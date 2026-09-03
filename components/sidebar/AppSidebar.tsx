@@ -131,50 +131,64 @@ function ParentItem({
   const isActive = item.children?.some((c) => pathname === c.href);
   const isOpen = expandedMenu === item.label;
 
+  const buttonEl = (
+    <button
+      onClick={() => {
+        onToggle(item.label);
+        onNavigate?.();
+      }}
+      className={`
+        group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium
+        transition-all duration-200 ease-out
+        ${
+          isActive
+            ? "bg-blue-50 text-blue-700"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        }
+      `}
+    >
+      {Icon && (
+        <Icon
+          size={18}
+          className={`shrink-0 ${
+            isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+          }`}
+        />
+      )}
+      {!collapsed && (
+        <>
+          <span className="flex-1 truncate">{item.label}</span>
+          {item.badge !== undefined && item.badge > 0 && (
+            <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
+              {item.badge}
+            </span>
+          )}
+          <motion.span
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="text-slate-400"
+          >
+            <ChevronDown size={14} />
+          </motion.span>
+        </>
+      )}
+    </button>
+  );
+
+  const buttonWithTooltip = showTooltip ? (
+    <Tooltip>
+      <TooltipTrigger asChild>{buttonEl}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={10}>
+        {item.label}
+      </TooltipContent>
+    </Tooltip>
+  ) : (
+    buttonEl
+  );
+
   return (
     <div>
-      <button
-        onClick={() => {
-          onToggle(item.label);
-          onNavigate?.();
-        }}
-        className={`
-          group relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium
-          transition-all duration-200 ease-out
-          ${
-            isActive
-              ? "bg-blue-50 text-blue-700"
-              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-          }
-        `}
-      >
-        {Icon && (
-          <Icon
-            size={18}
-            className={`shrink-0 ${
-              isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
-            }`}
-          />
-        )}
-        {!collapsed && (
-          <>
-            <span className="flex-1 truncate">{item.label}</span>
-            {item.badge !== undefined && item.badge > 0 && (
-              <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
-                {item.badge}
-              </span>
-            )}
-            <motion.span
-              animate={{ rotate: isOpen ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="text-slate-400"
-            >
-              <ChevronDown size={14} />
-            </motion.span>
-          </>
-        )}
-        {showTooltip && <SidebarTooltip label={item.label} />}
-      </button>
+      {buttonWithTooltip}
 
       <AnimatePresence initial={false}>
         {isOpen && !collapsed && (
@@ -561,9 +575,9 @@ export default function AppSidebar() {
   );
 
   return (
-    <>
+    <TooltipProvider delayDuration={200}>
       {rail}
       {drawer}
-    </>
+    </TooltipProvider>
   );
 }
