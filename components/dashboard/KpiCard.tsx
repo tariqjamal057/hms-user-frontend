@@ -137,11 +137,10 @@ export default function KpiCard({
 
   const content = (
     <>
-      <span aria-hidden="true" className="kpi-wave" />
-      <div className="relative flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div
           className={cn(
-            "kpi-icon relative grid h-10 w-10 place-items-center rounded-xl",
+            "relative grid h-10 w-10 place-items-center rounded-xl",
             ACCENTS.blue.icon,
             accentStyle.icon,
             iconClassName
