@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ChevronDown, Search, UserRound, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, Search, UserRound, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import type { NurseIpdPatient } from "@/types/nurse/ipd/nurse-ipd-types";
@@ -108,7 +108,7 @@ export function PatientDetailShell({
     <div className="min-h-screen">
       <div className="mx-auto max-w-[1600px] px-3 sm:px-6 lg:px-8">
         {/* ── Patient Profile Header (separate card) ── */}
-        <div className="rounded-t-2xl border border-b-0 border-slate-200 bg-white shadow-sm">
+        <div className="rounded-t-2xl border border-b-0 border-slate-200 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
           <div className="px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-col gap-3">
               {/* Top row: back + identity + actions (actions right-aligned on desktop) */}
@@ -131,17 +131,9 @@ export function PatientDetailShell({
                         {patient.patientName}
                       </h1>
                       {status && currentStatusMeta && (
-                        <Badge className={`border ${currentStatusMeta.color}`}>{status}</Badge>
+                        <StatusPill label={status} color={currentStatusMeta.color} dot={currentStatusMeta.dot} />
                       )}
                       <AcuityBadge acuity={patient.acuity} />
-                      {patient.allergies.length > 0 && (
-                        <Badge
-                          variant="outline"
-                          className="border-red-200 bg-red-50 text-red-700"
-                        >
-                          Allergy: {patient.allergies.join(", ")}
-                        </Badge>
-                      )}
                     </div>
                     <p className="mt-1 text-sm text-slate-600">
                       {patient.age} years · {patient.gender} · Blood Group{" "}
@@ -152,6 +144,12 @@ export function PatientDetailShell({
                       {patient.ward} / {patient.room} / {patient.bed}
                       {subtitle ? ` · ${subtitle}` : ""}
                     </p>
+                    {patient.allergies.length > 0 && (
+                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
+                        <AlertTriangle className="h-3 w-3" />
+                        Allergy: {patient.allergies.join(", ")}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -189,11 +187,11 @@ export function PatientDetailShell({
               <div className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
                 {shownInfo.map((f, i) => (
                   <div key={i} className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-wide text-slate-400">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
                       {f.label}
                     </p>
                     <p
-                      className={`mt-0.5 truncate text-sm ${
+                      className={`mt-1 truncate text-sm ${
                         f.highlight
                           ? "font-bold text-blue-600"
                           : "font-semibold text-slate-800"
@@ -212,22 +210,22 @@ export function PatientDetailShell({
         <Tabs value={tab} onValueChange={handleTabChange}>
           <TabsList
             variant="line"
-            className="w-full justify-start overflow-x-auto rounded-none border border-slate-200 bg-slate-50/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="w-full justify-start overflow-x-auto rounded-none border border-slate-200 bg-white p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {tabs.map((t) => {
+            {tabs.map((t, idx) => {
               const active = t.value === tab;
               return (
                 <TabsTrigger
                   key={t.value}
                   value={t.value}
-                  className={`relative cursor-pointer whitespace-nowrap rounded-none! border-none bg-transparent px-4 py-2 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-blue-700 aria-selected:bg-transparent after:hidden! data-[state=active]:bg-transparent! data-[state=active]:font-semibold data-[state=active]:text-white data-[state=active]:shadow-none ${
+                  className={`relative cursor-pointer whitespace-nowrap rounded-none! border-none bg-transparent px-5 py-4 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-blue-700 aria-selected:bg-transparent after:hidden! data-[state=active]:bg-transparent! data-[state=active]:font-semibold data-[state=active]:text-white data-[state=active]:shadow-none ${
                     active ? "" : "hover:bg-blue-50"
-                  }`}
+                  } ${idx > 0 ? "border-l border-slate-100" : ""}`}
                 >
                   {active && (
                     <motion.span
                       layoutId="activeTabPill"
-                      className="absolute inset-0 z-0 rounded-none bg-blue-600 shadow-sm"
+                      className="absolute inset-0 z-0 rounded-none bg-blue-600"
                       transition={{ type: "spring", stiffness: 380, damping: 34 }}
                     />
                   )}
@@ -447,12 +445,27 @@ function PatientSwitcher({
   );
 }
 
+function StatusPill({
+  label,
+  color,
+  dot,
+}: {
+  label: string;
+  color: string;
+  dot: string;
+}) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${color}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+      {label}
+    </span>
+  );
+}
+
 function AcuityBadge({ acuity }: { acuity: string }) {
-  const color =
-    acuity === "Critical"
-      ? "bg-red-100 text-red-700 border-red-200"
-      : acuity === "Under Observation"
-        ? "bg-amber-100 text-amber-700 border-amber-200"
-        : "bg-emerald-100 text-emerald-700 border-emerald-200";
-  return <Badge className={`border ${color}`}>{acuity}</Badge>;
+  if (acuity === "Critical")
+    return <StatusPill label={acuity} color="border-red-200 bg-red-50 text-red-700" dot="bg-red-500" />;
+  if (acuity === "Under Observation")
+    return <StatusPill label={acuity} color="border-amber-200 bg-amber-50 text-amber-700" dot="bg-amber-500" />;
+  return <StatusPill label={acuity} color="border-emerald-200 bg-emerald-50 text-emerald-700" dot="bg-emerald-500" />;
 }
