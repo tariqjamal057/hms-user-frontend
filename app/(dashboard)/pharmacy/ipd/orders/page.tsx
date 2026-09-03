@@ -6,6 +6,7 @@ import {
   CalendarClock,
   IndianRupee,
   ReceiptText,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ import {
   getMedicinesGrossValue,
   getDiscountTotalValue,
 } from "@/lib/pharmacy/ipd/pharmacy-ipd-order-data";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import {
@@ -528,14 +529,9 @@ export default function PharmacyIpdOrdersPage() {
       className: "text-right",
       enableHiding: false,
       cell: (o) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setSelectedOrder(o)}
-          className="border-blue-200 text-blue-700"
-        >
-          View
-        </Button>
+        <div className="text-right">
+          <OpsActionButton label="View" icon={Eye} onClick={() => setSelectedOrder(o)} className="border-blue-200 text-blue-700" />
+        </div>
       ),
     },
   ];

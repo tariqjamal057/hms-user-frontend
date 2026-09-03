@@ -4,6 +4,7 @@ import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { OpsActionButton } from "@/components/operations";
 import type { BillingPatient } from "@/types/billing/ipd/billing-types";
 import { computeBilling, formatCurrency } from "@/lib/billing/ipd/billing-calculations";
 import { BillingStatusBadge } from "./billing-badges";
@@ -44,7 +45,7 @@ export function getBillingColumns(onView: (patient: BillingPatient) => void): Co
       id: "Action", header: () => <span className="block text-right">Action</span>, enableHiding: false,
       cell: ({ row }) => (
         <div className="text-right">
-          <Button variant="outline" size="sm" onClick={() => onView(row.original)} className="gap-1 border-blue-200 text-blue-700"><Eye className="h-4 w-4" />View Details</Button>
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => onView(row.original)} className="border-blue-200 text-blue-700" />
         </div>
       ),
     },

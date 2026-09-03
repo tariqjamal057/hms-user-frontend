@@ -3,8 +3,11 @@
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
+  Eye,
   ShieldAlert,
   Siren,
+  UserRound,
+  UserRoundCog,
   Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -26,11 +29,10 @@ import {
   AVAILABLE_NURSES,
 } from "@/lib/emergency/rmo-emergency-data";
 import { EMERGENCY_STATUS_OPTIONS, INCIDENT_TYPE_OPTIONS } from "@/lib/emergency/emergency-data";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionMenu, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import { EmergencyStatusBadge } from "@/app/(dashboard)/admission/emergency/all-patients/_components/emergency-badges";
-import { RmoActionMenu } from "./_components/rmo-action-menu";
 import { AssignmentDrawer } from "./_components/assignment-drawer";
 import { RmoPatientDetailsDrawer } from "./_components/rmo-patient-details-drawer";
 
@@ -267,15 +269,24 @@ export default function RmoEmergencyAllPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <RmoActionMenu
-          patient={p}
-          onView={() => setDrawerPatient(p)}
-          onAssignDoctor={() =>
-            setAssignment({ patient: p, role: "Doctor" })
-          }
-          onAssignNurse={() =>
-            setAssignment({ patient: p, role: "Nurse" })
-          }
+        <OpsActionMenu
+          items={[
+            {
+              label: "View Details",
+              icon: Eye,
+              onClick: () => setDrawerPatient(p),
+            },
+            {
+              label: p.attendingDoctor === "Unassigned" ? "Assign Doctor" : "Doctor Assigned",
+              icon: UserRoundCog,
+              onClick: () => setAssignment({ patient: p, role: "Doctor" }),
+            },
+            {
+              label: p.assignedNurse === "Unassigned" ? "Assign Nurse" : "Nurse Assigned",
+              icon: UserRound,
+              onClick: () => setAssignment({ patient: p, role: "Nurse" }),
+            },
+          ]}
         />
       ),
     },
@@ -303,15 +314,24 @@ export default function RmoEmergencyAllPatientsPage() {
             Nurse: {p.assignedNurse}
           </p>
           <div className="mt-4">
-            <RmoActionMenu
-              patient={p}
-              onView={() => setDrawerPatient(p)}
-              onAssignDoctor={() =>
-                setAssignment({ patient: p, role: "Doctor" })
-              }
-              onAssignNurse={() =>
-                setAssignment({ patient: p, role: "Nurse" })
-              }
+            <OpsActionMenu
+              items={[
+                {
+                  label: "View Details",
+                  icon: Eye,
+                  onClick: () => setDrawerPatient(p),
+                },
+                {
+                  label: p.attendingDoctor === "Unassigned" ? "Assign Doctor" : "Doctor Assigned",
+                  icon: UserRoundCog,
+                  onClick: () => setAssignment({ patient: p, role: "Doctor" }),
+                },
+                {
+                  label: p.assignedNurse === "Unassigned" ? "Assign Nurse" : "Nurse Assigned",
+                  icon: UserRound,
+                  onClick: () => setAssignment({ patient: p, role: "Nurse" }),
+                },
+              ]}
             />
           </div>
         </CardContent>

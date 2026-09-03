@@ -8,7 +8,7 @@ import type { RmoEmergencyPatient } from "@/types/emergency/rmo-emergency-types"
 import { EMERGENCY_PATIENTS, EMERGENCY_STATUS_OPTIONS, INCIDENT_TYPE_OPTIONS } from "@/lib/emergency/emergency-data";
 import { EmergencyStatusBadge } from "@/app/(dashboard)/admission/emergency/all-patients/_components/emergency-badges";
 import { RmoPatientDetailsDrawer } from "@/app/(dashboard)/rmo/emergency/all-patients/_components/rmo-patient-details-drawer";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 
@@ -105,9 +105,11 @@ export default function DoctorEmergencyAllPatientsPage() {
       header: "Action",
       enableHiding: false,
       cell: (p) => (
-        <Button variant="outline" size="sm" className="gap-1" onClick={() => setDrawerPatient(p)}>
-          <Stethoscope className="h-4 w-4" />View Details
-        </Button>
+        <OpsActionButton
+          label="View Details"
+          icon={Stethoscope}
+          onClick={() => setDrawerPatient(p)}
+        />
       ),
     },
   ];

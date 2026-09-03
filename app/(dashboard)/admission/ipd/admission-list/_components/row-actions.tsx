@@ -1,11 +1,9 @@
 // app/ipd/admission-list/_components/row-actions.tsx
 "use client";
 
-import { Eye, Bed, MoreVertical, Ban, Download, NotebookPen, Edit } from "lucide-react";
+import { Eye, Bed, MoreVertical, Ban, Download, NotebookPen, Edit, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { OpsActionMenu } from "@/components/operations";
 import { AdmissionRecord } from "@/types/admission-list-types";
 import { MdEmail } from "react-icons/md";
 import { FaWhatsappSquare } from "react-icons/fa";
@@ -36,38 +34,41 @@ export function RowActions({ record, onView, onBedTransfer, onPrint, onCancel }:
       <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => onBedTransfer(record)} title="Bed / Ward">
         <Bed className="h-4 w-4" />
       </Button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={handleEdit}>
-            <Edit className="mr-2 h-4 w-4 text-blue-500" /> Edit Admission Details
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={()=> onPrint(record)}> 
-            <Download className="mr-2 h-4 w-4 text-blue-500" /> Download Admission Summary
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem >
-            <MdEmail className="mr-2 h-4 w-4 text-blue-500" /> Send Via Email
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem >
-            <FaWhatsappSquare className="mr-2 h-4 w-4 text-green-500" /> Send Via WhatsApp
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem >
-            <NotebookPen className="mr-2 h-4 w-4 text-blue-500" /> Notes
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => onCancel(record)} className="text-red-600 focus:text-red-600">
-            <Ban className="mr-2 h-4 w-4" /> Cancel Admission
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <OpsActionMenu
+        items={[
+          {
+            label: "Edit Admission Details",
+            icon: Edit,
+            onClick: handleEdit,
+          },
+          {
+            label: "Download Admission Summary",
+            icon: Download,
+            onClick: () => onPrint(record),
+          },
+          {
+            label: "Send Via Email",
+            icon: MdEmail as unknown as LucideIcon,
+            onClick: () => {},
+          },
+          {
+            label: "Send Via WhatsApp",
+            icon: FaWhatsappSquare as unknown as LucideIcon,
+            onClick: () => {},
+          },
+          {
+            label: "Notes",
+            icon: NotebookPen,
+            onClick: () => {},
+          },
+          {
+            label: "Cancel Admission",
+            icon: Ban,
+            onClick: () => onCancel(record),
+            destructive: true,
+          },
+        ]}
+      />
     </div>
   );
 }

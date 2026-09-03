@@ -6,6 +6,7 @@ import {
   IndianRupee,
   PackageCheck,
   ReceiptText,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ import {
   getOrderStockStatus,
   getOrderValue,
 } from "@/lib/pharmacy/opd/pharmacy-opd-orders-data";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import { PharmacyOrderDetailDrawer } from "./_components/pharmacy-order-detail-drawer";
@@ -292,14 +293,9 @@ export default function PharmacyOPDOrdersPage() {
       className: "text-right",
       enableHiding: false,
       cell: (o) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setSelectedOrder(o)}
-          className="border-blue-200 text-blue-700"
-        >
-          View Details
-        </Button>
+        <div className="text-right">
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => setSelectedOrder(o)} className="border-blue-200 text-blue-700" />
+        </div>
       ),
     },
   ];

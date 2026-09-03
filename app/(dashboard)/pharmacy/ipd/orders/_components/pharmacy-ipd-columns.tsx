@@ -3,6 +3,7 @@
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OpsActionButton } from "@/components/operations";
 import type { PharmacyIpdOrder } from "@/types/pharmacy/ipd/pharmacy-ipd-order-types";
 import {
   getAdmittedDays, getBalanceDueValue, getDiscountTotalValue, getMedicinesGrossValue,
@@ -126,9 +127,7 @@ export function getPharmacyIpdColumns(onView: (order: PharmacyIpdOrder) => void)
       header: () => <span className="text-right block">Action</span>,
       cell: ({ row }) => (
         <div className="text-right">
-          <Button variant="outline" size="sm" onClick={() => onView(row.original)} className="border-blue-200 text-blue-700">
-            <Eye className="mr-1 h-4 w-4" />View
-          </Button>
+          <OpsActionButton label="View" icon={Eye} onClick={() => onView(row.original)} className="border-blue-200 text-blue-700" />
         </div>
       ),
       enableHiding: false,

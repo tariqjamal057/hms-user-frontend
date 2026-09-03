@@ -20,6 +20,7 @@ import {
   OpsTable,
   OpsGrid,
   OpsGridCard,
+  OpsActionMenu,
   buildTrend,
 } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
@@ -189,21 +190,22 @@ export default function IPDPendingAdmissionsPage() {
       headerClassName: "text-right",
       className: "text-right",
       cell: (d) => (
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => continueAdmission(d.id)}
-          >
-            <Edit2 className="mr-1 h-3 w-3" /> Continue
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => deleteDraft(d.id)}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+        <div className="flex justify-end">
+          <OpsActionMenu
+            items={[
+              {
+                label: "Continue",
+                icon: Edit2,
+                onClick: () => continueAdmission(d.id),
+              },
+              {
+                label: "Delete Draft",
+                icon: Trash2,
+                onClick: () => deleteDraft(d.id),
+                destructive: true,
+              },
+            ]}
+          />
         </div>
       ),
     },

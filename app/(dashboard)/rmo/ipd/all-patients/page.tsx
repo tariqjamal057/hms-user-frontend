@@ -15,7 +15,7 @@ import type {
   RmoPatient,
 } from "@/types/rmo/ipd/rmo-types";
 import { RMO_PATIENTS, RMO_WARDS, RMO_DEPARTMENTS } from "@/lib/rmo/ipd/rmo-data";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import { PatientStatusBadge } from "./_components/rmo-badges";
@@ -211,15 +211,11 @@ export default function RmoAllPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <Button
-          variant="outline"
-          size="sm"
+        <OpsActionButton
+          label="View Details"
+          icon={Eye}
           onClick={() => setViewingPatient(p)}
-          className="gap-1 border-blue-200 text-blue-700"
-        >
-          <Eye className="h-4 w-4" />
-          View Details
-        </Button>
+        />
       ),
     },
   ];

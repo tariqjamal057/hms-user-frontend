@@ -9,7 +9,7 @@ import type { WardPatientFull } from "@/types/nurse-admin/ipd/ward-detail-types"
 import { ALL_WARDS, WARD_PATIENTS_FULL } from "@/lib/nurse-admin/ipd/ward-detail-data";
 import { PatientDetailDrawer } from "./_components/drawer/patient-detail-drawer";
 import { PatientStatusBadge } from "./_components/status-badges";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
 
@@ -107,11 +107,11 @@ export default function AllWardPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <div className="text-right">
-          <Button variant="outline" size="sm" onClick={() => setViewingPatient(p)} className="gap-1 border-blue-200 text-blue-700">
-            <Eye className="h-4 w-4" />View Details
-          </Button>
-        </div>
+        <OpsActionButton
+          label="View Details"
+          icon={Eye}
+          onClick={() => setViewingPatient(p)}
+        />
       ),
     },
   ];

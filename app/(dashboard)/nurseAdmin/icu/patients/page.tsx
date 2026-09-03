@@ -2,17 +2,11 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, HeartPulse, PackageX, UserPlus, Users, Eye, MoreVertical } from "lucide-react";
+import { AlertTriangle, HeartPulse, PackageX, UserPlus, Users, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionMenu, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import type { NurseIpdPatient, NurseIpdPatientFilters } from "@/types/nurse/ipd/nurse-ipd-types";
@@ -157,25 +151,20 @@ export default function NurseAdminIcuPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <div className="text-right">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="ml-auto">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => openAssignNurse(p)} className="gap-2 cursor-pointer">
-                <UserPlus className="h-4 w-4 text-emerald-600" />
-                <span>Assign Nurse</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => viewPatient(p)} className="gap-2 cursor-pointer">
-                <Eye className="h-4 w-4 text-blue-600" />
-                <span>View Details</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <OpsActionMenu
+          items={[
+            {
+              label: "Assign Nurse",
+              icon: UserPlus,
+              onClick: () => openAssignNurse(p),
+            },
+            {
+              label: "View Details",
+              icon: Eye,
+              onClick: () => viewPatient(p),
+            },
+          ]}
+        />
       ),
     },
   ];

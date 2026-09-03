@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { Users, HeartPulse, Activity, AlertCircle, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import {
@@ -149,14 +149,11 @@ export default function MyIPDPatientsPage() {
       headerClassName: "text-right",
       className: "text-right",
       cell: (p) => (
-        <Button
-          size="sm"
+        <OpsActionButton
+          label="Clinical Overview"
+          icon={Eye}
           onClick={() => handleClinicalOverview(p.uhid)}
-          className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700"
-        >
-          <Eye className="mr-1.5 h-4 w-4" />
-          Clinical Overview
-        </Button>
+        />
       ),
     },
   ];
@@ -254,11 +251,14 @@ export default function MyIPDPatientsPage() {
         </div>
 
         {viewMode === "list" ? (
-          <OpsTable
-            data={filteredPatients}
-            rowKey={(p) => p.uhid}
-            columns={columns}
-          />
+          <div className="min-w-0 w-full">
+            <OpsTable
+              data={filteredPatients}
+              rowKey={(p) => p.uhid}
+              columns={columns}
+              showColumnToggle
+            />
+          </div>
         ) : (
           <OpsGrid data={filteredPatients} rowKey={(p) => p.uhid} renderCard={renderCard} pageSize={6} />
         )}

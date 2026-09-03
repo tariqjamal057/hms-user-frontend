@@ -1,14 +1,14 @@
 // app/(dashboard)/nurse/emergency/all-patients/page.tsx
 "use client";
 import { useMemo, useState } from "react";
-import { ShieldAlert, Siren, Syringe, Users } from "lucide-react";
+import { Eye, ShieldAlert, Siren, Syringe, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { RmoEmergencyPatient } from "@/types/emergency/rmo-emergency-types";
 import { EMERGENCY_PATIENTS, EMERGENCY_STATUS_OPTIONS, INCIDENT_TYPE_OPTIONS } from "@/lib/emergency/emergency-data";
 import { EmergencyStatusBadge } from "@/app/(dashboard)/admission/emergency/all-patients/_components/emergency-badges";
 import { NursePatientDetailsDrawer } from "./_components/nurse-patient-details-drawer";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
 
@@ -111,9 +111,11 @@ export default function NurseEmergencyAllPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <Button variant="outline" size="sm" className="gap-1" onClick={() => setDrawerPatient(p)}>
-          <Syringe className="h-4 w-4" />View Details
-        </Button>
+        <OpsActionButton
+          label="View Details"
+          icon={Eye}
+          onClick={() => setDrawerPatient(p)}
+        />
       ),
     },
   ];

@@ -5,7 +5,8 @@ import { Appointment } from "@/types/admission-desk/opd/appointment-types";
 import { StatusBadge } from "./appointment-detail-drawer";
 import { getEffectiveStatus } from "@/lib/admission-desk/opd/appointment-data";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, RefreshCw } from "lucide-react";
+import { OpsActionMenu } from "@/components/operations";
 
 export function AppointmentTable({
   appointments,
@@ -75,25 +76,24 @@ export function AppointmentTable({
                   <StatusBadge status={getEffectiveStatus(a)} />
                 </td>
                 <td className="px-5 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onView(a)}
-                    >
-                      <Eye className="mr-1 h-4 w-4" /> View
-                    </Button>
-                    {["Booked", "Waiting"].includes(getEffectiveStatus(a)) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onReschedule(a)}
-                        className="border-orange-200 text-orange-700 hover:bg-orange-50"
-                      >
-                        Reschedule
-                      </Button>
-                    )}
-                  </div>
+                  <OpsActionMenu
+                    items={[
+                      {
+                        label: "View",
+                        icon: Eye,
+                        onClick: () => onView(a),
+                      },
+                      ...(getEffectiveStatus(a) === "Booked" || getEffectiveStatus(a) === "Waiting"
+                        ? [
+                            {
+                              label: "Reschedule",
+                              icon: RefreshCw,
+                              onClick: () => onReschedule(a),
+                            } as const,
+                          ]
+                        : []),
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

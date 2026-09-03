@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { NurseIpdPatient } from "@/types/nurse/ipd/nurse-ipd-types";
 import { NURSE_ICU_SHIFTS, NURSE_ICU_WARDS, getEmarForPatient, getNursePatients } from "@/lib/nurse/icu/nurse-icu-data";
 import { AcuityBadge } from "../../../nurse/ipd/patients/_components/nurse-ipd-badges";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 
@@ -129,9 +129,11 @@ export default function DoctorIcuPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <Button variant="outline" size="sm" onClick={() => viewPatient(p)} className="border-blue-200 text-blue-700">
-          <Eye className="mr-1 h-4 w-4" />View Details
-        </Button>
+        <OpsActionButton
+          label="View Details"
+          icon={Eye}
+          onClick={() => viewPatient(p)}
+        />
       ),
     },
   ];

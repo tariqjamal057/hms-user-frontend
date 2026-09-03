@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import type {
@@ -286,10 +286,9 @@ export default function PathologyOPDOrdersPage() {
       headerClassName: "text-right",
       className: "text-right",
       cell: (order) => (
-        <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)} className="border-blue-200 text-blue-700">
-          <Eye className="mr-1 h-4 w-4" />
-          View Details
-        </Button>
+        <div className="text-right">
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => setSelectedOrder(order)} className="border-blue-200 text-blue-700" />
+        </div>
       ),
     },
   ];

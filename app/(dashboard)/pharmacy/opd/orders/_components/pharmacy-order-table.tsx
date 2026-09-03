@@ -3,6 +3,7 @@
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { OpsActionButton } from "@/components/operations";
 import type { PharmacyOPDOrder } from "@/types/pharmacy/opd/pharmacy-opd-types";
 import {
   getOrderStockStatus,
@@ -78,14 +79,7 @@ export function PharmacyOrderTable({
                   <OrderBadge status={order.status} />
                 </td>
                 <td className="px-5 py-4 text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onView(order)}
-                    className="border-blue-200 text-blue-700"
-                  >
-                    <Eye className="mr-1 h-4 w-4" /> View Details
-                  </Button>
+                  <OpsActionButton label="View Details" icon={Eye} onClick={() => onView(order)} className="border-blue-200 text-blue-700" />
                 </td>
               </tr>
             ))}

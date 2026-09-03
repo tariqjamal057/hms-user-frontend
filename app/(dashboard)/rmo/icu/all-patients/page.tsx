@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
+  Eye,
   HeartPulse,
   PackageX,
   Users,
@@ -20,7 +21,7 @@ import {
   getEmarForPatient,
   getNursePatients,
 } from "@/lib/nurse/icu/nurse-icu-data";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import { AcuityBadge } from "@/app/(dashboard)/nurse/ipd/patients/_components/nurse-ipd-badges";
@@ -236,14 +237,11 @@ export default function RmoIcuPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <Button
-          variant="outline"
-          size="sm"
+        <OpsActionButton
+          label="View Details"
+          icon={Eye}
           onClick={() => viewPatient(p)}
-          className="border-blue-200 text-blue-700"
-        >
-          View Details
-        </Button>
+        />
       ),
     },
   ];

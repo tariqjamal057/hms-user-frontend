@@ -39,7 +39,7 @@ export default function DashboardLayout({
       <motion.div
         animate={{ marginLeft: isDesktop ? (sidebarCollapsed ? 72 : 256) : 0 }}
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-        className="flex flex-1 flex-col min-w-0 overflow-x-hidden"
+        className="flex flex-1 flex-col min-w-0"
       >
         <Header />
 

@@ -1,12 +1,12 @@
 // app/(dashboard)/billing/ipd/page.tsx
 "use client";
 import { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, TrendingUp, Wallet } from "lucide-react";
+import { AlertTriangle, CheckCircle2, TrendingUp, Wallet, Eye } from "lucide-react";
 import type { BillingFilters as BillingFiltersState, BillingPatient } from "@/types/billing/ipd/billing-types";
 import { BILLING_PATIENTS, BILLING_WARDS, THIS_MONTH_PREFIX, TODAY_ISO } from "@/lib/billing/ipd/billing-data";
 import { computeBilling, formatCurrency } from "@/lib/billing/ipd/billing-calculations";
 import { BillingDetailDrawer } from "./_components/drawer/billing-detail-drawer";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
 import { BillingStatusBadge } from "./_components/billing-badges";
@@ -67,7 +67,7 @@ export default function IpdBillingPage() {
     { key: "Collected", header: "Collected", cell: (row) => <span className="text-sm font-semibold text-emerald-600">{formatCurrency(computeBilling(row).totalCollected)}</span> },
     { key: "Due", header: "Due", cell: (row) => { const due = computeBilling(row).dueAmount; return <span className={`text-sm font-bold ${due > 0 ? "text-red-600" : "text-slate-400"}`}>{formatCurrency(due)}</span>; } },
     { key: "Status", header: "Status", cell: (row) => <BillingStatusBadge status={computeBilling(row).status} /> },
-    { key: "Action", header: "Action", enableHiding: false, headerClassName: "text-right", cell: (row) => (<div className="text-right"><button type="button" onClick={() => setViewingPatient(row)} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">View Details</button></div>) },
+    { key: "Action", header: "Action", enableHiding: false, headerClassName: "text-right", cell: (row) => (<div className="text-right"><OpsActionButton label="View Details" icon={Eye} onClick={() => setViewingPatient(row)} /></div>) },
   ], []);
 
   const infoCards: KpiCardProps[] = [

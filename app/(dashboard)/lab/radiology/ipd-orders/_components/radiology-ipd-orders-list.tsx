@@ -3,6 +3,7 @@
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { OpsActionButton } from "@/components/operations";
 import type { RadiologyIpdOrder } from "@/types/lab/radiology/radiology-ipd-types";
 import {
   getRadiologyIpdAggregateStatus,
@@ -93,15 +94,7 @@ export function RadiologyIpdOrdersList({ orders, onView }: Props) {
                   <RadiologyIpdPaymentBadge status={order.paymentStatus} />
                 </td>
                 <td className="px-5 py-4 text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onView(order)}
-                    className="border-sky-200 text-sky-700"
-                  >
-                    <Eye className="mr-1 h-4 w-4" />
-                    View Details
-                  </Button>
+                  <OpsActionButton label="View Details" icon={Eye} onClick={() => onView(order)} className="border-sky-200 text-sky-700" />
                 </td>
               </tr>
             ))}

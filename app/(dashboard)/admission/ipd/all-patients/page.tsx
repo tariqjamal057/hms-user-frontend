@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
 import type { IPDPatient } from "@/types/admission-desk/ipd/ipd-admission-types";
@@ -172,14 +172,7 @@ export default function IPDAllPatientsPage() {
       headerClassName: "text-right",
       cell: (row) => (
         <div className="text-right">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => openDrawer(row)}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-          >
-            View
-          </Button>
+          <OpsActionButton label="View" icon={Eye} onClick={() => openDrawer(row)} />
         </div>
       ),
     },

@@ -6,7 +6,7 @@ import { AlertTriangle, UserPlus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import type { AdmittedPatient, DailyShiftAssignment } from "@/types/nurse-admin/ipd/nurse-admin-types";
@@ -128,11 +128,11 @@ export default function NewAdmissionsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <div className="text-right">
-          <Button size="sm" onClick={() => setAssigningPatient(p)} className="gap-1 bg-blue-600 hover:bg-blue-700">
-            <UserPlus className="h-4 w-4" />Assign Nurse
-          </Button>
-        </div>
+        <OpsActionButton
+          label="Assign Nurse"
+          icon={UserPlus}
+          onClick={() => setAssigningPatient(p)}
+        />
       ),
     },
   ];

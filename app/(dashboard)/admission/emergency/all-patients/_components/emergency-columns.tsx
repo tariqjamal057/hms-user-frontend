@@ -4,6 +4,7 @@ import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
 import { Eye, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { OpsActionButton } from "@/components/operations";
 import type { EmergencyPatient } from "@/types/emergency/emergency-types";
 import { EmergencyStatusBadge } from "./emergency-badges";
 
@@ -28,7 +29,7 @@ export function getEmergencyColumns(onView: (patient: EmergencyPatient) => void)
       id: "Action", header: () => <span className="block text-right">Action</span>, enableHiding: false,
       cell: ({ row }) => (
         <div className="text-right">
-          <Button variant="outline" size="sm" onClick={() => onView(row.original)} className="gap-1 border-red-200 text-red-700"><Eye className="h-4 w-4" />View Details</Button>
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => onView(row.original)} className="border-red-200 text-red-700" />
         </div>
       ),
     },

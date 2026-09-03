@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { NurseIpdPatient, NurseIpdPatientFilters } from "@/types/nurse/ipd/nurse-ipd-types";
 import { NURSE_IPD_SHIFTS, NURSE_IPD_WARDS, getEmarForPatient, getNursePatients } from "@/lib/nurse/ipd/nurse-ipd-data";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
 import { AcuityBadge } from "./_components/nurse-ipd-badges";
@@ -123,9 +123,11 @@ export default function NurseIpdPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <Button variant="outline" size="sm" onClick={() => viewPatient(p)} className="border-blue-200 text-blue-700">
-          <Eye className="mr-1 h-4 w-4" />View Details
-        </Button>
+        <OpsActionButton
+          label="View Details"
+          icon={Eye}
+          onClick={() => viewPatient(p)}
+        />
       ),
     },
   ];

@@ -3,6 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OpsActionButton } from "@/components/operations";
 import type { IcuPatient } from "@/types/admission-desk/icu/icu-types";
 import { IcuStatusBadge, AdmissionTypeBadge } from "./icu-badges";
 
@@ -22,7 +23,7 @@ export function getIcuColumns(onView: (patient: IcuPatient) => void): ColumnDef<
       id: "Action", header: () => <span className="block text-right">Action</span>, enableHiding: false,
       cell: ({ row }) => (
         <div className="text-right">
-          <Button variant="outline" size="sm" onClick={() => onView(row.original)} className="gap-1"><Eye className="h-4 w-4" />View Details</Button>
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => onView(row.original)} />
         </div>
       ),
     },

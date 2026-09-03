@@ -25,6 +25,7 @@ import {
   OpsTable,
   OpsGrid,
   OpsGridCard,
+  OpsActionButton,
   buildTrend,
 } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
@@ -247,15 +248,9 @@ export default function EmergencyAllPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setViewingPatient(p)}
-          className="gap-1 border-red-200 text-red-700"
-        >
-          <Eye className="h-4 w-4" />
-          View Details
-        </Button>
+        <div className="text-right">
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => setViewingPatient(p)} className="border-red-200 text-red-700" />
+        </div>
       ),
     },
   ];

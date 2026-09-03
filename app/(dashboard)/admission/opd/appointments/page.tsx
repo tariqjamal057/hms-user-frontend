@@ -23,6 +23,7 @@ import {
   OpsTable,
   OpsGrid,
   OpsGridCard,
+  OpsActionMenu,
   buildTrend,
 } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
@@ -273,24 +274,25 @@ export default function AllAppointmentsPage() {
       cell: (a) => {
         const status = getEffectiveStatus(a);
         return (
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDetail(a)}
-            >
-              <Eye className="mr-1 h-4 w-4" /> View
-            </Button>
-            {["Booked", "Waiting"].includes(status) && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRescheduling(a)}
-                className="border-orange-200 text-orange-700 hover:bg-orange-50"
-              >
-                Reschedule
-              </Button>
-            )}
+          <div className="flex justify-end">
+            <OpsActionMenu
+              items={[
+                {
+                  label: "View",
+                  icon: Eye,
+                  onClick: () => setDetail(a),
+                },
+                ...(status === "Booked" || status === "Waiting"
+                  ? [
+                      {
+                        label: "Reschedule",
+                        icon: RefreshCw,
+                        onClick: () => setRescheduling(a),
+                      } as const,
+                    ]
+                  : []),
+              ]}
+            />
           </div>
         );
       },

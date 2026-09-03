@@ -8,6 +8,9 @@ import {
   ChevronsRight,
   Inbox,
   Columns3,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -66,6 +69,8 @@ export interface OpsColumn<T> {
   widthClass?: string;
   /** Hide this column below the given breakpoint (e.g. "sm" hides on < 640px) */
   hideOn?: HideOnBreakpoint;
+  sortable?: boolean;
+  sortFn?: (a: T, b: T) => number;
   cell: (row: T, index: number) => React.ReactNode;
 }
 
@@ -84,6 +89,8 @@ interface OpsTableProps<T> {
   bulkActions?: (selected: T[], clearSelection: () => void) => React.ReactNode;
   className?: string;
   minWidth?: string;
+  storageKey?: string;
+  isLoading?: boolean;
 }
 
 export default function OpsTable<T>({
@@ -92,7 +99,7 @@ export default function OpsTable<T>({
   rowKey,
   pageSize = 10,
   pageSizeOptions = [10, 25, 50, 100],
-  showColumnToggle = false,
+  showColumnToggle = true,
   onRowClick,
   emptyContent,
   selection = true,
@@ -101,11 +108,70 @@ export default function OpsTable<T>({
   bulkActions,
   className,
   minWidth = "min-w-[900px]",
+  storageKey,
+  isLoading = false,
 }: OpsTableProps<T>) {
   const [pageIndex, setPageIndex] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(pageSize);
-  const [hidden, setHidden] = useState<Record<string, boolean>>({});
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [internalSelection, setInternalSelection] = useState<Set<string | number>>(new Set());
+
+  function getStorageKey() {
+    if (storageKey) return `opstable_hidden_${storageKey}`;
+    if (typeof window !== "undefined") {
+      return `opstable_hidden_${window.location.pathname}`;
+    }
+    return "opstable_hidden_default";
+  }
+
+  const [hidden, setHidden] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const saved = localStorage.getItem(getStorageKey());
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  function handleSort(col: OpsColumn<T>) {
+    if (!col.sortable) return;
+    if (sortKey === col.key) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortKey(null);
+        setSortDirection("asc");
+      }
+    } else {
+      setSortKey(col.key);
+      setSortDirection("asc");
+    }
+    setPageIndex(0);
+  }
+
+  const sortedData = useMemo(() => {
+    if (!sortKey) return data;
+    const col = columns.find((c) => c.key === sortKey);
+    if (!col) return data;
+
+    const copy = [...data];
+    copy.sort((a, b) => {
+      if (col.sortFn) {
+        const res = col.sortFn(a, b);
+        return sortDirection === "asc" ? res : -res;
+      }
+      const valA = (a as any)[sortKey];
+      const valB = (b as any)[sortKey];
+      if (valA == null) return 1;
+      if (valB == null) return -1;
+      if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+      if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+    return copy;
+  }, [data, sortKey, sortDirection, columns]);
 
   const selected = controlledSelection ?? internalSelection;
 
@@ -120,19 +186,24 @@ export default function OpsTable<T>({
     [columns, hidden]
   );
 
-  const pageCount = Math.max(1, Math.ceil(data.length / rowsPerPage));
+  const pageCount = Math.max(1, Math.ceil(sortedData.length / rowsPerPage));
   const safePage = Math.min(pageIndex, pageCount - 1);
 
   const pageRows = useMemo(() => {
     const start = safePage * rowsPerPage;
-    return data.slice(start, start + rowsPerPage);
-  }, [data, safePage, rowsPerPage]);
+    return sortedData.slice(start, start + rowsPerPage);
+  }, [sortedData, safePage, rowsPerPage]);
 
   function toggleColumn(key: string, show: boolean) {
     setHidden((previous) => {
       const next = { ...previous };
       if (show) delete next[key];
       else next[key] = true;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(getStorageKey(), JSON.stringify(next));
+        } catch {}
+      }
       return next;
     });
   }
@@ -231,67 +302,102 @@ export default function OpsTable<T>({
                 )}
                 {visibleColumns.map((col) => {
                   const hideCls = col.hideOn ? ` ${responsiveHideThClass(col.hideOn)}` : "";
+                  const isSorted = sortKey === col.key;
                   return (
                     <th
                       key={col.key}
+                      onClick={() => handleSort(col)}
                       className={cn(
-                        "truncate border-b border-slate-200 px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:text-xs",
+                        "truncate border-b border-slate-200 px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:px-4 sm:text-xs select-none",
+                        col.sortable && "cursor-pointer hover:bg-slate-100 transition-colors",
                         col.headerClassName,
                         col.widthClass,
                         hideCls,
                       )}
                     >
-                      {col.header}
+                      <div className="flex items-center gap-1.5">
+                        <span>{col.header}</span>
+                        {col.sortable && (
+                          <span className="text-slate-400">
+                            {isSorted ? (
+                              sortDirection === "asc" ? (
+                                <ArrowUp className="h-3 w-3 text-blue-600" />
+                              ) : (
+                                <ArrowDown className="h-3 w-3 text-blue-600" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 opacity-50 hover:opacity-100" />
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </th>
                   );
                 })}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {pageRows.map((row, index) => {
-                const key = rowKey(row);
-                const isSelected = selected.has(key);
-                return (
-                  <tr
-                    key={key}
-                    onClick={
-                      onRowClick
-                        ? () => {
-                            if (!isSelected) onRowClick(row);
-                          }
-                        : undefined
-                    }
-                    className={cn(
-                      "transition-colors",
-                      onRowClick && "cursor-pointer hover:bg-slate-50/80",
-                      isSelected && "bg-blue-50/50"
-                    )}
-                  >
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, rIdx) => (
+                  <tr key={`skeleton-${rIdx}`} className="animate-pulse">
                     {selection && (
                       <td className="px-2 py-3 sm:px-3">
-                        <Checkbox
-                          aria-label="Select row"
-                          checked={isSelected}
-                          onCheckedChange={(value) =>
-                            toggleRow(key, value === true)
-                          }
-                        />
+                        <div className="h-4 w-4 rounded bg-slate-200" />
                       </td>
                     )}
-                    {visibleColumns.map((col) => {
-                      const hideCls = col.hideOn ? ` ${responsiveHideClass(col.hideOn)}` : "";
-                      return (
-                        <td
-                          key={col.key}
-                          className={cn("truncate px-2 py-3 text-xs sm:px-4 sm:text-sm", col.className, col.widthClass, hideCls)}
-                        >
-                          {col.cell(row, index)}
-                        </td>
-                      );
-                    })}
+                    {visibleColumns.map((col, cIdx) => (
+                      <td key={`skeleton-cell-${cIdx}`} className="px-2 py-3 sm:px-4">
+                        <div className="h-4 w-3/4 rounded bg-slate-200" />
+                      </td>
+                    ))}
                   </tr>
-                );
-              })}
+                ))
+              ) : (
+                pageRows.map((row, index) => {
+                  const key = rowKey(row);
+                  const isSelected = selected.has(key);
+                  return (
+                    <tr
+                      key={key}
+                      onClick={
+                        onRowClick
+                          ? () => {
+                              if (!isSelected) onRowClick(row);
+                            }
+                          : undefined
+                      }
+                      className={cn(
+                        "transition-colors",
+                        onRowClick && "cursor-pointer hover:bg-slate-50/80",
+                        isSelected && "bg-blue-50/50"
+                      )}
+                    >
+                      {selection && (
+                        <td className="px-2 py-3 sm:px-3">
+                          <Checkbox
+                            aria-label="Select row"
+                            checked={isSelected}
+                            onCheckedChange={(value) =>
+                              toggleRow(key, value === true)
+                            }
+                          />
+                        </td>
+                      )}
+                      {visibleColumns.map((col) => {
+                        const hideCls = col.hideOn ? ` ${responsiveHideClass(col.hideOn)}` : "";
+                        return (
+                          <td
+                            key={col.key}
+                            className={cn("truncate px-2 py-3 text-xs sm:px-4 sm:text-sm", col.className, col.widthClass, hideCls)}
+                          >
+                            {col.cell(row, index)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
 

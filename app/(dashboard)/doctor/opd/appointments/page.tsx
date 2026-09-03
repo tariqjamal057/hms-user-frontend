@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionMenu, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import { PatientDetailsDialog } from "./_components/patient-details-dialog";
@@ -36,7 +36,6 @@ export default function DoctorOPDAppointmentsPage() {
 
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [viewingPatient, setViewingPatient] = useState<PatientFullProfile | null>(null);
-  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
 
   const filteredAppointments = appointments.filter((apt) => {
     const matchesSearch =
@@ -61,7 +60,6 @@ export default function DoctorOPDAppointmentsPage() {
   function handleViewDetails(apt: PatientFullProfile) {
     setViewingPatient(apt);
     setIsDetailsOpen(true);
-    setActionMenuOpen(null);
   }
 
   function handleStartConsultation(apt: PatientFullProfile) {
@@ -70,11 +68,6 @@ export default function DoctorOPDAppointmentsPage() {
 
   function getStatusBadge(status: string) {
     return STATUS_BADGES[status] || STATUS_BADGES.waiting;
-  }
-
-  function toggleActionMenu(id: string, e?: React.MouseEvent) {
-    e?.stopPropagation();
-    setActionMenuOpen(actionMenuOpen === id ? null : id);
   }
 
   const infoCards: KpiCardProps[] = [
@@ -142,40 +135,21 @@ export default function DoctorOPDAppointmentsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (apt) => (
-        <div className="flex items-center justify-end gap-2 relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => toggleActionMenu(apt.id, e)}
-            className="text-slate-500 hover:text-slate-700"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </Button>
-          {actionMenuOpen === apt.id && (
-            <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 min-w-[180px]">
-              <button
-                onClick={() => handleViewDetails(apt)}
-                className="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 rounded-t-lg"
-              >
-                <Eye className="w-4 h-4" />
-                View Details
-              </button>
-              <button
-                onClick={() => handleStartConsultation(apt)}
-                disabled={apt.status === "completed"}
-                className={cn(
-                  "w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 rounded-b-lg",
-                  apt.status === "completed"
-                    ? "text-slate-400 cursor-not-allowed bg-slate-50"
-                    : "text-blue-600 hover:bg-blue-50"
-                )}
-              >
-                <Play className="w-4 h-4" />
-                {apt.status === "checked-in" ? "Continue Consultation" : "Start Consultation"}
-              </button>
-            </div>
-          )}
-        </div>
+        <OpsActionMenu
+          items={[
+            {
+              label: "View Details",
+              icon: Eye,
+              onClick: () => handleViewDetails(apt),
+            },
+            {
+              label: apt.status === "checked-in" ? "Continue Consultation" : "Start Consultation",
+              icon: Play,
+              disabled: apt.status === "completed",
+              onClick: () => handleStartConsultation(apt),
+            },
+          ]}
+        />
       ),
     },
   ];
@@ -194,44 +168,12 @@ export default function DoctorOPDAppointmentsPage() {
           { label: "Time", value: apt.time },
           { label: "Type", value: apt.patientType },
         ]}
-      >
-        <div className="relative">
-          <Button
-            variant="outline"
-            onClick={(e) => toggleActionMenu(apt.id, e)}
-            className="w-full border-slate-200 justify-between"
-          >
-            <span className="flex items-center gap-2">
-              <MoreVertical className="w-4 h-4" />
-              Actions
-            </span>
-          </Button>
-          {actionMenuOpen === apt.id && (
-            <div className="absolute inset-x-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden">
-              <button
-                onClick={() => handleViewDetails(apt)}
-                className="w-full px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100"
-              >
-                <Eye className="w-4 h-4" />
-                View Details
-              </button>
-              <button
-                onClick={() => handleStartConsultation(apt)}
-                disabled={apt.status === "completed"}
-                className={cn(
-                  "w-full px-4 py-3 text-left text-sm flex items-center gap-2",
-                  apt.status === "completed"
-                    ? "text-slate-400 cursor-not-allowed bg-slate-50"
-                    : "text-blue-600 hover:bg-blue-50"
-                )}
-              >
-                <Play className="w-4 h-4" />
-                {apt.status === "checked-in" ? "Continue Consultation" : "Start Consultation"}
-              </button>
-            </div>
-          )}
-        </div>
-      </OpsGridCard>
+        action={{
+          label: "View Details",
+          icon: Eye,
+          onClick: () => handleViewDetails(apt),
+        }}
+      />
     );
   }
 
@@ -301,13 +243,14 @@ export default function DoctorOPDAppointmentsPage() {
         </div>
 
         {viewMode === "list" ? (
-          <OpsTable
-            data={filteredAppointments}
-            rowKey={(apt) => apt.id}
-            columns={columns}
-           
-            showColumnToggle
-          />
+          <div className="min-w-0 w-full">
+            <OpsTable
+              data={filteredAppointments}
+              rowKey={(apt) => apt.id}
+              columns={columns}
+              showColumnToggle
+            />
+          </div>
         ) : (
           <OpsGrid
             data={filteredAppointments}

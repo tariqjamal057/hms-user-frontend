@@ -13,6 +13,7 @@ import {
   OpsTable,
   OpsGrid,
   OpsGridCard,
+  OpsActionButton,
   buildTrend,
 } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
@@ -184,15 +185,9 @@ export default function IcuAllPatientsPage() {
       className: "text-right",
       enableHiding: false,
       cell: (p) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setSelectedPatient(p)}
-          className="gap-1"
-        >
-          <Eye className="h-4 w-4" />
-          View Details
-        </Button>
+        <div className="text-right">
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => setSelectedPatient(p)} />
+        </div>
       ),
     },
   ];

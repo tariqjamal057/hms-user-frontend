@@ -58,14 +58,16 @@ export function CancelListRow({
       <div>
         <CancelStatusBadge status={record.status} />
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 text-slate-400"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <MoreVertical className="h-4 w-4" />
-      </Button>
+      <div className="flex justify-end">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-slate-400"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

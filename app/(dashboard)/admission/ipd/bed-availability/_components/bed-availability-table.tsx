@@ -3,6 +3,7 @@
 
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OpsActionButton } from "@/components/operations";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from "@/components/ui/table";
@@ -81,9 +82,7 @@ export function BedAvailabilityTable({ records, onViewDetails }: BedAvailability
                   </TableCell>
                   <TableCell><AvailabilityStatusBadge status={status} /></TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => onViewDetails(r)} title="View">
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <OpsActionButton label="View" icon={Eye} onClick={() => onViewDetails(r)} />
                   </TableCell>
                 </TableRow>
               );
@@ -130,9 +129,7 @@ export function BedAvailabilityTable({ records, onViewDetails }: BedAvailability
                 <span className="text-xs font-medium text-slate-600">{pct.toFixed(2)}%</span>
               </div>
               <div className="flex justify-end border-t border-slate-100 pt-2">
-                <Button variant="ghost" size="sm" className="gap-1.5 text-blue-600" onClick={() => onViewDetails(r)}>
-                  <Eye className="h-4 w-4" /> View Details
-                </Button>
+                <OpsActionButton label="View Details" icon={Eye} onClick={() => onViewDetails(r)} />
               </div>
             </div>
           );
