@@ -6,6 +6,7 @@ import AppSidebar from "@/components/sidebar/AppSidebar";
 import Header from "@/components/navbar/Header";
 import { useAuth } from "@/providers/AuthProvider";
 import { useLayout } from "@/providers/LayoutProvider";
+import { useIsDesktop } from "@/hooks/use-media-query";
 
 export default function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAuth();
   const { sidebarCollapsed } = useLayout();
+  const isDesktop = useIsDesktop();
 
   if (loading) {
     return (
@@ -35,7 +37,7 @@ export default function DashboardLayout({
       <AppSidebar />
 
       <motion.div
-        animate={{ marginLeft: sidebarCollapsed ? 72 : 256 }}
+        animate={{ marginLeft: isDesktop ? (sidebarCollapsed ? 72 : 256) : 0 }}
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
         className="flex flex-1 flex-col"
       >

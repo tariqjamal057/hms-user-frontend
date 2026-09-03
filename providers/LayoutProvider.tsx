@@ -18,10 +18,26 @@ import type {
 
 export type { NotificationItem, CriticalAlert } from "@/lib/services/app-shell-service";
 
+const SIDEBAR_COLLAPSED_KEY = "hms_sidebar_collapsed";
+
+function readInitialCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const stored = window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return stored === "1";
+  } catch {
+    return false;
+  }
+}
+
 interface LayoutContextType {
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
   setSidebarCollapsed: (v: boolean) => void;
+
+  mobileSidebarOpen: boolean;
+  openMobileSidebar: () => void;
+  closeMobileSidebar: () => void;
 
   globalSearch: string;
   setGlobalSearch: (v: string) => void;
@@ -57,7 +73,8 @@ function formatDateTime() {
 }
 
 export function LayoutProvider({ children }: { children: ReactNode }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readInitialCollapsed);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [criticalAlerts, setCriticalAlerts] = useState<CriticalAlert[]>([]);
@@ -95,10 +112,24 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        SIDEBAR_COLLAPSED_KEY,
+        sidebarCollapsed ? "1" : "0"
+      );
+    } catch {
+      /* ignore storage errors */
+    }
+  }, [sidebarCollapsed]);
+
   const toggleSidebar = useCallback(
     () => setSidebarCollapsed((p) => !p),
     []
   );
+
+  const openMobileSidebar = useCallback(() => setMobileSidebarOpen(true), []);
+  const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
@@ -133,6 +164,9 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
       sidebarCollapsed,
       toggleSidebar,
       setSidebarCollapsed,
+      mobileSidebarOpen,
+      openMobileSidebar,
+      closeMobileSidebar,
       globalSearch,
       setGlobalSearch,
       notifications,
@@ -147,6 +181,10 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     [
       sidebarCollapsed,
       toggleSidebar,
+      setSidebarCollapsed,
+      mobileSidebarOpen,
+      openMobileSidebar,
+      closeMobileSidebar,
       globalSearch,
       notifications,
       unreadCount,

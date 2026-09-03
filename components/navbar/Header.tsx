@@ -21,6 +21,7 @@ import {
   LogOut,
   Mail,
   ShieldCheck,
+  Menu,
 } from "lucide-react";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -59,6 +60,9 @@ function getRoleLabel(role?: UserRole): string {
   return match ? match.label : role;
 }
 
+const IS_MAC =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+
 export default function Header() {
   const { user, setUser } = useAuth();
   const router = useRouter();
@@ -73,11 +77,13 @@ export default function Header() {
     criticalAlertCount,
     acknowledgeAlert,
     currentDateTime,
+    openMobileSidebar,
   } = useLayout();
 
   const [showAlerts, setShowAlerts] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const alertsRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const initials = user?.name
     ?.split(" ")
@@ -102,12 +108,30 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur-md">
       <div className="flex h-[72px] items-center justify-between px-6">
-        {/* Left — Hospital info */}
+        {/* Left — Hospital info + mobile hamburger */}
         <div className="flex items-center gap-3">
-          <div>
+          <button
+            onClick={openMobileSidebar}
+            className="grid h-9 w-9 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-500 transition-all duration-200 hover:bg-slate-50 lg:hidden"
+            title="Open menu"
+          >
+            <Menu size={18} />
+          </button>
+          <div className="hidden md:block">
             <p className="text-sm font-bold text-slate-800">
               {APP_CONFIG.hospitalName}
             </p>
@@ -120,7 +144,7 @@ export default function Header() {
         {/* Right — Search, Alerts, Notifications, Help, User */}
         <div className="flex items-center gap-2.5">
           {/* Global Search */}
-          <div className="relative">
+          <div className="relative hidden sm:block">
             <motion.div
               animate={{ width: searchFocused ? 380 : 300 }}
               transition={{ duration: 0.2 }}
@@ -131,6 +155,7 @@ export default function Header() {
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
@@ -138,7 +163,7 @@ export default function Header() {
                 onBlur={() => setSearchFocused(false)}
                 placeholder="Search patient, UHID, mobile, doctor..."
                 className={`
-                  w-full rounded-xl border bg-slate-50 py-2.5 pl-9 pr-3 text-xs
+                  w-full rounded-xl border bg-slate-50 py-2.5 pl-9 pr-9 text-xs
                   transition-all duration-200
                   ${
                     searchFocused
@@ -147,13 +172,18 @@ export default function Header() {
                   }
                 `}
               />
-              {globalSearch && (
+              {globalSearch ? (
                 <button
                   onClick={() => setGlobalSearch("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer rounded p-0.5 text-slate-400 hover:text-slate-600"
                 >
                   <X size={14} />
                 </button>
+              ) : (
+                <span className="absolute right-2.5 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded border border-slate-200 bg-slate-100 px-1 py-0.5 text-[10px] font-semibold text-slate-400 md:flex">
+                  <kbd>{IS_MAC ? "⌘" : "Ctrl"}</kbd>
+                  <span>K</span>
+                </span>
               )}
             </motion.div>
           </div>
