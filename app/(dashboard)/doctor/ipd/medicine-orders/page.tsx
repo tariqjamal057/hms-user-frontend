@@ -128,7 +128,7 @@ export default function MedicineOrdersPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
+    <div className="min-h-screen">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         <Card className="border-slate-200 shadow-sm">
           <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">

@@ -3,21 +3,24 @@
 
 import { useMemo, useState } from "react";
 import {
-  AlertTriangle, CalendarDays, CheckCircle2, Clock3, Grid2X2, IndianRupee,
-  LayoutList, ReceiptText, TestTube2,
+  AlertTriangle, CheckCircle2, Clock3, Eye, IndianRupee,
+  ReceiptText,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import { KpiCardProps } from "@/components/dashboard";
 import type {
   PathologyIpdOrder, PathologyIpdOrderFilters, PathologyIpdTestItem,
 } from "@/types/lab/pathology/pathology-ipd-types";
 import type { PathologyPaymentMethod } from "@/types/lab/pathology/pathology-opd-types";
 import {
-  PATHOLOGY_IPD_CATEGORIES, PATHOLOGY_IPD_DOCTORS, PATHOLOGY_IPD_ORDERS,
+  PATHOLOGY_IPD_DOCTORS, PATHOLOGY_IPD_ORDERS,
   getIpdAggregateStatus, getTotalIpdTestValue, hasUrgentTest,
 } from "@/lib/lab/pathology/pathology-ipd-orders-data";
-import { PathologyIpdStat } from "./_components/pathology-ipd-stats";
-import { PathologyIpdFilters } from "./_components/pathology-ipd-filters";
-import { PathologyIpdOrdersGrid, PathologyIpdOrdersList } from "./_components/pathology-ipd-orders-list";
+import { TestStatusBadge } from "../opd-orders/_components/pathology-status-badges";
+import { UrgencyBadge, IpdPaymentBadge } from "./_components/pathology-ipd-badges";
 import { PathologyIpdOrderDetailDrawer } from "./_components/pathology-ipd-order-detail-drawer";
 
 type ViewMode = "list" | "grid";
@@ -30,6 +33,13 @@ function dateToIso(value: string) {
   if (Number.isNaN(date.getTime())) return "";
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
+
+const previousDay = {
+  totalIncome: 6340,
+  totalOrders: 9,
+  reportsReady: 18,
+  pendingTests: 14,
+};
 
 export default function PathologyIpdOrdersPage() {
   const [orders, setOrders] = useState<PathologyIpdOrder[]>(PATHOLOGY_IPD_ORDERS);
@@ -59,6 +69,15 @@ export default function PathologyIpdOrdersPage() {
     return { totalIncome, totalOrders: orders.length, totalTests, reportsReady, pendingTests, urgentOrders, billsSentToDept };
   }, [orders]);
 
+  const dateOptions = useMemo(() => {
+    const dates = new Set<string>();
+    orders.forEach((order) => {
+      const iso = dateToIso(order.orderedAt);
+      if (iso) dates.add(iso);
+    });
+    return Array.from(dates).sort().reverse();
+  }, [orders]);
+
   function updateFilter<K extends keyof PathologyIpdOrderFilters>(key: K, value: PathologyIpdOrderFilters[K]) {
     setFilters((previous) => ({ ...previous, [key]: value }));
   }
@@ -85,48 +104,225 @@ export default function PathologyIpdOrdersPage() {
     toast.success(`Reports delivered for ${current?.patient.name ?? "patient"}. Bill sent to IPD Billing Department.`);
   }
 
+  const infoCards: KpiCardProps[] = [
+    { label: "Total Pathology Income", value: `₹${stats.totalIncome}`, icon: IndianRupee, accent: "emerald", footer: "Directly collected payments", trend: buildTrend(stats.totalIncome, previousDay.totalIncome) },
+    { label: "Total IPD Orders", value: String(stats.totalOrders), icon: ReceiptText, accent: "blue", footer: `${stats.totalTests} ordered tests`, trend: buildTrend(stats.totalOrders, previousDay.totalOrders) },
+    { label: "Reports Ready", value: String(stats.reportsReady), icon: CheckCircle2, accent: "violet", footer: "Finalized laboratory reports", trend: buildTrend(stats.reportsReady, previousDay.reportsReady) },
+    { label: "Pending / Billed to Dept.", value: `${stats.pendingTests} / ${stats.billsSentToDept}`, icon: Clock3, accent: "amber", footer: "Tests pending / bills sent to billing dept.", trend: buildTrend(stats.pendingTests, previousDay.pendingTests) },
+  ];
+
+  const columns: OpsColumn<PathologyIpdOrder>[] = [
+    {
+      key: "patient",
+      header: "Patient",
+      cell: (order) => (
+        <div>
+          <p className="font-semibold text-slate-800">{order.patient.name}</p>
+          <p className="text-xs text-slate-400">{order.patient.uhid}</p>
+        </div>
+      ),
+    },
+    {
+      key: "order",
+      header: "Order ID",
+      cell: (order) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{order.id}</p>
+          <p className="text-xs text-slate-400">{order.ipdId}</p>
+        </div>
+      ),
+    },
+    {
+      key: "ward",
+      header: "Ward / Bed",
+      cell: (order) => (
+        <div>
+          <span className="text-sm text-slate-600">{order.patient.ward}</span>
+          <p className="text-xs text-slate-400">{order.patient.room} · {order.patient.bed}</p>
+        </div>
+      ),
+    },
+    {
+      key: "doctor",
+      header: "Doctor",
+      cell: (order) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{order.doctor.name}</p>
+          <p className="text-xs text-slate-400">{order.doctor.specialty}</p>
+        </div>
+      ),
+    },
+    {
+      key: "orderedOn",
+      header: "Ordered On",
+      cell: (order) => <span className="text-sm text-slate-600">{order.orderedAt}</span>,
+    },
+    {
+      key: "tests",
+      header: "Tests",
+      cell: (order) => (
+        <span className="text-sm font-semibold text-slate-700">
+          {order.tests.length} test{order.tests.length !== 1 ? "s" : ""}
+        </span>
+      ),
+    },
+    {
+      key: "urgency",
+      header: "Urgency",
+      cell: (order) => <UrgencyBadge urgency={hasUrgentTest(order) ? "Urgent" : "Routine"} />,
+    },
+    {
+      key: "testValue",
+      header: "Test Value",
+      cell: (order) => <span className="text-sm font-bold text-slate-800">₹{getTotalIpdTestValue(order)}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (order) => <TestStatusBadge status={getIpdAggregateStatus(order)} />,
+    },
+    {
+      key: "payment",
+      header: "Payment",
+      cell: (order) => <IpdPaymentBadge status={order.paymentStatus} />,
+    },
+    {
+      key: "actions",
+      header: "Action",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (order) => (
+        <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)} className="border-violet-200 text-violet-700">
+          <Eye className="mr-1 h-4 w-4" />
+          View Details
+        </Button>
+      ),
+    },
+  ];
+
+  function renderCard(order: PathologyIpdOrder) {
+    return (
+      <OpsGridCard
+        avatar={order.patient.name.charAt(0).toUpperCase()}
+        title={order.patient.name}
+        subtitle={`${order.patient.uhid} · ${order.ipdId}`}
+        badge={<IpdPaymentBadge status={order.paymentStatus} />}
+        context={
+          <>
+            <p className="text-sm font-semibold text-slate-700">{order.doctor.name}</p>
+            <p className="mt-1 text-xs text-slate-500">{order.doctor.specialty} · {order.patient.ward} · {order.patient.bed}</p>
+          </>
+        }
+        stats={[
+          { label: "Total Tests", value: order.tests.length },
+          { label: "Total Value", value: `₹${getTotalIpdTestValue(order)}` },
+        ]}
+        footerTags={
+          <>
+            <TestStatusBadge status={getIpdAggregateStatus(order)} />
+            <UrgencyBadge urgency={hasUrgentTest(order) ? "Urgent" : "Routine"} />
+          </>
+        }
+        action={{
+          label: "Process Tests",
+          icon: Eye,
+          onClick: () => setSelectedOrder(order),
+        }}
+      />
+    );
+  }
+
+  const isAnyFilterActive = Boolean(
+    filters.search || filters.date || filters.doctor || filters.category ||
+    filters.status !== "All" || filters.urgency !== "All" || filters.paymentStatus !== "All"
+  );
+
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1600px] space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">Pathology IPD Orders</h1>
-              <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">Inpatient Queue</span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">Process ward-based diagnostic tests, finalize reports, and manage direct or department billing.</p>
-          </div>
+      <PageShellHeader
+        title="Pathology IPD Orders"
+        description="Process ward-based diagnostic tests, finalize reports, and manage direct or department billing."
+        meta={<span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">Inpatient Queue</span>}
+        actions={
           <div className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
             <AlertTriangle className="h-4 w-4" />
             {stats.urgentOrders} urgent order{stats.urgentOrders !== 1 ? "s" : ""}
           </div>
-        </header>
+        }
+      />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <PathologyIpdStat icon={<IndianRupee className="h-5 w-5" />} label="Total Pathology Income" value={`₹${stats.totalIncome}`} subtitle="Directly collected payments" tone="emerald" />
-          <PathologyIpdStat icon={<ReceiptText className="h-5 w-5" />} label="Total IPD Orders" value={String(stats.totalOrders)} subtitle={`${stats.totalTests} ordered tests`} tone="blue" />
-          <PathologyIpdStat icon={<CheckCircle2 className="h-5 w-5" />} label="Reports Ready" value={String(stats.reportsReady)} subtitle="Finalized laboratory reports" tone="violet" />
-          <PathologyIpdStat icon={<Clock3 className="h-5 w-5" />} label="Pending / Billed to Dept." value={`${stats.pendingTests} / ${stats.billsSentToDept}`} subtitle="Tests pending / bills sent to billing dept." tone="amber" />
-        </div>
+      <main className="py-6">
+        <StatsRow items={infoCards} />
 
-        <PathologyIpdFilters filters={filters} results={filteredOrders.length} doctors={PATHOLOGY_IPD_DOCTORS} categories={PATHOLOGY_IPD_CATEGORIES} onChange={updateFilter} onReset={() => setFilters(initialFilters)} />
-
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-500">Showing <span className="font-bold text-slate-800">{filteredOrders.length}</span> pathology IPD order{filteredOrders.length !== 1 ? "s" : ""}</p>
-          <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-            <button type="button" onClick={() => setView("list")} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view === "list" ? "bg-violet-50 text-violet-700" : "text-slate-500"}`}>
-              <LayoutList className="inline h-4 w-4" /> <span className="hidden sm:inline">List</span>
-            </button>
-            <button type="button" onClick={() => setView("grid")} className={`rounded-lg px-3 py-2 text-xs font-semibold ${view === "grid" ? "bg-violet-50 text-violet-700" : "text-slate-500"}`}>
-              <Grid2X2 className="inline h-4 w-4" /> <span className="hidden sm:inline">Grid</span>
-            </button>
-          </div>
+        <div className="my-6">
+          <FilterBar
+            search={filters.search}
+            searchPlaceholder="Patient, UHID, IPD ID, ward or bed..."
+            onSearch={(v) => updateFilter("search", v)}
+            canClear={isAnyFilterActive}
+            onClear={() => setFilters(initialFilters)}
+            viewSupported
+            viewMode={view}
+            onViewChange={setView}
+            filters={[
+              {
+                key: "doctor",
+                label: "Doctor",
+                placeholder: "All Doctors",
+                selected: filters.doctor,
+                options: [{ value: "", label: "All Doctors" }, ...PATHOLOGY_IPD_DOCTORS.map((d) => ({ value: d, label: d }))],
+              },
+              {
+                key: "status",
+                label: "Status",
+                placeholder: "All Status",
+                selected: filters.status,
+                options: [
+                  { value: "All", label: "All Status" },
+                  { value: "Ordered", label: "Ordered" },
+                  { value: "Sample Collected", label: "Sample Collected" },
+                  { value: "Processing", label: "Processing" },
+                  { value: "Report Ready", label: "Report Ready" },
+                ],
+              },
+              {
+                key: "urgency",
+                label: "Urgency",
+                placeholder: "All Urgency",
+                selected: filters.urgency,
+                options: [
+                  { value: "All", label: "All Urgency" },
+                  { value: "Routine", label: "Routine" },
+                  { value: "Urgent", label: "Urgent" },
+                ],
+              },
+              {
+                key: "date",
+                label: "Date",
+                placeholder: "All Dates",
+                selected: filters.date,
+                options: [{ value: "", label: "All Dates" }, ...dateOptions.map((d) => ({ value: d, label: d }))],
+              },
+              {
+                key: "paymentStatus",
+                label: "Payment",
+                placeholder: "All Payments",
+                selected: filters.paymentStatus,
+                options: [
+                  { value: "All", label: "All Payments" },
+                  { value: "Paid", label: "Paid" },
+                  { value: "Unpaid", label: "Unpaid" },
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => updateFilter(key as keyof PathologyIpdOrderFilters, value as never)}
+          />
         </div>
 
         {view === "list" ? (
-          <PathologyIpdOrdersList orders={filteredOrders} onView={setSelectedOrder} />
+          <OpsTable data={filteredOrders} rowKey={(o) => o.id} columns={columns} showColumnToggle />
         ) : (
-          <PathologyIpdOrdersGrid orders={filteredOrders} onView={setSelectedOrder} />
+          <OpsGrid data={filteredOrders} rowKey={(o) => o.id} renderCard={renderCard} pageSize={6} />
         )}
 
         <PathologyIpdOrderDetailDrawer
@@ -136,7 +332,8 @@ export default function PathologyIpdOrdersPage() {
           onCollectPayment={collectPayment}
           onSendToBillingDept={sendToBillingDept}
         />
-      </div>
+      </main>
     </div>
   );
 }
+

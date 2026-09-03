@@ -2,37 +2,40 @@
 "use client";
 import { useMemo, useState } from "react";
 import { BedDouble, CheckCircle2, Users, Wrench } from "lucide-react";
+import { PageShellHeader, StatsRow, FilterBar, buildTrend } from "@/components/operations";
+import { KpiCardProps } from "@/components/dashboard";
 import type { WardPatientFull } from "@/types/nurse-admin/ipd/ward-detail-types";
 import { ALL_WARDS, BEDS, WARD_PATIENTS_FULL } from "@/lib/nurse-admin/ipd/ward-detail-data";
-import { BedStat } from "./_components/beds-stats";
-import { BedsFilters, type BedFiltersState } from "./_components/beds-filters";
 import { BedLegend } from "./_components/bed-legend";
 import { WardBedGroup } from "./_components/ward-bed-group";
 import { PatientDetailDrawer } from "../all-ward-patients/_components/drawer/patient-detail-drawer";
 
-const initialFilters: BedFiltersState = { search: "", ward: "All", room: "All", status: "All" };
+const previousDay = { total: 48, available: 12, occupied: 30, maintenance: 6 };
 
 export default function BedsPage() {
   const [patients, setPatients] = useState<WardPatientFull[]>(WARD_PATIENTS_FULL);
-  const [filters, setFilters] = useState<BedFiltersState>(initialFilters);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [wardFilter, setWardFilter] = useState("All");
+  const [roomFilter, setRoomFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [viewingPatient, setViewingPatient] = useState<WardPatientFull | null>(null);
 
   const patientsByUhid = useMemo(() => new Map(patients.map((p) => [p.uhid, p])), [patients]);
 
   const availableRooms = useMemo(() => {
-    if (filters.ward === "All") return Array.from(new Set(BEDS.map((b) => b.room)));
-    return Array.from(new Set(BEDS.filter((b) => b.ward === filters.ward).map((b) => b.room)));
-  }, [filters.ward]);
+    if (wardFilter === "All") return Array.from(new Set(BEDS.map((b) => b.room)));
+    return Array.from(new Set(BEDS.filter((b) => b.ward === wardFilter).map((b) => b.room)));
+  }, [wardFilter]);
 
   const filteredBeds = useMemo(() => BEDS.filter((bed) => {
-    const query = filters.search.trim().toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
     const patient = bed.patientUhid ? patientsByUhid.get(bed.patientUhid) : undefined;
     const matchesSearch = !query || [bed.bedLabel, patient?.patientName ?? ""].join(" ").toLowerCase().includes(query);
-    const matchesWard = filters.ward === "All" || bed.ward === filters.ward;
-    const matchesRoom = filters.room === "All" || bed.room === filters.room;
-    const matchesStatus = filters.status === "All" || bed.status === filters.status;
+    const matchesWard = wardFilter === "All" || bed.ward === wardFilter;
+    const matchesRoom = roomFilter === "All" || bed.room === roomFilter;
+    const matchesStatus = statusFilter === "All" || bed.status === statusFilter;
     return matchesSearch && matchesWard && matchesRoom && matchesStatus;
-  }), [filters, patientsByUhid]);
+  }), [searchQuery, wardFilter, roomFilter, statusFilter, patientsByUhid]);
 
   const stats = useMemo(() => ({
     total: BEDS.length,
@@ -41,42 +44,78 @@ export default function BedsPage() {
     maintenance: BEDS.filter((b) => b.status === "Maintenance").length,
   }), []);
 
-  function updateFilter<K extends keyof BedFiltersState>(key: K, value: BedFiltersState[K]) {
-    setFilters((previous) => ({ ...previous, [key]: value, ...(key === "ward" ? { room: "All" } : {}) }));
-  }
-
   function handlePatientUpdate(updated: WardPatientFull) {
     setPatients((previous) => previous.map((p) => p.uhid === updated.uhid ? updated : p));
     setViewingPatient(updated);
   }
 
-  const wardsToRender = filters.ward === "All" ? ALL_WARDS : [filters.ward];
+  const infoCards: KpiCardProps[] = [
+    { label: "Total Beds", value: String(stats.total), icon: BedDouble, accent: "blue", footer: "Across all wards", trend: buildTrend(stats.total, previousDay.total) },
+    { label: "Available", value: String(stats.available), icon: CheckCircle2, accent: "emerald", footer: "Ready for new booking", trend: buildTrend(stats.available, previousDay.available) },
+    { label: "Occupied", value: String(stats.occupied), icon: Users, accent: "amber", footer: "Currently in use", trend: buildTrend(stats.occupied, previousDay.occupied) },
+    { label: "Maintenance", value: String(stats.maintenance), icon: Wrench, accent: "slate", footer: "Temporarily unavailable", trend: buildTrend(stats.maintenance, previousDay.maintenance) },
+  ];
+
+  const wardsToRender = wardFilter === "All" ? ALL_WARDS : [wardFilter];
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1700px] space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">Bed Availability</h1>
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">Ward & Room View</span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">Live occupancy map across all wards and rooms — hover a bed for patient info, click to view full details.</p>
-          </div>
-        </header>
+      <PageShellHeader
+        title="Bed Availability"
+        description="Live occupancy map across all wards and rooms — hover a bed for patient info, click to view full details."
+        meta={<span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">Ward & Room View</span>}
+      />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <BedStat icon={<BedDouble className="h-5 w-5" />} label="Total Beds" value={String(stats.total)} subtitle="Across all wards" tone="blue" />
-          <BedStat icon={<CheckCircle2 className="h-5 w-5" />} label="Available" value={String(stats.available)} subtitle="Ready for new booking" tone="emerald" />
-          <BedStat icon={<Users className="h-5 w-5" />} label="Occupied" value={String(stats.occupied)} subtitle="Currently in use" tone="amber" />
-          <BedStat icon={<Wrench className="h-5 w-5" />} label="Maintenance" value={String(stats.maintenance)} subtitle="Temporarily unavailable" tone="slate" />
+      <main className="py-6">
+        <StatsRow items={infoCards} />
+
+        <div className="my-6">
+          <FilterBar
+            search={searchQuery}
+            searchPlaceholder="Bed ID or patient name..."
+            onSearch={setSearchQuery}
+            canClear={searchQuery !== "" || wardFilter !== "All" || roomFilter !== "All" || statusFilter !== "All"}
+            onClear={() => { setSearchQuery(""); setWardFilter("All"); setRoomFilter("All"); setStatusFilter("All"); }}
+            filters={[
+              {
+                key: "ward",
+                label: "Filter by ward",
+                placeholder: "All Wards",
+                selected: wardFilter,
+                options: [{ value: "All", label: "All Wards" }, ...ALL_WARDS.map((w) => ({ value: w, label: w }))],
+              },
+              {
+                key: "room",
+                label: "Filter by room",
+                placeholder: "All Rooms",
+                selected: roomFilter,
+                options: [{ value: "All", label: "All Rooms" }, ...availableRooms.map((r) => ({ value: r, label: r }))],
+              },
+              {
+                key: "status",
+                label: "Filter by status",
+                placeholder: "All Statuses",
+                selected: statusFilter,
+                options: [
+                  { value: "All", label: "All Statuses" },
+                  { value: "Available", label: "Available" },
+                  { value: "Occupied", label: "Occupied" },
+                  { value: "Reserved", label: "Reserved" },
+                  { value: "Maintenance", label: "Maintenance" },
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => {
+              if (key === "ward") { setWardFilter(value); setRoomFilter("All"); }
+              if (key === "room") setRoomFilter(value);
+              if (key === "status") setStatusFilter(value);
+            }}
+          />
         </div>
-
-        <BedsFilters filters={filters} results={filteredBeds.length} wards={ALL_WARDS} rooms={availableRooms} onChange={updateFilter} onReset={() => setFilters(initialFilters)} />
 
         <BedLegend />
 
-        <div className="space-y-6">
+        <div className="mt-6 space-y-6">
           {wardsToRender.map((ward) => {
             const bedsInWard = filteredBeds.filter((b) => b.ward === ward);
             if (bedsInWard.length === 0) return null;
@@ -86,9 +125,10 @@ export default function BedsPage() {
             <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-16 text-center text-sm text-slate-400">No beds match the selected filters.</div>
           )}
         </div>
+      </main>
 
-        <PatientDetailDrawer patient={viewingPatient} onClose={() => setViewingPatient(null)} onPatientUpdate={handlePatientUpdate} />
-      </div>
+      <PatientDetailDrawer patient={viewingPatient} onClose={() => setViewingPatient(null)} onPatientUpdate={handlePatientUpdate} />
     </div>
   );
 }
+

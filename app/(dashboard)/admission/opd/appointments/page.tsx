@@ -1,22 +1,32 @@
-// app/admission-desk/opd/appointments/page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
-  Grid2X2,
   IndianRupee,
-  LayoutList,
   Plus,
-  Search,
   Users,
   UserPlus,
+  Eye,
+  RefreshCw,
+  Stethoscope,
+  Clock3,
+  Calendar,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-
+import {
+  PageShellHeader,
+  StatsRow,
+  FilterBar,
+  OpsTable,
+  OpsGrid,
+  OpsGridCard,
+  buildTrend,
+} from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import type { KpiCardProps } from "@/components/dashboard";
 import {
   APPOINTMENTS,
   SPECIALTIES,
@@ -29,15 +39,36 @@ import type {
 import { AppointmentDetailDrawer } from "./_components/appointment-detail-drawer";
 import { RescheduleAppointmentDrawer } from "./_components/reschedule-appointment-drawer";
 import { toast } from "sonner";
-import { Stat } from "./_components/stat";
-import { FilterSelect } from "./_components/filterSelect";
-import { AppointmentTable } from "./_components/appointmentTable";
-import { AppointmentGrid } from "./_components/appointmentGrid";
+import { StatusBadge } from "./_components/appointment-detail-drawer";
+
+type ViewMode = "list" | "grid";
+
+const previousDay = {
+  income: 178000,
+  total: 38,
+  monthNew: 18,
+  monthFollow: 14,
+};
+
+function formatAppointmentDate(date: string) {
+  if (!date) return "—";
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getTypeStyle(type: Appointment["appointmentType"]) {
+  return type === "New Registration"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : "border-violet-200 bg-violet-50 text-violet-700";
+}
 
 export default function AllAppointmentsPage() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>(APPOINTMENTS);
-  const [view, setView] = useState<"list" | "grid">("list");
+  const [view, setView] = useState<ViewMode>("list");
   const [filters, setFilters] = useState<AppointmentFilters>({
     search: "",
     type: "All",
@@ -48,6 +79,7 @@ export default function AllAppointmentsPage() {
   });
   const [detail, setDetail] = useState<Appointment | null>(null);
   const [rescheduling, setRescheduling] = useState<Appointment | null>(null);
+
   const visible = useMemo(
     () =>
       appointments.filter((a) => {
@@ -95,6 +127,17 @@ export default function AllAppointmentsPage() {
     setFilters((previous) => ({ ...previous, [key]: value }));
   }
 
+  function handleResetAll() {
+    setFilters({
+      search: "",
+      type: "All",
+      status: "All",
+      specialty: "All",
+      doctorId: "All",
+      date: "",
+    });
+  }
+
   function reschedule(date: string, slot: Appointment["slot"]) {
     if (!rescheduling) return;
     setAppointments((previous) =>
@@ -113,146 +156,290 @@ export default function AllAppointmentsPage() {
     toast.success("Appointment rescheduled successfully");
     setRescheduling(null);
   }
-  
-  return (
-    <div className="min-h-screen ">
-      <div className="mx-auto max-w-[1600px] space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+  const hasActiveFilters =
+    filters.search !== "" ||
+    filters.type !== "All" ||
+    filters.status !== "All" ||
+    filters.specialty !== "All" ||
+    filters.doctorId !== "All" ||
+    filters.date !== "";
+
+  const infoCards: KpiCardProps[] = [
+    {
+      label: "Total Income",
+      value: `₹${income.toLocaleString("en-IN")}`,
+      icon: IndianRupee,
+      accent: "blue",
+      footer: "Collected",
+      trend: buildTrend(income, previousDay.income),
+    },
+    {
+      label: "Total OPD Patients",
+      value: String(appointments.length),
+      icon: Users,
+      accent: "violet",
+      footer: "Registered",
+      trend: buildTrend(appointments.length, previousDay.total),
+    },
+    {
+      label: "This Month New Registration",
+      value: String(monthNew),
+      icon: UserPlus,
+      accent: "emerald",
+      footer: "New patients",
+      trend: buildTrend(monthNew, previousDay.monthNew),
+    },
+    {
+      label: "This Month Follow Up",
+      value: String(monthFollow),
+      icon: CalendarDays,
+      accent: "amber",
+      footer: "Returning",
+      trend: buildTrend(monthFollow, previousDay.monthFollow),
+    },
+  ];
+
+  const columns: OpsColumn<Appointment>[] = [
+    {
+      key: "patient",
+      header: "Patient",
+      cell: (a) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-sm font-bold text-white">
+            {a.patient.firstName[0]}
+            {a.patient.lastName[0]}
+          </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">
-              All OPD Appointments
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Manage patient registrations, consultations, bookings, and
-              reschedules.
+            <p className="font-semibold text-slate-800">
+              {a.patient.firstName} {a.patient.lastName}
+            </p>
+            <p className="text-xs text-slate-400">
+              {a.patient.age} yrs · {a.patient.gender}
             </p>
           </div>
+        </div>
+      ),
+    },
+    {
+      key: "ids",
+      header: "UHID / Appointment",
+      cell: (a) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{a.patient.uhid}</p>
+          <p className="text-xs text-slate-400">{a.id}</p>
+        </div>
+      ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      cell: (a) => (
+        <span className="text-sm text-slate-600">{a.appointmentType}</span>
+      ),
+    },
+    {
+      key: "doctor",
+      header: "Doctor / Specialty",
+      cell: (a) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{a.doctor.name}</p>
+          <p className="text-xs text-slate-400">{a.specialty}</p>
+        </div>
+      ),
+    },
+    {
+      key: "date",
+      header: "Date & Slot",
+      cell: (a) => (
+        <div>
+          <span className="text-sm text-slate-600">{a.appointmentDate}</span>
+          <p className="text-xs text-slate-400">
+            {a.slot.period}: {a.slot.startTime}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (a) => <StatusBadge status={getEffectiveStatus(a)} />,
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (a) => {
+        const status = getEffectiveStatus(a);
+        return (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDetail(a)}
+            >
+              <Eye className="mr-1 h-4 w-4" /> View
+            </Button>
+            {["Booked", "Waiting"].includes(status) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRescheduling(a)}
+                className="border-orange-200 text-orange-700 hover:bg-orange-50"
+              >
+                Reschedule
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  function renderCard(a: Appointment) {
+    const status = getEffectiveStatus(a);
+    const canReschedule = status === "Booked" || status === "Waiting";
+
+    return (
+      <OpsGridCard
+        avatar={`${a.patient.firstName.charAt(0)}${a.patient.lastName.charAt(0)}`}
+        title={`${a.patient.firstName} ${a.patient.lastName}`}
+        subtitle={a.patient.uhid}
+        badge={<StatusBadge status={status} />}
+        context={
+          <p className="text-sm font-semibold text-slate-700">{a.doctor.name} · {a.specialty}</p>
+        }
+        stats={[
+          { label: "Appointment Date", value: formatAppointmentDate(a.appointmentDate) },
+          { label: "Consultation Slot", value: a.slot.period },
+          { label: "Paid Amount", value: `₹${a.totalAmount.toLocaleString("en-IN")}` },
+          { label: "Payment", value: a.paymentMethod },
+        ]}
+        footerTags={
+          <Badge variant="outline" className={getTypeStyle(a.appointmentType)}>
+            <UserPlus className="mr-1 h-3 w-3" />
+            {a.appointmentType}
+          </Badge>
+        }
+        action={{
+          label: "View Details",
+          icon: Eye,
+          onClick: () => setDetail(a),
+        }}
+      >
+        {canReschedule && (
+          <Button
+            variant="outline"
+            className="mt-2 w-full gap-2 border-orange-200 text-orange-700 hover:bg-orange-50"
+            onClick={() => setRescheduling(a)}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Reschedule
+          </Button>
+        )}
+      </OpsGridCard>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <PageShellHeader
+        title="All OPD Appointments"
+        description="Manage patient registrations, consultations, bookings, and reschedules."
+        actions={
           <Button
             className="gap-2 bg-blue-600 hover:bg-blue-700"
             onClick={() => router.push("/admission/opd/book-appointments")}
           >
             <Plus className="h-4 w-4" /> Book Consultation
           </Button>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Stat
-            icon={<IndianRupee className="h-5 w-5" />}
-            label="Total Income"
-            value={`₹${income.toLocaleString("en-IN")}`}
-            tone="blue"
-            subtitle="Collected"
-          />
+        }
+      />
 
-          <Stat
-            icon={<Users className="h-5 w-5" />}
-            label="Total OPD Patients"
-            value={String(appointments.length)}
-            tone="violet"
-            subtitle="Registered"
-          />
+      <main className="py-6">
+        <StatsRow items={infoCards} />
 
-          <Stat
-            icon={<UserPlus className="h-5 w-5" />}
-            label="This Month New Registration"
-            value={String(monthNew)}
-            tone="emerald"
-            subtitle="New patients"
-          />
-
-          <Stat
-            icon={<CalendarDays className="h-5 w-5" />}
-            label="This Month Follow Up"
-            value={String(monthFollow)}
-            tone="amber"
-            subtitle="Returning"
-          />
-        </div>
-
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-              <div className="relative xl:col-span-2">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  className="pl-9"
-                  placeholder="Search name, UHID, mobile or appointment ID"
-                  value={filters.search}
-                  onChange={(e) => update("search", e.target.value)}
-                />
-              </div>
-              <FilterSelect
-                value={filters.type}
-                onChange={(v) =>
-                  update("type", v as AppointmentFilters["type"])
-                }
-                items={["All", "New Registration", "Follow-up"]}
-                placeholder="Patient type"
-              />
-              <FilterSelect
-                value={filters.status}
-                onChange={(v) =>
-                  update("status", v as AppointmentFilters["status"])
-                }
-                items={[
-                  "All",
-                  "Booked",
-                  "Waiting",
-                  "Checked In",
-                  "Completed",
-                  "Rescheduled",
-                ]}
-                placeholder="Status"
-              />
-              <FilterSelect
-                value={filters.specialty}
-                onChange={(v) => update("specialty", v)}
-                items={["All", ...SPECIALTIES.map((s) => s.name)]}
-                placeholder="Specialty"
-              />
-              <Input
+        <div className="my-6">
+          <FilterBar
+            search={filters.search}
+            onSearch={(v) => update("search", v)}
+            searchPlaceholder="Search name, UHID, mobile or appointment ID"
+            canClear={hasActiveFilters}
+            onClear={handleResetAll}
+            viewSupported
+            viewMode={view}
+            onViewChange={setView}
+            filters={[
+              {
+                key: "type",
+                label: "Patient type",
+                placeholder: "All Types",
+                selected: filters.type,
+                options: [
+                  { value: "All", label: "All Types" },
+                  { value: "New Registration", label: "New Registration" },
+                  { value: "Follow-up", label: "Follow-up" },
+                ],
+              },
+              {
+                key: "status",
+                label: "Status",
+                placeholder: "All Status",
+                selected: filters.status,
+                options: [
+                  { value: "All", label: "All Status" },
+                  { value: "Booked", label: "Booked" },
+                  { value: "Waiting", label: "Waiting" },
+                  { value: "Checked In", label: "Checked In" },
+                  { value: "Completed", label: "Completed" },
+                  { value: "Rescheduled", label: "Rescheduled" },
+                ],
+              },
+              {
+                key: "specialty",
+                label: "Specialty",
+                placeholder: "All Specialties",
+                selected: filters.specialty,
+                options: [
+                  { value: "All", label: "All Specialties" },
+                  ...SPECIALTIES.map((s) => ({ value: s.name, label: s.name })),
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => {
+              if (key === "type") update("type", value as AppointmentFilters["type"]);
+              if (key === "status") update("status", value as AppointmentFilters["status"]);
+              if (key === "specialty") update("specialty", value);
+            }}
+            extra={
+              <input
                 type="date"
                 value={filters.date}
                 onChange={(e) => update("date", e.target.value)}
+                className="h-9 rounded-lg border border-slate-200 px-3 text-sm"
               />
-            </div>
-            <div className="mt-4 flex items-center justify-between">
-              <p className="text-sm text-slate-500">
-                Showing{" "}
-                <span className="font-semibold text-slate-800">
-                  {visible.length}
-                </span>{" "}
-                appointments
-              </p>
-              <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-                <button
-                  onClick={() => setView("list")}
-                  className={`rounded-md p-2 ${view === "list" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
-                >
-                  <LayoutList className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setView("grid")}
-                  className={`rounded-md p-2 ${view === "grid" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
-                >
-                  <Grid2X2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            }
+          />
+        </div>
+
         {view === "list" ? (
-          <AppointmentTable
-            appointments={visible}
-            onView={setDetail}
-            onReschedule={setRescheduling}
+          <OpsTable
+            data={visible}
+            rowKey={(a) => a.id}
+            columns={columns}
+           
+            showColumnToggle
           />
         ) : (
-          <AppointmentGrid
-            appointments={visible}
-            onView={setDetail}
-            onReschedule={setRescheduling}
+          <OpsGrid
+            data={visible}
+            rowKey={(a) => a.id}
+            renderCard={renderCard}
+            pageSize={6}
           />
         )}
+
         <AppointmentDetailDrawer
           appointment={detail}
           onClose={() => setDetail(null)}
@@ -262,7 +449,8 @@ export default function AllAppointmentsPage() {
           onClose={() => setRescheduling(null)}
           onConfirm={reschedule}
         />
-      </div>
+      </main>
     </div>
   );
 }
+

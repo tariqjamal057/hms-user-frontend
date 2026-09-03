@@ -1,4 +1,3 @@
-// app/ipd/cancel-admission/page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -10,11 +9,17 @@ import {
   ShieldOff,
   MoreHorizontal,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { CancelStatCard } from "./_components/cancel-stat-card";
-import { CancelFilters } from "./_components/cancel-filters";
-import { CancelListRow } from "./_components/cancel-list-row";
+import {
+  PageShellHeader,
+  StatsRow,
+  FilterBar,
+  OpsTable,
+  buildTrend,
+} from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import type { KpiCardProps } from "@/components/dashboard";
 import { CancelDetailPanel } from "./_components/cancel-detail-panel";
+import { CancelStatusBadge } from "./_components/cancel-status-badge";
 
 import {
   CANCELLED_ADMISSIONS,
@@ -22,17 +27,21 @@ import {
   CANCEL_REASONS,
 } from "@/lib/cancel-admission-data";
 import type { CancelledAdmissionRecord } from "@/types/cancel-admission-types";
-import { TablePagination } from "../admission-list/_components/table-pagination";
+import { Button } from "@/components/ui/button";
+
+const previousDay = {
+  total: 28,
+  today: 1,
+  byPatient: 12,
+  byStaff: 6,
+  byOthers: 2,
+};
 
 export default function CancelAdmissionPage() {
-  const [dateFrom, setDateFrom] = useState("2024-05-01");
-  const [dateTo, setDateTo] = useState("2024-05-20");
   const [department, setDepartment] = useState("all");
   const [reason, setReason] = useState("all");
   const [cancelledBy, setCancelledBy] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [pageSize, setPageSize] = useState(10);
-  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<CancelledAdmissionRecord | null>(
     CANCELLED_ADMISSIONS[0],
   );
@@ -53,9 +62,6 @@ export default function CancelAdmissionPage() {
       );
     });
   }, [searchQuery, department, reason, cancelledBy]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const stats = useMemo(() => {
     const total = CANCELLED_ADMISSIONS.length;
@@ -85,121 +91,213 @@ export default function CancelAdmissionPage() {
     toast.success("Exporting cancelled admissions...");
   }
 
+  function handleResetFilters() {
+    setSearchQuery("");
+    setDepartment("all");
+    setReason("all");
+    setCancelledBy("all");
+  }
+
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    department !== "all" ||
+    reason !== "all" ||
+    cancelledBy !== "all";
+
+  const infoCards: KpiCardProps[] = [
+    {
+      label: "Total Cancelled",
+      value: String(stats.total),
+      icon: FileX,
+      accent: "blue",
+      footer: "All Time",
+      trend: buildTrend(stats.total, previousDay.total),
+    },
+    {
+      label: "Cancelled Today",
+      value: String(stats.today),
+      icon: CalendarX,
+      accent: "rose",
+      footer: "20 May 2024",
+      trend: buildTrend(stats.today, previousDay.today),
+    },
+    {
+      label: "By Patient/Family",
+      value: String(stats.byPatient),
+      icon: UserX,
+      accent: "amber",
+      footer: `${stats.byPatientPct}%`,
+      trend: buildTrend(stats.byPatient, previousDay.byPatient),
+    },
+    {
+      label: "By Staff",
+      value: String(stats.byStaff),
+      icon: ShieldOff,
+      accent: "violet",
+      footer: `${stats.byStaffPct}%`,
+      trend: buildTrend(stats.byStaff, previousDay.byStaff),
+    },
+    {
+      label: "By Others",
+      value: String(stats.byOthers),
+      icon: MoreHorizontal,
+      accent: "emerald",
+      footer: `${stats.byOthersPct}%`,
+      trend: buildTrend(stats.byOthers, previousDay.byOthers),
+    },
+  ];
+
+  const cancelledByOptions = useMemo(() => {
+    const set = new Set(CANCELLED_ADMISSIONS.map((r) => r.cancelledBy));
+    return Array.from(set).sort();
+  }, []);
+
+  const columns: OpsColumn<CancelledAdmissionRecord>[] = [
+    {
+      key: "requestId",
+      header: "Request ID",
+      cell: (r) => (
+        <div>
+          <p className="text-sm font-semibold text-blue-600">{r.requestId}</p>
+          <p className="text-xs text-slate-400">{r.uhid}</p>
+        </div>
+      ),
+    },
+    {
+      key: "patient",
+      header: "Patient Details",
+      cell: (r) => (
+        <div>
+          <p className="text-sm font-medium text-slate-800">{r.patientName}</p>
+          <p className="text-xs text-slate-400">
+            {r.age} Y / {r.gender}
+          </p>
+          <p className="text-xs text-slate-400">{r.mobile}</p>
+        </div>
+      ),
+    },
+    {
+      key: "department",
+      header: "Department",
+      cell: (r) => <span className="text-sm text-slate-600">{r.department}</span>,
+    },
+    {
+      key: "cancelledOn",
+      header: "Cancelled On",
+      cell: (r) => (
+        <div>
+          <p className="text-sm text-slate-700">
+            {r.cancelledOnDateTime.split(",")[0]}
+          </p>
+          <p className="text-xs text-slate-400">
+            {r.cancelledOnDateTime.split(",")[1]}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "cancelledBy",
+      header: "Cancelled By",
+      cell: (r) => (
+        <div>
+          <p className="text-sm text-slate-700">{r.cancelledBy}</p>
+          <p className="text-xs text-slate-400">{r.cancelledByName}</p>
+        </div>
+      ),
+    },
+    {
+      key: "reason",
+      header: "Reason",
+      cell: (r) => <span className="text-sm text-slate-600">{r.reason}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (r) => <CancelStatusBadge status={r.status} />,
+    },
+  ];
+
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1400px] space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-slate-800">
-              Cancelled Admissions
-            </h1>
-            <p className="text-xs text-slate-400">
-              Overview of cancelled admissions, reasons, and responsible parties.
-            </p>
-          </div>
-        </div>
+      <PageShellHeader
+        title="Cancelled Admissions"
+        description="Overview of cancelled admissions, reasons, and responsible parties."
+      />
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <CancelStatCard
-            icon={FileX}
-            label="Total Cancelled"
-            value={stats.total}
-            sublabel="All Time"
-            color="blue"
-          />
-          <CancelStatCard
-            icon={CalendarX}
-            label="Cancelled Today"
-            value={stats.today}
-            sublabel="20 May 2024"
-            color="red"
-          />
-          <CancelStatCard
-            icon={UserX}
-            label="By Patient/Family"
-            value={stats.byPatient}
-            sublabel={`${stats.byPatientPct}%`}
-            color="amber"
-          />
-          <CancelStatCard
-            icon={ShieldOff}
-            label="By Staff"
-            value={stats.byStaff}
-            sublabel={`${stats.byStaffPct}%`}
-            color="purple"
-          />
-          <CancelStatCard
-            icon={MoreHorizontal}
-            label="By Others"
-            value={stats.byOthers}
-            sublabel={`${stats.byOthersPct}%`}
-            color="emerald"
+      <main className="py-6">
+        <StatsRow items={infoCards} />
+
+        <div className="my-6">
+          <FilterBar
+            search={searchQuery}
+            onSearch={setSearchQuery}
+            searchPlaceholder="Search patient name, UHID, or request ID..."
+            canClear={hasActiveFilters}
+            onClear={handleResetFilters}
+            filters={[
+              {
+                key: "department",
+                label: "Department",
+                placeholder: "All Departments",
+                selected: department,
+                options: [
+                  { value: "all", label: "All Departments" },
+                  ...CANCEL_DEPARTMENTS.map((d) => ({ value: d, label: d })),
+                ],
+              },
+              {
+                key: "reason",
+                label: "Reason",
+                placeholder: "All Reasons",
+                selected: reason,
+                options: [
+                  { value: "all", label: "All Reasons" },
+                  ...CANCEL_REASONS.map((r) => ({ value: r, label: r })),
+                ],
+              },
+              {
+                key: "cancelledBy",
+                label: "Cancelled By",
+                placeholder: "All",
+                selected: cancelledBy,
+                options: [
+                  { value: "all", label: "All" },
+                  ...cancelledByOptions.map((c) => ({ value: c, label: c })),
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => {
+              if (key === "department") setDepartment(value);
+              if (key === "reason") setReason(value);
+              if (key === "cancelledBy") setCancelledBy(value);
+            }}
+            extra={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                className="gap-2"
+              >
+                Export
+              </Button>
+            }
           />
         </div>
-
-        {/* Filters */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="py-5">
-            <CancelFilters
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              onDateFromChange={setDateFrom}
-              onDateToChange={setDateTo}
-              department={department}
-              onDepartmentChange={setDepartment}
-              reason={reason}
-              onReasonChange={setReason}
-              cancelledBy={cancelledBy}
-              onCancelledByChange={setCancelledBy}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              departments={CANCEL_DEPARTMENTS}
-              reasons={CANCEL_REASONS}
-              onExport={handleExport}
-            />
-          </CardContent>
-        </Card>
 
         {/* Master-detail layout */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]">
-          {/* Master list */}
-          <Card className="overflow-hidden border-slate-200 shadow-sm">
-            <div className="hidden border-b border-slate-100 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-500 sm:grid sm:grid-cols-[100px_140px_110px_130px_150px_1fr_100px_28px] sm:gap-3">
-              <span>Request ID</span>
-              <span>Patient Details</span>
-              <span>Department</span>
-              <span>Cancelled On</span>
-              <span>Cancelled By</span>
-              <span>Reason</span>
-              <span>Status</span>
-              <span />
-            </div>
-            <div className="divide-y divide-slate-100 overflow-y-auto">
-              {paginated.map((r) => (
-                <CancelListRow
-                  key={r.requestId}
-                  record={r}
-                  isSelected={selected?.requestId === r.requestId}
-                  onSelect={setSelected}
-                />
-              ))}
-            </div>
-            <TablePagination
-              page={page}
-              totalPages={totalPages}
-              pageSize={pageSize}
-              totalEntries={filtered.length}
-              onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-            />
-          </Card>
+          <OpsTable
+            data={filtered}
+            rowKey={(r) => r.requestId}
+            columns={columns}
+           
+            onRowClick={(r) => setSelected(r)}
+          />
 
-          {/* Detail panel */}
           <CancelDetailPanel record={selected} />
         </div>
-      </div>
+      </main>
     </div>
   );
 }
+

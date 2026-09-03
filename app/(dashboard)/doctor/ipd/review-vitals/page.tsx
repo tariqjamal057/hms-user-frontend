@@ -124,7 +124,7 @@ export default function ReviewVitalsPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden ">
+    <div className="min-h-screen ">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         {/* Patient header bar */}
         <Card className="border-slate-200 shadow-sm">
@@ -428,3 +428,4 @@ function QuickAction({
     </button>
   );
 }
+

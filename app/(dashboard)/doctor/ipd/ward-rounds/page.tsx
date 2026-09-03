@@ -130,7 +130,7 @@ export default function DoctorWardRoundsPage() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden text-slate-800">
+    <div className="min-h-screen text-slate-800">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
@@ -741,3 +741,4 @@ function roundRecommendation(patients: WardRoundPatient[]) {
     ? `Review ${review.patientName} next — pending clinical observation and investigation results.`
     : "All assigned patients are stable. Continue with routine ward review.";
 }
+

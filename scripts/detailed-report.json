@@ -1,0 +1,88 @@
+{
+  "filesMissingUseClient": [
+    "hooks/use-mobile.ts"
+  ],
+  "alertFiles": [
+    "app/(dashboard)/doctor/opd/consultation/[uhid]/page.tsx",
+    "components/navbar/Header.tsx"
+  ],
+  "imageIssues": [
+    {
+      "file": "app/(dashboard)/lab/radiology/opd-orders/_components/radiology-orders-list.tsx",
+      "tag": "<Image className=\"mr-2 h-4 w-4\" />"
+    }
+  ],
+  "altIssues": [
+    {
+      "file": "app/(dashboard)/lab/radiology/opd-orders/_components/radiology-orders-list.tsx",
+      "tag": "<Image className=\"mr-2 h-4 w-4\" />"
+    }
+  ],
+  "emptyAlt": [],
+  "innerHTMLFiles": [],
+  "evalFiles": [],
+  "localStorageFiles": [
+    "lib/auth.ts",
+    "providers/LayoutProvider.tsx"
+  ],
+  "anyFiles": [
+    "components/ui/form.tsx"
+  ],
+  "tsIgnoreFiles": [],
+  "effectFiles": [
+    "app/(auth)/login/page.tsx",
+    "app/(dashboard)/admission/ipd/new-admission/_components/step2-package-payment.tsx",
+    "app/(dashboard)/admission/ipd/new-registration/page.tsx",
+    "app/(dashboard)/admission/opd/appointments/_components/reschedule-appointment-drawer.tsx",
+    "app/(dashboard)/doctor/ipd/discharge-decision/page.tsx",
+    "app/(dashboard)/doctor/ipd/investigation-orders/page.tsx",
+    "app/(dashboard)/doctor/ipd/investigation-orders/_components/add-investigation-dialog.tsx",
+    "app/(dashboard)/doctor/ipd/medicine-orders/page.tsx",
+    "app/(dashboard)/doctor/ipd/medicine-orders/_components/add-medicine-dialog.tsx",
+    "app/(dashboard)/doctor/ipd/progress-note/page.tsx",
+    "app/(dashboard)/doctor/ipd/treatment-plan/_components/treatment-plan-dialog.tsx",
+    "app/(dashboard)/doctor/ipd/ward-rounds/_components/change-patient-dialog.tsx",
+    "app/(dashboard)/lab/pathology/ipd-orders/_components/pathology-ipd-order-detail-drawer.tsx",
+    "app/(dashboard)/lab/pathology/opd-orders/_components/pathology-order-detail-drawer.tsx",
+    "app/(dashboard)/lab/radiology/ipd-orders/_components/radiology-ipd-order-detail-drawer.tsx",
+    "app/(dashboard)/lab/radiology/opd-orders/_components/radiology-order-detail-drawer.tsx",
+    "app/(dashboard)/layout.tsx",
+    "app/(dashboard)/nurseAdmin/ipd/new-admissions/_components/assign-nurse-drawer.tsx",
+    "app/(dashboard)/pharmacy/opd/orders/_components/pharmacy-order-detail-drawer.tsx",
+    "app/(dashboard)/rmo/emergency/all-patients/_components/rmo-action-menu.tsx",
+    "app/page.tsx",
+    "components/navbar/Header.tsx",
+    "components/sidebar/AppSidebar.tsx",
+    "components/ui/sidebar.tsx",
+    "providers/AuthProvider.tsx",
+    "providers/LayoutProvider.tsx",
+    "hooks/use-mobile.ts",
+    "hooks/useRoleGuard.ts"
+  ],
+  "iconButtonIssues": [
+    {
+      "file": "app/(dashboard)/doctor/icu/all-patients/[uhid]/_components/diagnosis-form.tsx",
+      "snippet": "<button type=\"button\" onClick={onClose} className=\"text-slate-400 hover:text-slate-600\">\r\n          <X className=\"h-5 w-5\" />\r\n        </button>"
+    },
+    {
+      "file": "app/(dashboard)/doctor/icu/all-patients/[uhid]/_components/lab-form.tsx",
+      "snippet": "<button type=\"button\" onClick={onClose} className=\"text-slate-400 hover:text-slate-600\">\r\n          <X className=\"h-5 w-5\" />\r\n        </button>"
+    },
+    {
+      "file": "app/(dashboard)/doctor/icu/all-patients/[uhid]/_components/medicine-form.tsx",
+      "snippet": "<button type=\"button\" onClick={onClose} className=\"text-slate-400 hover:text-slate-600\">\r\n          <X className=\"h-5 w-5\" />\r\n        </button>"
+    },
+    {
+      "file": "components/navbar/Header.tsx",
+      "snippet": "<button\n            onClick={openMobileSidebar}\n            className=\"grid h-9 w-9 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-500 transition-all duration-200 hover:bg-slate-50 lg:hidden\"\n            title=\"Open menu\"\n          >\n            <Menu size={18} />\n          </button>"
+    },
+    {
+      "file": "components/navbar/Header.tsx",
+      "snippet": "<button\n                className=\"grid h-9 w-9 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-500 transition-all duration-200 hover:bg-slate-50 hover:text-blue-600\"\n                title=\"Help & support\"\n              >\n                <CircleHelp size={16} />\n              </button>"
+    },
+    {
+      "file": "components/sidebar/AppSidebar.tsx",
+      "snippet": "<button\n          onClick={closeMobileSidebar}\n          className=\"relative ml-auto grid h-7 w-7 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600\"\n          title=\"Close sidebar\"\n        >\n          <X size={16} />\n        </button>"
+    }
+  ]
+}

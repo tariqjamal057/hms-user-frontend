@@ -1,26 +1,27 @@
 // app/(dashboard)/doctor/emergency/all-patients/page.tsx
 "use client";
 import { useMemo, useState } from "react";
-import { Grid2X2, LayoutList, ShieldAlert, Siren, Stethoscope, Users } from "lucide-react";
-import type { VisibilityState } from "@tanstack/react-table";
-import { DataTable } from "@/components/ui/data-table";
+import { ShieldAlert, Siren, Stethoscope, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { EmergencyFilters, EmergencyPatient } from "@/types/emergency/emergency-types";
+import type { EmergencyFilters } from "@/types/emergency/emergency-types";
 import type { RmoEmergencyPatient } from "@/types/emergency/rmo-emergency-types";
-import { EMERGENCY_PATIENTS } from "@/lib/emergency/emergency-data";
-import { EmergencyStat } from "@/app/(dashboard)/admission/emergency/all-patients/_components/emergency-stats";
-import { AllEmergencyFilters } from "@/app/(dashboard)/admission/emergency/all-patients/_components/emergency-filters";
+import { EMERGENCY_PATIENTS, EMERGENCY_STATUS_OPTIONS, INCIDENT_TYPE_OPTIONS } from "@/lib/emergency/emergency-data";
 import { EmergencyStatusBadge } from "@/app/(dashboard)/admission/emergency/all-patients/_components/emergency-badges";
 import { RmoPatientDetailsDrawer } from "@/app/(dashboard)/rmo/emergency/all-patients/_components/rmo-patient-details-drawer";
-import { PharmacyIpdColumnToggle as ColumnToggle } from "@/app/(dashboard)/pharmacy/ipd/orders/_components/pharmacy-ipd-column-toggle";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import { KpiCardProps } from "@/components/dashboard";
+
+type ViewMode = "list" | "grid";
 
 const initialFilters: EmergencyFilters = { search: "", status: "All", incidentType: "All" };
+
+const previousDay = { total: 13, critical: 2, underObservation: 4, unassigned: 3, police: 1 };
 
 export default function DoctorEmergencyAllPatientsPage() {
   const [patients, setPatients] = useState<RmoEmergencyPatient[]>(EMERGENCY_PATIENTS.map((p) => ({ ...p, criticalNotifications: [] })));
   const [filters, setFilters] = useState<EmergencyFilters>(initialFilters);
-  const [view, setView] = useState<"table" | "grid">("table");
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [drawerPatient, setDrawerPatient] = useState<RmoEmergencyPatient | null>(null);
 
   const filtered = useMemo(
@@ -52,114 +53,154 @@ export default function DoctorEmergencyAllPatientsPage() {
     setDrawerPatient(updated);
   }
 
-  const columns = useMemo(
-    () => [
-      {
-        id: "Patient",
-        accessorKey: "patientName",
-        header: "Patient",
-        cell: ({ row }: { row: { original: RmoEmergencyPatient } }) => (
-          <div>
-            <p className="font-semibold text-slate-800">{row.original.patientName || "Unidentified"}</p>
-            <p className="text-xs text-slate-400">{row.original.uhid}</p>
-          </div>
-        ),
-      },
-      { id: "Emergency No.", accessorKey: "emergencyNumber", header: "Emergency No." },
-      { id: "Incident", accessorKey: "incidentType", header: "Incident" },
-      {
-        id: "Attending Doctor",
-        accessorKey: "attendingDoctor",
-        header: "Attending Doctor",
-        cell: ({ row }: { row: { original: RmoEmergencyPatient } }) => (
-          <span className={row.original.attendingDoctor === "Unassigned" ? "font-semibold text-amber-600" : "text-slate-600"}>
-            {row.original.attendingDoctor}
-          </span>
-        ),
-      },
-      {
-        id: "Status",
-        header: "Status",
-        cell: ({ row }: { row: { original: RmoEmergencyPatient } }) => <EmergencyStatusBadge status={row.original.status} />,
-      },
-      {
-        id: "Action",
-        header: "Action",
-        enableHiding: false,
-        cell: ({ row }: { row: { original: RmoEmergencyPatient } }) => (
-          <div>
-            <Button variant="outline" size="sm" className="gap-1" onClick={() => setDrawerPatient(row.original)}>
-              <Stethoscope className="h-4 w-4" />View Details
-            </Button>
-          </div>
-        ),
-      },
-    ],
-    [],
-  );
+  const isActive = filters.search !== "" || filters.status !== "All" || filters.incidentType !== "All";
 
-  const columnIds = useMemo(() => columns.map((column) => column.id as string).filter(Boolean), [columns]);
+  const infoCards: KpiCardProps[] = [
+    { label: "Total Patients", value: String(stats.total), icon: Users, accent: "blue", footer: "Emergency census", trend: buildTrend(stats.total, previousDay.total) },
+    { label: "Critical", value: String(stats.critical), icon: Siren, accent: "rose", footer: "Immediate attention", trend: buildTrend(stats.critical, previousDay.critical) },
+    { label: "Under Observation", value: String(stats.underObservation), icon: Stethoscope, accent: "amber", footer: "Being monitored", trend: buildTrend(stats.underObservation, previousDay.underObservation) },
+    { label: "Unassigned to Me", value: String(stats.unassigned), icon: Users, accent: "violet", footer: "Need assignment", trend: buildTrend(stats.unassigned, previousDay.unassigned) },
+    { label: "Police Cases", value: String(stats.police), icon: ShieldAlert, accent: "slate", footer: "MLC cases", trend: buildTrend(stats.police, previousDay.police) },
+  ];
+
+  const columns: OpsColumn<RmoEmergencyPatient>[] = [
+    {
+      key: "patient",
+      header: "Patient",
+      cell: (p) => (
+        <div>
+          <p className="font-semibold text-slate-800">{p.patientName || "Unidentified"}</p>
+          <p className="text-xs text-slate-400">{p.uhid}</p>
+        </div>
+      ),
+    },
+    {
+      key: "emergencyNumber",
+      header: "Emergency No.",
+      cell: (p) => <span className="text-sm text-slate-600">{p.emergencyNumber}</span>,
+    },
+    {
+      key: "incidentType",
+      header: "Incident",
+      cell: (p) => <span className="text-sm text-slate-600">{p.incidentType}</span>,
+    },
+    {
+      key: "attendingDoctor",
+      header: "Attending Doctor",
+      cell: (p) => (
+        <span className={p.attendingDoctor === "Unassigned" ? "font-semibold text-amber-600" : "text-sm text-slate-600"}>
+          {p.attendingDoctor}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (p) => <EmergencyStatusBadge status={p.status} />,
+    },
+    {
+      key: "action",
+      header: "Action",
+      enableHiding: false,
+      cell: (p) => (
+        <Button variant="outline" size="sm" className="gap-1" onClick={() => setDrawerPatient(p)}>
+          <Stethoscope className="h-4 w-4" />View Details
+        </Button>
+      ),
+    },
+  ];
+
+  function renderCard(p: RmoEmergencyPatient) {
+    return (
+      <OpsGridCard
+        avatar={p.patientName ? p.patientName.charAt(0).toUpperCase() : "U"}
+        title={p.patientName || "Unidentified"}
+        subtitle={`${p.uhid} · ${p.emergencyNumber}`}
+        badge={<EmergencyStatusBadge status={p.status} />}
+        context={
+          <>
+            <p className="text-sm text-slate-600">Doctor: {p.attendingDoctor}</p>
+            <p className="mt-1 text-sm text-slate-600">Incident: {p.incidentType}</p>
+          </>
+        }
+        action={{
+          label: "View Details",
+          icon: Stethoscope,
+          onClick: () => setDrawerPatient(p),
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1700px] space-y-6">
-        <header>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">Emergency Patients</h1>
-            <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">Doctor</span>
-          </div>
-          <p className="mt-1 text-sm text-slate-500">Review clinical records, order investigations, add treatment plans, and manage emergency status.</p>
-        </header>
+      <PageShellHeader
+        title="Emergency Patients"
+        description="Review clinical records, order investigations, add treatment plans, and manage emergency status."
+        meta={
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">Doctor</span>
+        }
+      />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <EmergencyStat icon={<Users className="h-5 w-5" />} label="Total Patients" value={String(stats.total)} subtitle="Emergency census" tone="blue" />
-          <EmergencyStat icon={<Siren className="h-5 w-5" />} label="Critical" value={String(stats.critical)} subtitle="Immediate attention" tone="rose" />
-          <EmergencyStat icon={<Stethoscope className="h-5 w-5" />} label="Under Observation" value={String(stats.underObservation)} subtitle="Being monitored" tone="amber" />
-          <EmergencyStat icon={<Users className="h-5 w-5" />} label="Unassigned to Me" value={String(stats.unassigned)} subtitle="Need assignment" tone="violet" />
-          <EmergencyStat icon={<ShieldAlert className="h-5 w-5" />} label="Police Cases" value={String(stats.police)} subtitle="MLC cases" tone="slate" />
+      <main className="py-6">
+        <StatsRow items={infoCards} />
+
+        <div className="my-6">
+          <FilterBar
+            search={filters.search}
+            onSearch={(value) => setFilters((f) => ({ ...f, search: value }))}
+            searchPlaceholder="Patient, UHID, or Emergency No..."
+            canClear={isActive}
+            onClear={() => setFilters(initialFilters)}
+            viewSupported
+            viewMode={viewMode}
+            onViewChange={setViewMode}
+            filters={[
+              {
+                key: "status",
+                label: "Filter by status",
+                selected: filters.status,
+                options: [
+                  { value: "All", label: "All Statuses" },
+                  ...EMERGENCY_STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
+                ],
+              },
+              {
+                key: "incidentType",
+                label: "Filter by incident",
+                selected: filters.incidentType,
+                options: [
+                  { value: "All", label: "All Incidents" },
+                  ...INCIDENT_TYPE_OPTIONS.map((t) => ({ value: t, label: t })),
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => {
+              setFilters((f) => ({ ...f, [key]: value }));
+            }}
+          />
         </div>
 
-        <AllEmergencyFilters filters={filters} results={filtered.length} onChange={(key, value) => setFilters((f) => ({ ...f, [key]: value }))} onReset={() => setFilters(initialFilters)} />
-
-        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-          {view === "table" && (
-            <ColumnToggle columnIds={columnIds} visibility={columnVisibility as Record<string, boolean>} onToggle={(id, visible) => setColumnVisibility((prev) => ({ ...prev, [id]: visible }))} />
-          )}
-          <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-            <button onClick={() => setView("table")} className={`rounded-lg px-3 py-2 text-xs ${view === "table" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}>
-              <LayoutList className="inline h-4 w-4" /> Table
-            </button>
-            <button onClick={() => setView("grid")} className={`rounded-lg px-3 py-2 text-xs ${view === "grid" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}>
-              <Grid2X2 className="inline h-4 w-4" /> Grid
-            </button>
-          </div>
-        </div>
-
-        {view === "table" ? (
-          <DataTable columns={columns} data={filtered} columnVisibility={columnVisibility} onColumnVisibilityChange={setColumnVisibility} pageSize={8} />
+        {viewMode === "list" ? (
+          <OpsTable
+            data={filtered}
+            rowKey={(p) => p.emergencyNumber}
+            columns={columns}
+           
+            showColumnToggle
+          />
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((p) => (
-              <div key={p.emergencyNumber} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex justify-between gap-3">
-                  <div>
-                    <p className="font-bold text-slate-800">{p.patientName || "Unidentified"}</p>
-                    <p className="text-xs text-slate-400">{p.uhid} · {p.emergencyNumber}</p>
-                  </div>
-                  <EmergencyStatusBadge status={p.status} />
-                </div>
-                <p className="mt-3 text-sm text-slate-600">Doctor: {p.attendingDoctor}</p>
-                <p className="text-sm text-slate-600">Incident: {p.incidentType}</p>
-                <Button variant="outline" className="mt-4 w-full gap-2" onClick={() => setDrawerPatient(p)}>
-                  <Stethoscope className="h-4 w-4" />View Details
-                </Button>
-              </div>
-            ))}
-          </div>
+          <OpsGrid
+            data={filtered}
+            rowKey={(p) => p.emergencyNumber}
+            renderCard={renderCard}
+            pageSize={6}
+          />
         )}
 
         <RmoPatientDetailsDrawer patient={drawerPatient} onClose={() => setDrawerPatient(null)} onUpdate={updatePatient} />
-      </div>
+      </main>
     </div>
   );
 }
+

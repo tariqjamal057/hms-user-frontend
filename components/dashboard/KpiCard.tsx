@@ -61,6 +61,12 @@ const ACCENTS: Record<KpiAccent, {
     label: "text-violet-600",
     bg: "bg-gradient-to-b from-violet-50 via-white to-white",
   },
+  slate: {
+    icon: "bg-gradient-to-br from-slate-500 to-slate-600 text-white shadow-sm shadow-slate-500/30",
+    top: "[&::before]:from-slate-500 [&::before]:to-slate-400",
+    label: "text-slate-600",
+    bg: "bg-gradient-to-b from-slate-50 via-white to-white",
+  },
 };
 
 function resolveTrend(trend: KpiCardProps["trend"]) {

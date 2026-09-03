@@ -1,0 +1,230 @@
+{
+  "summary": {
+    "totalSourceFiles": 558,
+    "missingUseClient": 1,
+    "sidebarLinks": 55,
+    "existingRoutes": 69,
+    "zodFiles": 7,
+    "refHtmlFiles": 10,
+    "brandWarnings": 4,
+    "securityWarnings": 0
+  },
+  "issues": [],
+  "warnings": [
+    {
+      "category": "brand",
+      "file": "app/layout.tsx",
+      "message": "Mentions brand \"LTC HMS\""
+    },
+    {
+      "category": "brand",
+      "file": "components/auth/LoginForm.tsx",
+      "message": "Mentions brand \"Leads Health Care\""
+    },
+    {
+      "category": "brand",
+      "file": "components/navbar/Header.tsx",
+      "message": "Mentions brand \"LTC HMS\""
+    },
+    {
+      "category": "brand",
+      "file": "config/app.ts",
+      "message": "Mentions brand \"LTC HMS\""
+    },
+    {
+      "category": "typescript",
+      "file": "components/ui/form.tsx",
+      "message": "Uses 'any' type 3 times"
+    },
+    {
+      "category": "memory",
+      "file": "app/(auth)/login/page.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/admission/ipd/new-admission/_components/step2-package-payment.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/admission/ipd/new-registration/page.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/admission/opd/appointments/_components/reschedule-appointment-drawer.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/doctor/ipd/discharge-decision/page.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/doctor/ipd/investigation-orders/page.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/doctor/ipd/investigation-orders/_components/add-investigation-dialog.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/doctor/ipd/medicine-orders/page.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/doctor/ipd/medicine-orders/_components/add-medicine-dialog.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/doctor/ipd/progress-note/page.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/doctor/ipd/treatment-plan/_components/treatment-plan-dialog.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/doctor/ipd/ward-rounds/_components/change-patient-dialog.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/lab/pathology/ipd-orders/_components/pathology-ipd-order-detail-drawer.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/lab/pathology/opd-orders/_components/pathology-order-detail-drawer.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/lab/radiology/ipd-orders/_components/radiology-ipd-order-detail-drawer.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/lab/radiology/opd-orders/_components/radiology-order-detail-drawer.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/layout.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/nurseAdmin/ipd/new-admissions/_components/assign-nurse-drawer.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/pharmacy/opd/orders/_components/pharmacy-order-detail-drawer.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/(dashboard)/rmo/emergency/all-patients/_components/rmo-action-menu.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "app/page.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "components/navbar/Header.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "components/sidebar/AppSidebar.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "components/ui/sidebar.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "providers/AuthProvider.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "providers/LayoutProvider.tsx",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "hooks/use-mobile.ts",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "memory",
+      "file": "hooks/useRoleGuard.ts",
+      "message": "Contains useEffect (verify cleanup)"
+    },
+    {
+      "category": "duplicate-route",
+      "file": "lib/doctor/icu/doctor-icu-data.ts, lib/doctor/icu/doctor-icu-data.ts, lib/doctor/icu/doctor-icu-data.ts, lib/doctor/icu/doctor-icu-data.ts, lib/doctor/icu/doctor-icu-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/nurse/icu/nurse-icu-data.ts, lib/nurse/icu/nurse-icu-data.ts, lib/nurse/icu/nurse-icu-data.ts, lib/nurse/icu/nurse-icu-data.ts, lib/nurse/icu/nurse-icu-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/pharmacy/emergency/pharmacy-emergency-order-data.ts, lib/pharmacy/emergency/pharmacy-emergency-order-data.ts, lib/pharmacy/icu/pharmacy-icu-order-data.ts, lib/pharmacy/icu/pharmacy-icu-order-data.ts, lib/pharmacy/icu/pharmacy-icu-order-data.ts, lib/pharmacy/icu/pharmacy-icu-order-data.ts, lib/pharmacy/ipd/pharmacy-ipd-order-data.ts, lib/pharmacy/ipd/pharmacy-ipd-order-data.ts, lib/pharmacy/ipd/pharmacy-ipd-order-data.ts, lib/pharmacy/ipd/pharmacy-ipd-order-data.ts, lib/pharmacy/ipd/pharmacy-ipd-order-data.ts, lib/pharmacy/ipd/pharmacy-ipd-order-data.ts, lib/pharmacy/ipd/pharmacy-ipd-order-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, sample-data/pharmacy-orders.ts, sample-data/pharmacy-orders.ts",
+      "message": "Route \"Oral\" defined in multiple files"
+    },
+    {
+      "category": "duplicate-route",
+      "file": "lib/doctor/icu/doctor-icu-data.ts, lib/doctor/icu/doctor-icu-data.ts, lib/doctor/icu/doctor-icu-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/medicine-orders-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/doctor/ipd/ward-round-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/emergency/emergency-data.ts, lib/nurse/icu/nurse-icu-data.ts, lib/nurse/icu/nurse-icu-data.ts, lib/nurse/icu/nurse-icu-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/pharmacy/emergency/pharmacy-emergency-order-data.ts, lib/pharmacy/emergency/pharmacy-emergency-order-data.ts, lib/pharmacy/emergency/pharmacy-emergency-order-data.ts, lib/pharmacy/emergency/pharmacy-emergency-order-data.ts, lib/pharmacy/icu/pharmacy-icu-order-data.ts, lib/pharmacy/icu/pharmacy-icu-order-data.ts, lib/pharmacy/ipd/pharmacy-ipd-order-data.ts, lib/pharmacy/ipd/pharmacy-ipd-order-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts, sample-data/pharmacy-orders.ts",
+      "message": "Route \"IV\" defined in multiple files"
+    },
+    {
+      "category": "duplicate-route",
+      "file": "lib/nurse/icu/nurse-icu-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse/ipd/nurse-ipd-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/nurse-admin/ipd/ward-detail-data.ts, lib/rmo/ipd/rmo-data.ts, lib/rmo/ipd/rmo-data.ts",
+      "message": "Route \"Urine\" defined in multiple files"
+    },
+    {
+      "category": "duplicate-route",
+      "file": "lib/nurse/icu/nurse-icu-data.ts, lib/nurse/ipd/nurse-ipd-data.ts",
+      "message": "Route \"Drain\" defined in multiple files"
+    }
+  ],
+  "info": [
+    {
+      "category": "scan",
+      "message": "Scanned 558 source files"
+    },
+    {
+      "category": "useClient",
+      "message": "1 files use React hooks without 'use client' directive"
+    },
+    {
+      "category": "routes",
+      "message": "Found 69 existing routes in app/"
+    },
+    {
+      "category": "zod",
+      "message": "Found 7 files referencing zod"
+    },
+    {
+      "category": "gitignore",
+      "message": "*.tsbuildinfo is present in .gitignore"
+    },
+    {
+      "category": "reference",
+      "message": "Found 10 reference HTML files in E:\\Client\\hms\\reference-files"
+    },
+    {
+      "category": "data",
+      "message": "sample-data files: 9, lib data files: 54"
+    }
+  ]
+}

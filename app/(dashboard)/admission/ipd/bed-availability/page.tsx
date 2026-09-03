@@ -1,19 +1,45 @@
-
 "use client";
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { BedDouble, CheckCircle2, Bed, Wrench, RefreshCw, Download } from "lucide-react";
+import {
+  BedDouble,
+  CheckCircle2,
+  Bed,
+  Wrench,
+  RefreshCw,
+  Download,
+  Eye,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BedStatCard } from "./_components/bed-stat-card";
-import { BedFilters } from "./_components/bed-filters";
-import { BedAvailabilityTable } from "./_components/bed-availability-table";
+import { Progress } from "@/components/ui/progress";
+import {
+  PageShellHeader,
+  StatsRow,
+  FilterBar,
+  OpsTable,
+  buildTrend,
+} from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import type { KpiCardProps } from "@/components/dashboard";
 import { AvailabilityOverviewChart } from "./_components/availability-overview-chart";
 import { QuickInfoPanel } from "./_components/quick-info-panel";
-import { getAvailabilityStatus } from "./_components/availability-status-badge";
-import { BED_AVAILABILITY } from "@/lib/bed-availability-data";
+import { AvailabilityStatusBadge, getAvailabilityStatus } from "./_components/availability-status-badge";
+import { BED_AVAILABILITY, DEPARTMENT_ICONS } from "@/lib/bed-availability-data";
 import type { DepartmentBedAvailability } from "@/types/bed-availability-types";
+
+const previousDay = {
+  totalBeds: 155,
+  available: 42,
+  occupied: 98,
+  blocked: 15,
+};
+
+function progressBarColor(pct: number) {
+  if (pct >= 20) return "bg-emerald-500";
+  if (pct >= 10) return "bg-amber-500";
+  return "bg-red-500";
+}
 
 export default function BedAvailabilityPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,10 +50,22 @@ export default function BedAvailabilityPage() {
   const [status, setStatus] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
 
-  const departments = useMemo(() => Array.from(new Set(BED_AVAILABILITY.map((r) => r.department))), []);
-  const wardTypes = useMemo(() => Array.from(new Set(BED_AVAILABILITY.map((r) => r.wardUnit))), []);
-  const floors = useMemo(() => Array.from(new Set(BED_AVAILABILITY.map((r) => r.floor))), []);
-  const bedTypes = useMemo(() => Array.from(new Set(BED_AVAILABILITY.map((r) => r.bedType))), []);
+  const departments = useMemo(
+    () => Array.from(new Set(BED_AVAILABILITY.map((r) => r.department))),
+    [],
+  );
+  const wardTypes = useMemo(
+    () => Array.from(new Set(BED_AVAILABILITY.map((r) => r.wardUnit))),
+    [],
+  );
+  const floors = useMemo(
+    () => Array.from(new Set(BED_AVAILABILITY.map((r) => r.floor))),
+    [],
+  );
+  const bedTypes = useMemo(
+    () => Array.from(new Set(BED_AVAILABILITY.map((r) => r.bedType))),
+    [],
+  );
 
   const filtered = useMemo(() => {
     return BED_AVAILABILITY.filter((r) => {
@@ -40,8 +78,16 @@ export default function BedAvailabilityPage() {
       const matchesFloor = floor === "all" || r.floor === floor;
       const matchesBedType = bedType === "all" || r.bedType === bedType;
       const pct = r.totalBeds ? (r.available / r.totalBeds) * 100 : 0;
-      const matchesStatus = status === "all" || getAvailabilityStatus(pct) === status;
-      return matchesSearch && matchesDept && matchesWard && matchesFloor && matchesBedType && matchesStatus;
+      const matchesStatus =
+        status === "all" || getAvailabilityStatus(pct) === status;
+      return (
+        matchesSearch &&
+        matchesDept &&
+        matchesWard &&
+        matchesFloor &&
+        matchesBedType &&
+        matchesStatus
+      );
     });
   }, [searchQuery, department, wardType, floor, bedType, status]);
 
@@ -53,13 +99,19 @@ export default function BedAvailabilityPage() {
         available: acc.available + r.available,
         blocked: acc.blocked + r.blocked,
       }),
-      { totalBeds: 0, occupied: 0, available: 0, blocked: 0 }
+      { totalBeds: 0, occupied: 0, available: 0, blocked: 0 },
     );
   }, []);
 
-  const availablePct = totals.totalBeds ? (totals.available / totals.totalBeds) * 100 : 0;
-  const occupiedPct = totals.totalBeds ? (totals.occupied / totals.totalBeds) * 100 : 0;
-  const blockedPct = totals.totalBeds ? (totals.blocked / totals.totalBeds) * 100 : 0;
+  const availablePct = totals.totalBeds
+    ? (totals.available / totals.totalBeds) * 100
+    : 0;
+  const occupiedPct = totals.totalBeds
+    ? (totals.occupied / totals.totalBeds) * 100
+    : 0;
+  const blockedPct = totals.totalBeds
+    ? (totals.blocked / totals.totalBeds) * 100
+    : 0;
 
   function handleRefresh() {
     setRefreshing(true);
@@ -75,14 +127,13 @@ export default function BedAvailabilityPage() {
     toast.success("Exporting bed availability to Excel...");
   }
 
-  function handleApplyFilters() {
-    console.log("Filters applied:", { searchQuery, department, wardType, floor, bedType, status });
-    toast.info("Filters applied");
-  }
-
   function handleResetFilters() {
-    setSearchQuery(""); setDepartment("all"); setWardType("all"); setFloor("all"); setBedType("all"); setStatus("all");
-    toast.info("Filters reset");
+    setSearchQuery("");
+    setDepartment("all");
+    setWardType("all");
+    setFloor("all");
+    setBedType("all");
+    setStatus("all");
   }
 
   function handleViewDetails(r: DepartmentBedAvailability) {
@@ -90,65 +141,291 @@ export default function BedAvailabilityPage() {
     toast.info(`Opening bed-level details for ${r.department} - ${r.wardUnit}`);
   }
 
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    department !== "all" ||
+    wardType !== "all" ||
+    floor !== "all" ||
+    bedType !== "all" ||
+    status !== "all";
+
+  const infoCards: KpiCardProps[] = [
+    {
+      label: "Total Beds",
+      value: String(totals.totalBeds),
+      icon: BedDouble,
+      accent: "violet",
+      footer: "All Departments",
+      trend: buildTrend(totals.totalBeds, previousDay.totalBeds),
+    },
+    {
+      label: "Available Beds",
+      value: String(totals.available),
+      icon: CheckCircle2,
+      accent: "emerald",
+      footer: `${availablePct.toFixed(2)}% Available`,
+      trend: buildTrend(totals.available, previousDay.available),
+    },
+    {
+      label: "Occupied Beds",
+      value: String(totals.occupied),
+      icon: Bed,
+      accent: "amber",
+      footer: `${occupiedPct.toFixed(2)}% Occupied`,
+      trend: buildTrend(totals.occupied, previousDay.occupied),
+    },
+    {
+      label: "Blocked / Maintenance",
+      value: String(totals.blocked),
+      icon: Wrench,
+      accent: "rose",
+      footer: `${blockedPct.toFixed(2)}% Blocked`,
+      trend: buildTrend(totals.blocked, previousDay.blocked),
+    },
+  ];
+
+  const columns: OpsColumn<DepartmentBedAvailability>[] = [
+    {
+      key: "department",
+      header: "Department",
+      cell: (r) => (
+        <span className="flex items-center gap-2 font-medium text-slate-800">
+          <span className="text-base">
+            {DEPARTMENT_ICONS[r.department] ?? "🏨"}
+          </span>
+          {r.department}
+        </span>
+      ),
+    },
+    {
+      key: "wardUnit",
+      header: "Ward / Unit",
+      hideOn: "md",
+      cell: (r) => (
+        <span className="text-slate-500">{r.wardUnit}</span>
+      ),
+    },
+    {
+      key: "floor",
+      header: "Floor",
+      hideOn: "md",
+      cell: (r) => (
+        <span className="whitespace-nowrap text-slate-500">{r.floor}</span>
+      ),
+    },
+    {
+      key: "bedType",
+      header: "Bed Type",
+      hideOn: "md",
+      cell: (r) => <span className="text-slate-500">{r.bedType}</span>,
+    },
+    {
+      key: "totalBeds",
+      header: "Total Beds",
+      headerClassName: "text-right",
+      className: "text-right font-medium text-slate-700",
+      hideOn: "lg",
+      cell: (r) => <span>{r.totalBeds}</span>,
+    },
+    {
+      key: "occupied",
+      header: "Occupied",
+      headerClassName: "text-right",
+      className: "text-right text-slate-700",
+      cell: (r) => <span>{r.occupied}</span>,
+    },
+    {
+      key: "available",
+      header: "Available",
+      headerClassName: "text-right",
+      className: "text-right font-semibold text-emerald-600",
+      cell: (r) => <span>{r.available}</span>,
+    },
+    {
+      key: "blocked",
+      header: "Blocked",
+      headerClassName: "text-right",
+      className: "text-right text-slate-500",
+      cell: (r) => <span>{r.blocked}</span>,
+    },
+    {
+      key: "availability",
+      header: "Availability %",
+      cell: (r) => {
+        const pct = r.totalBeds
+          ? (r.available / r.totalBeds) * 100
+          : 0;
+        return (
+          <div className="flex items-center gap-2">
+            <Progress
+              value={pct}
+              className="h-1.5 w-20"
+              indicatorClassName={progressBarColor(pct)}
+            />
+            <span className="w-12 shrink-0 text-xs font-medium text-slate-600">
+              {pct.toFixed(2)}%
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (r) => {
+        const pct = r.totalBeds
+          ? (r.available / r.totalBeds) * 100
+          : 0;
+        return <AvailabilityStatusBadge status={getAvailabilityStatus(pct)} />;
+      },
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (r) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-slate-500 hover:text-blue-600"
+          onClick={() => handleViewDetails(r)}
+          title="View"
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-slate-800">Bed Availability</h1>
-            <p className="text-xs text-slate-400">Real-time overview of bed availability across departments and wards.</p>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" className="gap-2" onClick={handleRefresh} disabled={refreshing}>
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh
+      <PageShellHeader
+        title="Bed Availability"
+        description="Real-time overview of bed availability across departments and wards."
+        actions={
+          <>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />{" "}
+              Refresh
             </Button>
-            <Button variant="outline" className="gap-2" onClick={handleExportExcel}>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleExportExcel}
+            >
               <Download className="h-4 w-4" /> Export Excel
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <BedStatCard icon={BedDouble} label="Total Beds" value={totals.totalBeds} sublabel="All Departments" color="purple" />
-          <BedStatCard icon={CheckCircle2} label="Available Beds" value={totals.available} sublabel={`${availablePct.toFixed(2)}% Available`} color="emerald" />
-          <BedStatCard icon={Bed} label="Occupied Beds" value={totals.occupied} sublabel={`${occupiedPct.toFixed(2)}% Occupied`} color="amber" />
-          <BedStatCard icon={Wrench} label="Blocked / Maintenance" value={totals.blocked} sublabel={`${blockedPct.toFixed(2)}% Blocked`} color="red" />
-        </div>
+      <main className="py-6">
+        <StatsRow items={infoCards} />
 
-        {/* Filters */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="py-5">
-            <BedFilters
-              searchQuery={searchQuery} onSearchChange={setSearchQuery}
-              department={department} onDepartmentChange={setDepartment}
-              wardType={wardType} onWardTypeChange={setWardType}
-              floor={floor} onFloorChange={setFloor}
-              bedType={bedType} onBedTypeChange={setBedType}
-              status={status} onStatusChange={setStatus}
-              departments={departments} wardTypes={wardTypes} floors={floors} bedTypes={bedTypes}
-              onApply={handleApplyFilters}
-              onReset={handleResetFilters}
-            />
-          </CardContent>
-        </Card>
+        <div className="my-6">
+          <FilterBar
+            search={searchQuery}
+            onSearch={setSearchQuery}
+            searchPlaceholder="Search department or ward..."
+            canClear={hasActiveFilters}
+            onClear={handleResetFilters}
+            filters={[
+              {
+                key: "department",
+                label: "Department",
+                placeholder: "All Departments",
+                selected: department,
+                options: [
+                  { value: "all", label: "All Departments" },
+                  ...departments.map((d) => ({ value: d, label: d })),
+                ],
+              },
+              {
+                key: "wardType",
+                label: "Ward / Unit",
+                placeholder: "All Wards",
+                selected: wardType,
+                options: [
+                  { value: "all", label: "All Wards" },
+                  ...wardTypes.map((w) => ({ value: w, label: w })),
+                ],
+              },
+              {
+                key: "floor",
+                label: "Floor",
+                placeholder: "All Floors",
+                selected: floor,
+                options: [
+                  { value: "all", label: "All Floors" },
+                  ...floors.map((f) => ({ value: f, label: f })),
+                ],
+              },
+              {
+                key: "bedType",
+                label: "Bed Type",
+                placeholder: "All Types",
+                selected: bedType,
+                options: [
+                  { value: "all", label: "All Types" },
+                  ...bedTypes.map((b) => ({ value: b, label: b })),
+                ],
+              },
+              {
+                key: "status",
+                label: "Status",
+                placeholder: "All Statuses",
+                selected: status,
+                options: [
+                  { value: "all", label: "All Statuses" },
+                  { value: "Available", label: "Available" },
+                  { value: "Limited", label: "Limited" },
+                  { value: "Full", label: "Full" },
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => {
+              if (key === "department") setDepartment(value);
+              if (key === "wardType") setWardType(value);
+              if (key === "floor") setFloor(value);
+              if (key === "bedType") setBedType(value);
+              if (key === "status") setStatus(value);
+            }}
+          />
+        </div>
 
         {/* Main content: table + sidebar */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="border-b border-slate-100 pb-3">
-              <CardTitle className="text-sm font-semibold text-slate-800">Bed Availability Details</CardTitle>
-            </CardHeader>
-            <BedAvailabilityTable records={filtered} onViewDetails={handleViewDetails} />
-          </Card>
+          <div className="min-w-0">
+          <OpsTable
+            data={filtered}
+            rowKey={(r) => `${r.department}-${r.wardUnit}`}
+            columns={columns}
+            pageSize={10}
+            showColumnToggle
+          />
+          </div>
 
           <div className="space-y-6">
-            <AvailabilityOverviewChart available={totals.available} occupied={totals.occupied} blocked={totals.blocked} />
-            <QuickInfoPanel records={BED_AVAILABILITY} lastUpdated="20 May 2024, 11:30 AM" />
+            <AvailabilityOverviewChart
+              available={totals.available}
+              occupied={totals.occupied}
+              blocked={totals.blocked}
+            />
+            <QuickInfoPanel
+              records={BED_AVAILABILITY}
+              lastUpdated="20 May 2024, 11:30 AM"
+            />
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

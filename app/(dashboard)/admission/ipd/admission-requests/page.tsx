@@ -11,10 +11,18 @@ import {
   Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { RequestStatCard } from "./_components/request-stat-card";
-import { RequestFilters } from "./_components/request-filters";
-import { RequestsTable } from "./_components/requests-table";
+import {
+  PageShellHeader,
+  StatsRow,
+  FilterBar,
+  OpsTable,
+  buildTrend,
+} from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import type { KpiCardProps } from "@/components/dashboard";
+import { RequestStatusBadge } from "./_components/request-status-badge";
+import { RequestPriorityBadge } from "./_components/request-priority-badge";
+import { RequestRowActions } from "./_components/request-row-actions";
 
 import {
   ADMISSION_REQUESTS,
@@ -25,18 +33,20 @@ import type {
   AdmissionRequestDetail,
   AdmissionRequestRecord,
 } from "@/types/admission-request-types";
-import { TablePagination } from "../admission-list/_components/table-pagination";
 import { RequestDetailsDialog } from "./_components/request-details-dialog";
+
+const previousDay = {
+  total: 42,
+  pending: 14,
+  approved: 16,
+  rejected: 5,
+};
 
 export default function AdmissionRequestsPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [dateFrom, setDateFrom] = useState("2024-05-13");
-  const [dateTo, setDateTo] = useState("2024-05-20");
   const [requestStatus, setRequestStatus] = useState("all");
   const [department, setDepartment] = useState("all");
   const [doctor, setDoctor] = useState("all");
-  const [pageSize, setPageSize] = useState(8);
-  const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
 
   const [selectedRequest, setSelectedRequest] =
@@ -94,9 +104,6 @@ export default function AdmissionRequestsPage() {
     });
   }, [searchQuery, requestStatus, department, doctor]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
-
   const stats = useMemo(
     () => ({
       total: ADMISSION_REQUESTS.length,
@@ -137,49 +144,143 @@ export default function AdmissionRequestsPage() {
     toast.success("Exporting admission requests to Excel...");
   }
 
-  function handleApplyFilters() {
-    console.log("Filters applied:", {
-      searchQuery,
-      dateFrom,
-      dateTo,
-      requestStatus,
-      department,
-      doctor,
-    });
-    setPage(1);
-    toast.info("Filters applied");
-  }
-
   function handleResetFilters() {
     setSearchQuery("");
     setRequestStatus("all");
     setDepartment("all");
     setDoctor("all");
-    setDateFrom("2024-05-13");
-    setDateTo("2024-05-20");
-    setPage(1);
-    toast.info("Filters reset");
   }
+
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    requestStatus !== "all" ||
+    department !== "all" ||
+    doctor !== "all";
+
+  const infoCards: KpiCardProps[] = [
+    {
+      label: "Total Requests",
+      value: String(stats.total),
+      icon: FileText,
+      accent: "blue",
+      footer: "All Requests",
+      trend: buildTrend(stats.total, previousDay.total),
+    },
+    {
+      label: "Pending Review",
+      value: String(stats.pending),
+      icon: Clock,
+      accent: "amber",
+      footer: "Awaiting Review",
+      trend: buildTrend(stats.pending, previousDay.pending),
+    },
+    {
+      label: "Approved",
+      value: String(stats.approved),
+      icon: CheckCircle2,
+      accent: "emerald",
+      footer: "Approved Requests",
+      trend: buildTrend(stats.approved, previousDay.approved),
+    },
+    {
+      label: "Rejected",
+      value: String(stats.rejected),
+      icon: XCircle,
+      accent: "rose",
+      footer: "Rejected Requests",
+      trend: buildTrend(stats.rejected, previousDay.rejected),
+    },
+  ];
+
+  const columns: OpsColumn<AdmissionRequestRecord>[] = [
+    {
+      key: "requestId",
+      header: "Request ID",
+      cell: (r) => (
+        <span className="font-medium text-blue-600">{r.requestId}</span>
+      ),
+    },
+    {
+      key: "dateTime",
+      header: "Request Date & Time",
+      cell: (r) => (
+        <span className="whitespace-nowrap text-slate-500">
+          {r.requestDateTime}
+        </span>
+      ),
+    },
+    {
+      key: "patient",
+      header: "Patient Details",
+      cell: (r) => (
+        <div>
+          <p className="font-medium text-slate-800">{r.patientName}</p>
+          <p className="text-xs text-slate-400">{r.uhid}</p>
+        </div>
+      ),
+    },
+    {
+      key: "ageGender",
+      header: "Age / Gender",
+      cell: (r) => (
+        <span className="text-slate-500">
+          {r.age} Y / {r.gender}
+        </span>
+      ),
+    },
+    {
+      key: "department",
+      header: "Department",
+      cell: (r) => <span className="text-slate-500">{r.department}</span>,
+    },
+    {
+      key: "doctor",
+      header: "Attending Doctor",
+      cell: (r) => <span className="text-slate-500">{r.attendingDoctor}</span>,
+    },
+    {
+      key: "requestedBy",
+      header: "Requested By",
+      cell: (r) => (
+        <div>
+          <p className="text-slate-700">{r.requestedByLocation}</p>
+          <p className="text-xs text-slate-400">{r.requestedByDoctor}</p>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Request Status",
+      cell: (r) => <RequestStatusBadge status={r.requestStatus} />,
+    },
+    {
+      key: "priority",
+      header: "Priority",
+      cell: (r) => <RequestPriorityBadge priority={r.priority} />,
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (r) => (
+        <RequestRowActions
+          record={r}
+          onView={handleView}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <FileText className="h-5 w-5" />
-            </span>
-            <div>
-              <h1 className="text-lg font-semibold text-slate-800">
-                Admission Requests
-              </h1>
-              <p className="text-xs text-slate-400">
-                Requests received from OPD / Doctors for IPD admission.
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
+      <PageShellHeader
+        title="Admission Requests"
+        description="Requests received from OPD / Doctors for IPD admission."
+        actions={
+          <>
             <Button
               variant="outline"
               className="gap-2"
@@ -198,83 +299,76 @@ export default function AdmissionRequestsPage() {
             >
               <Download className="h-4 w-4" /> Export Excel
             </Button>
-          </div>
+          </>
+        }
+      />
+
+      <main className="py-6">
+        <StatsRow items={infoCards} />
+
+        <div className="my-6">
+          <FilterBar
+            search={searchQuery}
+            onSearch={setSearchQuery}
+            searchPlaceholder="Search patient name or UHID..."
+            canClear={hasActiveFilters}
+            onClear={handleResetFilters}
+            filters={[
+              {
+                key: "requestStatus",
+                label: "Status",
+                placeholder: "All Status",
+                selected: requestStatus,
+                options: [
+                  { value: "all", label: "All Status" },
+                  { value: "Pending Review", label: "Pending Review" },
+                  { value: "Approved", label: "Approved" },
+                  { value: "Rejected", label: "Rejected" },
+                ],
+              },
+              {
+                key: "department",
+                label: "Department",
+                placeholder: "All Departments",
+                selected: department,
+                options: [
+                  { value: "all", label: "All Departments" },
+                  ...REQUEST_DEPARTMENTS.map((d) => ({
+                    value: d,
+                    label: d,
+                  })),
+                ],
+              },
+              {
+                key: "doctor",
+                label: "Doctor",
+                placeholder: "All Doctors",
+                selected: doctor,
+                options: [
+                  { value: "all", label: "All Doctors" },
+                  ...REQUEST_DOCTORS.map((d) => ({
+                    value: d,
+                    label: d,
+                  })),
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => {
+              if (key === "requestStatus") setRequestStatus(value);
+              if (key === "department") setDepartment(value);
+              if (key === "doctor") setDoctor(value);
+            }}
+          />
         </div>
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <RequestStatCard
-            icon={FileText}
-            label="Total Requests"
-            value={stats.total}
-            sublabel="All Requests"
-            color="blue"
-          />
-          <RequestStatCard
-            icon={Clock}
-            label="Pending Review"
-            value={stats.pending}
-            sublabel="Awaiting Review"
-            color="amber"
-          />
-          <RequestStatCard
-            icon={CheckCircle2}
-            label="Approved"
-            value={stats.approved}
-            sublabel="Approved Requests"
-            color="emerald"
-          />
-          <RequestStatCard
-            icon={XCircle}
-            label="Rejected"
-            value={stats.rejected}
-            sublabel="Rejected Requests"
-            color="red"
-          />
-        </div>
-
-        {/* Filters */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="py-5">
-            <RequestFilters
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              onDateFromChange={setDateFrom}
-              onDateToChange={setDateTo}
-              requestStatus={requestStatus}
-              onRequestStatusChange={setRequestStatus}
-              department={department}
-              onDepartmentChange={setDepartment}
-              doctor={doctor}
-              onDoctorChange={setDoctor}
-              departments={REQUEST_DEPARTMENTS}
-              doctors={REQUEST_DOCTORS}
-              onApply={handleApplyFilters}
-              onReset={handleResetFilters}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Table */}
-        <Card className="border-slate-200 shadow-sm">
-          <RequestsTable
-            records={paginated}
-            onView={handleView}
-            onApprove={handleApprove}
-            onReject={handleReject}
-          />
-          <TablePagination
-            page={page}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalEntries={filtered.length}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-          />
-        </Card>
-      </div>
+        <OpsTable
+          data={filtered}
+          rowKey={(r) => r.requestId}
+          columns={columns}
+         
+          showColumnToggle
+        />
+      </main>
 
       <RequestDetailsDialog
         request={selectedRequest}
@@ -284,3 +378,4 @@ export default function AdmissionRequestsPage() {
     </div>
   );
 }
+

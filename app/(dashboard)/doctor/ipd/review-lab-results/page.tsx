@@ -106,7 +106,7 @@ export default function ReviewLabResultsPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden ">
+    <div className="min-h-screen ">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         {/* Patient header */}
         <Card className="border-slate-200 shadow-sm">

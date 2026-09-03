@@ -2,45 +2,49 @@
 "use client";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Grid2X2, LayoutList, UserPlus, Users } from "lucide-react";
-import type { VisibilityState } from "@tanstack/react-table";
-import { DataTable } from "@/components/ui/data-table";
-import type { AdmittedPatient, DailyShiftAssignment, NurseAdminPatientFilters } from "@/types/nurse-admin/ipd/nurse-admin-types";
+import { AlertTriangle, UserPlus, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import { KpiCardProps } from "@/components/dashboard";
+import type { AdmittedPatient, DailyShiftAssignment } from "@/types/nurse-admin/ipd/nurse-admin-types";
 import { NEW_ADMISSIONS, NURSE_ADMIN_DEPARTMENTS, NURSE_ADMIN_WARDS, WARD_PATIENTS } from "@/lib/nurse-admin/ipd/nurse-admin-data";
-import { NurseAdminStat } from "./_components/nurse-admin-stats";
-import { NurseAdminFilters } from "./_components/nurse-admin-filters";
 import { AssignNurseDrawer } from "./_components/assign-nurse-drawer";
-import { getNewAdmissionColumns, defaultNewAdmissionColumnVisibility } from "./_components/new-admissions-columns";
-import { NewAdmissionsGrid } from "./_components/new-admissions-grid";
-import { PharmacyIpdColumnToggle as ColumnToggle } from "@/app/(dashboard)/pharmacy/ipd/orders/_components/pharmacy-ipd-column-toggle";
+import { AcuityBadge } from "./_components/nurse-admin-badges";
 
-type ViewMode = "table" | "grid";
-const initialFilters: NurseAdminPatientFilters = { search: "", ward: "All", acuity: "All", department: "All" };
+type ViewMode = "list" | "grid";
+
+const ACUITY_STYLES: Record<string, string> = {
+  Stable: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "Under Observation": "bg-amber-50 text-amber-700 border-amber-200",
+  Critical: "bg-red-50 text-red-700 border-red-200",
+};
+
+const previousDay = { total: 4, critical: 1, today: 3 };
 
 export default function NewAdmissionsPage() {
   const [admissions, setAdmissions] = useState<AdmittedPatient[]>(NEW_ADMISSIONS);
-  const [filters, setFilters] = useState<NurseAdminPatientFilters>(initialFilters);
-  const [view, setView] = useState<ViewMode>("table");
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defaultNewAdmissionColumnVisibility);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [wardFilter, setWardFilter] = useState("All");
+  const [acuityFilter, setAcuityFilter] = useState("All");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [assigningPatient, setAssigningPatient] = useState<AdmittedPatient | null>(null);
 
   const filtered = useMemo(() => admissions.filter((patient) => {
-    const query = filters.search.trim().toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
     const matchesSearch = !query || [patient.patientName, patient.uhid, patient.ipdId, patient.bed].join(" ").toLowerCase().includes(query);
-    const matchesWard = filters.ward === "All" || patient.ward === filters.ward;
-    const matchesAcuity = filters.acuity === "All" || patient.acuity === filters.acuity;
+    const matchesWard = wardFilter === "All" || patient.ward === wardFilter;
+    const matchesAcuity = acuityFilter === "All" || patient.acuity === acuityFilter;
     return matchesSearch && matchesWard && matchesAcuity;
-  }), [admissions, filters]);
+  }), [admissions, searchQuery, wardFilter, acuityFilter]);
 
   const stats = useMemo(() => ({
     total: admissions.length,
     critical: admissions.filter((p) => p.acuity === "Critical").length,
     today: admissions.filter((p) => p.admissionDateTime.startsWith("24 Aug 2026")).length,
   }), [admissions]);
-
-  function updateFilter<K extends keyof NurseAdminPatientFilters>(key: K, value: NurseAdminPatientFilters[K]) {
-    setFilters((previous) => ({ ...previous, [key]: value }));
-  }
 
   function handleSaveAssignment(uhid: string, assignments: DailyShiftAssignment[]) {
     const patient = admissions.find((p) => p.uhid === uhid);
@@ -52,56 +56,182 @@ export default function NewAdmissionsPage() {
       return;
     }
 
-    // Move patient to ward patients list, remove from new admissions
     WARD_PATIENTS.push({ ...patient, assignments });
     setAdmissions((previous) => previous.filter((p) => p.uhid !== uhid));
     setAssigningPatient(null);
     toast.success(`${patient.patientName} moved to Ward Patients with nurse assignments.`);
   }
 
-  const columns = useMemo(() => getNewAdmissionColumns(setAssigningPatient), []);
-  const columnIds = useMemo(() => columns.map((column) => column.id as string).filter(Boolean), [columns]);
+  const infoCards: KpiCardProps[] = [
+    { label: "Pending Assignment", value: String(stats.total), icon: Users, accent: "blue", footer: "Awaiting nurse allocation", trend: buildTrend(stats.total, previousDay.total) },
+    { label: "Critical Patients", value: String(stats.critical), icon: AlertTriangle, accent: "rose", footer: "Require immediate assignment", trend: buildTrend(stats.critical, previousDay.critical) },
+    { label: "Admitted Today", value: String(stats.today), icon: UserPlus, accent: "emerald", footer: "24 Aug 2026", trend: buildTrend(stats.today, previousDay.today) },
+  ];
+
+  const columns: OpsColumn<AdmittedPatient>[] = [
+    {
+      key: "patient",
+      header: "Patient",
+      cell: (p) => (
+        <div>
+          <p className="font-semibold text-slate-800">{p.patientName}</p>
+          <p className="text-xs text-slate-400">{p.uhid}</p>
+        </div>
+      ),
+    },
+    {
+      key: "ipdId",
+      header: "IPD ID",
+      cell: (p) => <span className="text-sm text-slate-600">{p.ipdId}</span>,
+    },
+    {
+      key: "ageGender",
+      header: "Age / Gender",
+      cell: (p) => <span className="text-sm text-slate-600">{p.age} yrs · {p.gender}</span>,
+    },
+    {
+      key: "wardBed",
+      header: "Ward / Bed",
+      cell: (p) => (
+        <div className="text-sm text-slate-600">{p.ward}<p className="text-xs text-slate-400">{p.room} · {p.bed}</p></div>
+      ),
+    },
+    {
+      key: "diagnosis",
+      header: "Diagnosis",
+      cell: (p) => (
+        <div>
+          <p className="text-sm text-slate-700">{p.currentDiagnosis}</p>
+          <p className="text-xs text-slate-400">{p.diagnosisCode}</p>
+        </div>
+      ),
+    },
+    {
+      key: "doctor",
+      header: "Doctor",
+      cell: (p) => <span className="text-sm text-slate-600">{p.admittingDoctor}</span>,
+    },
+    {
+      key: "admissionTime",
+      header: "Admission Time",
+      cell: (p) => <span className="text-sm text-slate-600">{p.admissionDateTime}</span>,
+    },
+    {
+      key: "acuity",
+      header: "Acuity",
+      cell: (p) => <AcuityBadge acuity={p.acuity} />,
+    },
+    {
+      key: "action",
+      header: "Action",
+      headerClassName: "text-right",
+      className: "text-right",
+      enableHiding: false,
+      cell: (p) => (
+        <div className="text-right">
+          <Button size="sm" onClick={() => setAssigningPatient(p)} className="gap-1 bg-blue-600 hover:bg-blue-700">
+            <UserPlus className="h-4 w-4" />Assign Nurse
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  function renderCard(patient: AdmittedPatient) {
+    return (
+      <Card key={patient.uhid} className="overflow-hidden border-slate-200 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+        <div className="h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500" />
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 font-bold text-white">
+                {patient.patientName.charAt(0)}
+              </div>
+              <div><p className="font-bold text-slate-800">{patient.patientName}</p><p className="text-xs text-slate-400">{patient.uhid}</p></div>
+            </div>
+            <AcuityBadge acuity={patient.acuity} />
+          </div>
+
+          <div className="mt-4 rounded-xl bg-slate-50 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700"><span className="h-3.5 w-3.5 text-violet-600">🩺</span>{patient.admittingDoctor}</p>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">📍 {patient.ward} · {patient.room} · {patient.bed}</p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-slate-100 p-3"><p className="text-[10px] uppercase text-slate-400">Diagnosis</p><p className="mt-1 truncate text-sm font-bold text-slate-700">{patient.currentDiagnosis}</p></div>
+            <div className="rounded-lg border border-slate-100 p-3"><p className="text-[10px] uppercase text-slate-400">Admitted</p><p className="mt-1 truncate text-sm font-bold text-slate-700">{patient.admissionDateTime.split(",")[0]}</p></div>
+          </div>
+
+          <Button className="mt-4 w-full gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => setAssigningPatient(patient)}>
+            <UserPlus className="h-4 w-4" />Assign Nurse
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1700px] space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">New Admissions</h1>
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">Pending Nurse Assignment</span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">Patients freshly admitted from the admission desk, awaiting shift-wise nurse assignment.</p>
-          </div>
-        </header>
+      <PageShellHeader
+        title="New Admissions"
+        description="Patients freshly admitted from the admission desk, awaiting shift-wise nurse assignment."
+        meta={<span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">Pending Nurse Assignment</span>}
+      />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <NurseAdminStat icon={<Users className="h-5 w-5" />} label="Pending Assignment" value={String(stats.total)} subtitle="Awaiting nurse allocation" tone="blue" />
-          <NurseAdminStat icon={<AlertTriangle className="h-5 w-5" />} label="Critical Patients" value={String(stats.critical)} subtitle="Require immediate assignment" tone="rose" />
-          <NurseAdminStat icon={<UserPlus className="h-5 w-5" />} label="Admitted Today" value={String(stats.today)} subtitle="24 Aug 2026" tone="emerald" />
+      <main className="py-6">
+        <StatsRow items={infoCards} />
+
+        <div className="my-6">
+          <FilterBar
+            search={searchQuery}
+            searchPlaceholder="Patient, UHID, IPD ID or bed..."
+            onSearch={setSearchQuery}
+            canClear={searchQuery !== "" || wardFilter !== "All" || acuityFilter !== "All"}
+            onClear={() => { setSearchQuery(""); setWardFilter("All"); setAcuityFilter("All"); }}
+            viewSupported
+            viewMode={viewMode}
+            onViewChange={setViewMode}
+            filters={[
+              {
+                key: "ward",
+                label: "Filter by ward",
+                placeholder: "All Wards",
+                selected: wardFilter,
+                options: [{ value: "All", label: "All Wards" }, ...NURSE_ADMIN_WARDS.map((w) => ({ value: w, label: w }))],
+              },
+              {
+                key: "acuity",
+                label: "Filter by acuity",
+                placeholder: "All Acuity",
+                selected: acuityFilter,
+                options: [
+                  { value: "All", label: "All Acuity" },
+                  { value: "Stable", label: "Stable" },
+                  { value: "Under Observation", label: "Under Observation" },
+                  { value: "Critical", label: "Critical" },
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => {
+              if (key === "ward") setWardFilter(value);
+              if (key === "acuity") setAcuityFilter(value);
+            }}
+          />
         </div>
 
-        <NurseAdminFilters filters={filters} results={filtered.length} wards={NURSE_ADMIN_WARDS} departments={NURSE_ADMIN_DEPARTMENTS} onChange={updateFilter} onReset={() => setFilters(initialFilters)} title="Search & Filter New Admissions" />
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="min-w-0 shrink text-sm text-slate-500">Showing <span className="font-bold text-slate-800">{filtered.length}</span> patient{filtered.length !== 1 ? "s" : ""}</p>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-            {view === "table" && <ColumnToggle columnIds={columnIds} visibility={columnVisibility as Record<string, boolean>} onToggle={(id, visible) => setColumnVisibility((previous) => ({ ...previous, [id]: visible }))} />}
-            <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-              <button type="button" onClick={() => setView("table")} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${view === "table" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}><LayoutList className="inline h-4 w-4" /> <span className="hidden sm:inline">Table</span></button>
-              <button type="button" onClick={() => setView("grid")} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${view === "grid" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}><Grid2X2 className="inline h-4 w-4" /> <span className="hidden sm:inline">Grid</span></button>
-            </div>
-          </div>
-        </div>
-
-        {view === "table" ? (
-          <DataTable columns={columns} data={filtered} columnVisibility={columnVisibility} onColumnVisibilityChange={setColumnVisibility} pageSize={8} />
+        {viewMode === "list" ? (
+          <OpsTable
+            data={filtered}
+            rowKey={(p) => p.uhid}
+            columns={columns}
+          />
         ) : (
-          <NewAdmissionsGrid patients={filtered} onAssign={setAssigningPatient} />
+          <OpsGrid data={filtered} rowKey={(p) => p.uhid} renderCard={renderCard} pageSize={6} />
         )}
+      </main>
 
-        <AssignNurseDrawer patient={assigningPatient} onClose={() => setAssigningPatient(null)} onSave={handleSaveAssignment} />
-      </div>
+      <AssignNurseDrawer patient={assigningPatient} onClose={() => setAssigningPatient(null)} onSave={handleSaveAssignment} />
     </div>
   );
 }
+

@@ -4,14 +4,16 @@ import { useMemo, useState } from "react";
 import {
   CheckCircle2,
   Clock3,
-  Grid2X2,
+  Eye,
   IndianRupee,
-  LayoutList,
   ReceiptText,
   ScanLine,
-  WalletCards,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import { KpiCardProps } from "@/components/dashboard";
 import type {
   RadiologyOPDOrder,
   RadiologyOrderFilters,
@@ -25,12 +27,7 @@ import {
   getRadiologyAggregateStatus,
   getTotalRadiologyValue,
 } from "@/lib/lab/radiology/radiology-opd-orders-data";
-import { RadiologyOrderStat } from "./_components/radiology-order-stats";
-import { RadiologyOrderFilters as Filters } from "./_components/radiology-order-filters";
-import {
-  RadiologyOrdersGrid,
-  RadiologyOrdersList,
-} from "./_components/radiology-orders-list";
+import { RadiologyTestStatusBadge, RadiologyPaymentStatusBadge } from "./_components/radiology-status-badges";
 import { RadiologyOrderDetailDrawer } from "./_components/radiology-order-detail-drawer";
 
 type ViewMode = "list" | "grid";
@@ -42,6 +39,7 @@ const initialFilters: RadiologyOrderFilters = {
   status: "All",
   paymentStatus: "All",
 };
+
 function dateToIso(value: string) {
   const dateText = value.split(",")[0]?.trim();
   if (!dateText) return "";
@@ -50,14 +48,19 @@ function dateToIso(value: string) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+const previousDay = {
+  income: 5100,
+  orders: 11,
+  ready: 19,
+  processing: 7,
+};
+
 export default function RadiologyOPDOrdersPage() {
-  const [orders, setOrders] =
-    useState<RadiologyOPDOrder[]>(RADIOLOGY_OPD_ORDERS);
+  const [orders, setOrders] = useState<RadiologyOPDOrder[]>(RADIOLOGY_OPD_ORDERS);
   const [filters, setFilters] = useState<RadiologyOrderFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [selectedOrder, setSelectedOrder] = useState<RadiologyOPDOrder | null>(
-    null,
-  );
+  const [selectedOrder, setSelectedOrder] = useState<RadiologyOPDOrder | null>(null);
+
   const filteredOrders = useMemo(
     () =>
       orders.filter((order) => {
@@ -100,6 +103,7 @@ export default function RadiologyOPDOrdersPage() {
       }),
     [orders, filters],
   );
+
   const stats = useMemo(() => {
     const income = orders
       .filter((order) => order.paymentStatus === "Paid")
@@ -121,12 +125,23 @@ export default function RadiologyOPDOrdersPage() {
     ).length;
     return { income, orders: orders.length, tests, ready, processing, unpaid };
   }, [orders]);
+
+  const dateOptions = useMemo(() => {
+    const dates = new Set<string>();
+    orders.forEach((order) => {
+      const iso = dateToIso(order.orderedAt);
+      if (iso) dates.add(iso);
+    });
+    return Array.from(dates).sort().reverse();
+  }, [orders]);
+
   function updateFilter<K extends keyof RadiologyOrderFilters>(
     key: K,
     value: RadiologyOrderFilters[K],
   ) {
     setFilters((previous) => ({ ...previous, [key]: value }));
   }
+
   function updateTest(orderId: string, updatedTest: RadiologyTestItem) {
     setOrders((previous) =>
       previous.map((order) =>
@@ -156,6 +171,7 @@ export default function RadiologyOPDOrdersPage() {
         : `${updatedTest.testName} moved to ${updatedTest.status}.`,
     );
   }
+
   function collectPayment(orderId: string, method: RadiologyPaymentMethod) {
     const stamp = new Date().toLocaleString("en-IN", {
       day: "2-digit",
@@ -182,113 +198,216 @@ export default function RadiologyOPDOrdersPage() {
       `Payment collected successfully from ${target?.patient.name ?? "patient"}.`,
     );
   }
+
+  const infoCards: KpiCardProps[] = [
+    { label: "Total Radiology Income", value: `₹${stats.income}`, icon: IndianRupee, accent: "emerald", footer: "Collected imaging payments", trend: buildTrend(stats.income, previousDay.income) },
+    { label: "Total OPD Orders", value: String(stats.orders), icon: ReceiptText, accent: "blue", footer: `${stats.tests} ordered imaging tests`, trend: buildTrend(stats.orders, previousDay.orders) },
+    { label: "Reports Ready", value: String(stats.ready), icon: CheckCircle2, accent: "violet", footer: "Uploaded and finalized reports", trend: buildTrend(stats.ready, previousDay.ready) },
+    { label: "Processing / Unpaid", value: `${stats.processing} / ${stats.unpaid}`, icon: Clock3, accent: "amber", footer: "Imaging in progress / payment due", trend: buildTrend(stats.processing, previousDay.processing) },
+  ];
+
+  const columns: OpsColumn<RadiologyOPDOrder>[] = [
+    {
+      key: "patient",
+      header: "Patient",
+      cell: (order) => (
+        <div>
+          <p className="font-semibold text-slate-800">{order.patient.name}</p>
+          <p className="text-xs text-slate-400">{order.patient.uhid} · {order.patient.mobile}</p>
+        </div>
+      ),
+    },
+    {
+      key: "order",
+      header: "Order / Appointment",
+      cell: (order) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{order.id}</p>
+          <p className="text-xs text-slate-400">{order.appointmentId}</p>
+        </div>
+      ),
+    },
+    {
+      key: "doctor",
+      header: "Doctor",
+      cell: (order) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{order.doctor.name}</p>
+          <p className="text-xs text-slate-400">{order.doctor.specialty}</p>
+        </div>
+      ),
+    },
+    {
+      key: "orderedOn",
+      header: "Ordered On",
+      cell: (order) => <span className="text-sm text-slate-600">{order.orderedAt}</span>,
+    },
+    {
+      key: "tests",
+      header: "Imaging Tests",
+      cell: (order) => (
+        <span className="text-sm font-semibold text-slate-700">
+          {order.tests.length} test{order.tests.length !== 1 ? "s" : ""}
+        </span>
+      ),
+    },
+    {
+      key: "testValue",
+      header: "Test Value",
+      cell: (order) => <span className="text-sm font-bold text-slate-800">₹{getTotalRadiologyValue(order)}</span>,
+    },
+    {
+      key: "status",
+      header: "Report Status",
+      cell: (order) => <RadiologyTestStatusBadge status={getRadiologyAggregateStatus(order)} />,
+    },
+    {
+      key: "payment",
+      header: "Payment",
+      cell: (order) => <RadiologyPaymentStatusBadge status={order.paymentStatus} />,
+    },
+    {
+      key: "actions",
+      header: "Action",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (order) => (
+        <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)} className="border-sky-200 text-sky-700">
+          <Eye className="mr-1 h-4 w-4" />
+          View Details
+        </Button>
+      ),
+    },
+  ];
+
+  function renderCard(order: RadiologyOPDOrder) {
+    return (
+      <OpsGridCard
+        avatar={order.patient.name.charAt(0).toUpperCase()}
+        title={order.patient.name}
+        subtitle={order.patient.uhid}
+        badge={<RadiologyPaymentStatusBadge status={order.paymentStatus} />}
+        context={
+          <>
+            <p className="text-sm font-semibold text-slate-700">{order.doctor.name}</p>
+            <p className="mt-1 text-xs text-slate-500">{order.doctor.specialty} · {order.appointmentId}</p>
+          </>
+        }
+        stats={[
+          { label: "Imaging Tests", value: order.tests.length },
+          { label: "Total Value", value: `₹${getTotalRadiologyValue(order)}` },
+        ]}
+        footerTags={
+          <>
+            <RadiologyTestStatusBadge status={getRadiologyAggregateStatus(order)} />
+            <span className="text-xs text-slate-400">{order.orderedAt}</span>
+          </>
+        }
+        action={{
+          label: "Process Imaging",
+          icon: Eye,
+          onClick: () => setSelectedOrder(order),
+        }}
+      />
+    );
+  }
+
+  const isAnyFilterActive = Boolean(
+    filters.search || filters.date || filters.doctor || filters.category ||
+    filters.status !== "All" || filters.paymentStatus !== "All"
+  );
+
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1600px] space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">
-                Radiology OPD Orders
-              </h1>
-              <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
-                Imaging Queue
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">
-              Process imaging investigations, upload diagnostic reports, and
-              collect radiology payments.
-            </p>
-          </div>
+      <PageShellHeader
+        title="Radiology OPD Orders"
+        description="Process imaging investigations, upload diagnostic reports, and collect radiology payments."
+        meta={<span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">Imaging Queue</span>}
+        actions={
           <div className="flex items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-700">
             <ScanLine className="h-4 w-4" />
-            {stats.processing} imaging test{stats.processing !== 1 ? "s" : ""}{" "}
-            processing
+            {stats.processing} imaging test{stats.processing !== 1 ? "s" : ""} processing
           </div>
-        </header>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <RadiologyOrderStat
-            icon={<IndianRupee className="h-5 w-5" />}
-            label="Total Radiology Income"
-            value={`₹${stats.income}`}
-            subtitle="Collected imaging payments"
-            tone="emerald"
-          />
-          <RadiologyOrderStat
-            icon={<ReceiptText className="h-5 w-5" />}
-            label="Total OPD Orders"
-            value={String(stats.orders)}
-            subtitle={`${stats.tests} ordered imaging tests`}
-            tone="blue"
-          />
-          <RadiologyOrderStat
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            label="Reports Ready"
-            value={String(stats.ready)}
-            subtitle="Uploaded and finalized reports"
-            tone="violet"
-          />
-          <RadiologyOrderStat
-            icon={<Clock3 className="h-5 w-5" />}
-            label="Processing / Unpaid"
-            value={`${stats.processing} / ${stats.unpaid}`}
-            subtitle="Imaging in progress / payment due"
-            tone="amber"
+        }
+      />
+
+      <main className="py-6">
+        <StatsRow items={infoCards} />
+
+        <div className="my-6">
+          <FilterBar
+            search={filters.search}
+            searchPlaceholder="Patient, UHID, appointment or radiology order..."
+            onSearch={(v) => updateFilter("search", v)}
+            canClear={isAnyFilterActive}
+            onClear={() => setFilters(initialFilters)}
+            viewSupported
+            viewMode={view}
+            onViewChange={setView}
+            filters={[
+              {
+                key: "doctor",
+                label: "Doctor",
+                placeholder: "All Doctors",
+                selected: filters.doctor,
+                options: [{ value: "", label: "All Doctors" }, ...RADIOLOGY_DOCTORS.map((d) => ({ value: d, label: d }))],
+              },
+              {
+                key: "category",
+                label: "Category",
+                placeholder: "All Categories",
+                selected: filters.category,
+                options: [{ value: "", label: "All Categories" }, ...RADIOLOGY_CATEGORIES.map((c) => ({ value: c, label: c }))],
+              },
+              {
+                key: "status",
+                label: "Status",
+                placeholder: "All Status",
+                selected: filters.status,
+                options: [
+                  { value: "All", label: "All Status" },
+                  { value: "Ordered", label: "Ordered" },
+                  { value: "Processing", label: "Processing" },
+                  { value: "Report Ready", label: "Report Ready" },
+                ],
+              },
+              {
+                key: "date",
+                label: "Date",
+                placeholder: "All Dates",
+                selected: filters.date,
+                options: [{ value: "", label: "All Dates" }, ...dateOptions.map((d) => ({ value: d, label: d }))],
+              },
+              {
+                key: "paymentStatus",
+                label: "Payment",
+                placeholder: "All Payments",
+                selected: filters.paymentStatus,
+                options: [
+                  { value: "All", label: "All Payments" },
+                  { value: "Paid", label: "Paid" },
+                  { value: "Unpaid", label: "Unpaid" },
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => updateFilter(key as keyof RadiologyOrderFilters, value as never)}
           />
         </div>
-        <Filters
-          filters={filters}
-          results={filteredOrders.length}
-          doctors={RADIOLOGY_DOCTORS}
-          categories={RADIOLOGY_CATEGORIES}
-          onChange={updateFilter}
-          onReset={() => setFilters(initialFilters)}
-        />
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-500">
-            Showing{" "}
-            <span className="font-bold text-slate-800">
-              {filteredOrders.length}
-            </span>{" "}
-            radiology OPD order{filteredOrders.length !== 1 ? "s" : ""}
-          </p>
-          <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-            <button
-              type="button"
-              onClick={() => setView("list")}
-              className={`rounded-lg px-3 py-2 text-xs font-semibold ${view === "list" ? "bg-sky-50 text-sky-700" : "text-slate-500"}`}
-            >
-              <LayoutList className="inline h-4 w-4" />{" "}
-              <span className="hidden sm:inline">List</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("grid")}
-              className={`rounded-lg px-3 py-2 text-xs font-semibold ${view === "grid" ? "bg-sky-50 text-sky-700" : "text-slate-500"}`}
-            >
-              <Grid2X2 className="inline h-4 w-4" />{" "}
-              <span className="hidden sm:inline">Grid</span>
-            </button>
-          </div>
-        </div>
+
         {view === "list" ? (
-          <RadiologyOrdersList
-            orders={filteredOrders}
-            onView={setSelectedOrder}
-          />
+          <OpsTable data={filteredOrders} rowKey={(o) => o.id} columns={columns} showColumnToggle />
         ) : (
-          <RadiologyOrdersGrid
-            orders={filteredOrders}
-            onView={setSelectedOrder}
-          />
+          <OpsGrid data={filteredOrders} rowKey={(o) => o.id} renderCard={renderCard} pageSize={6} />
         )}
+
         <RadiologyOrderDetailDrawer
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onUpdateTest={updateTest}
           onCollectPayment={collectPayment}
         />
-      </div>
+      </main>
     </div>
   );
 }
+

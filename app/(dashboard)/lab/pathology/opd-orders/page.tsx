@@ -3,17 +3,18 @@
 
 import { useMemo, useState } from "react";
 import {
-  CalendarDays,
   CheckCircle2,
   Clock3,
-  Grid2X2,
+  Eye,
   IndianRupee,
-  LayoutList,
   ReceiptText,
   TestTube2,
-  WalletCards,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, buildTrend } from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import { KpiCardProps } from "@/components/dashboard";
 import type {
   PathologyOPDOrder,
   PathologyOrderFilters,
@@ -27,12 +28,7 @@ import {
   getAggregateStatus,
   getTotalTestValue,
 } from "@/lib/lab/pathology/pathology-opd-orders-data";
-import { PathologyOrderStat } from "./_components/pathology-order-stats";
-import { PathologyOrderFilters as Filters } from "./_components/pathology-order-filters";
-import {
-  PathologyOrdersGrid,
-  PathologyOrdersList,
-} from "./_components/pathology-orders-list";
+import { TestStatusBadge, PaymentStatusBadge } from "./_components/pathology-status-badges";
 import { PathologyOrderDetailDrawer } from "./_components/pathology-order-detail-drawer";
 
 type ViewMode = "list" | "grid";
@@ -56,14 +52,18 @@ function dateToIso(value: string) {
   return `${year}-${month}-${day}`;
 }
 
+const previousDay = {
+  totalIncome: 4820,
+  totalOrders: 14,
+  reportsReady: 22,
+  pendingTests: 11,
+};
+
 export default function PathologyOPDOrdersPage() {
-  const [orders, setOrders] =
-    useState<PathologyOPDOrder[]>(PATHOLOGY_OPD_ORDERS);
+  const [orders, setOrders] = useState<PathologyOPDOrder[]>(PATHOLOGY_OPD_ORDERS);
   const [filters, setFilters] = useState<PathologyOrderFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [selectedOrder, setSelectedOrder] = useState<PathologyOPDOrder | null>(
-    null,
-  );
+  const [selectedOrder, setSelectedOrder] = useState<PathologyOPDOrder | null>(null);
 
   const filteredOrders = useMemo(
     () =>
@@ -140,6 +140,15 @@ export default function PathologyOPDOrdersPage() {
     };
   }, [orders]);
 
+  const dateOptions = useMemo(() => {
+    const dates = new Set<string>();
+    orders.forEach((order) => {
+      const iso = dateToIso(order.orderedAt);
+      if (iso) dates.add(iso);
+    });
+    return Array.from(dates).sort().reverse();
+  }, [orders]);
+
   function updateFilter<K extends keyof PathologyOrderFilters>(
     key: K,
     value: PathologyOrderFilters[K],
@@ -204,112 +213,216 @@ export default function PathologyOPDOrdersPage() {
     );
   }
 
+  const infoCards: KpiCardProps[] = [
+    { label: "Total Pathology Income", value: `₹${stats.totalIncome}`, icon: IndianRupee, accent: "emerald", footer: "Collected payments", trend: buildTrend(stats.totalIncome, previousDay.totalIncome) },
+    { label: "Total OPD Orders", value: String(stats.totalOrders), icon: ReceiptText, accent: "blue", footer: `${stats.totalTests} ordered tests`, trend: buildTrend(stats.totalOrders, previousDay.totalOrders) },
+    { label: "Reports Ready", value: String(stats.reportsReady), icon: CheckCircle2, accent: "violet", footer: "Finalized laboratory reports", trend: buildTrend(stats.reportsReady, previousDay.reportsReady) },
+    { label: "Pending / Unpaid", value: `${stats.pendingTests} / ${stats.unpaid}`, icon: Clock3, accent: "amber", footer: "Tests pending / orders unpaid", trend: buildTrend(stats.pendingTests, previousDay.pendingTests) },
+  ];
+
+  const columns: OpsColumn<PathologyOPDOrder>[] = [
+    {
+      key: "patient",
+      header: "Patient",
+      cell: (order) => (
+        <div>
+          <p className="font-semibold text-slate-800">{order.patient.name}</p>
+          <p className="text-xs text-slate-400">{order.patient.uhid} · {order.patient.mobile}</p>
+        </div>
+      ),
+    },
+    {
+      key: "order",
+      header: "Order / Appointment",
+      cell: (order) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{order.id}</p>
+          <p className="text-xs text-slate-400">{order.appointmentId}</p>
+        </div>
+      ),
+    },
+    {
+      key: "doctor",
+      header: "Doctor",
+      cell: (order) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{order.doctor.name}</p>
+          <p className="text-xs text-slate-400">{order.doctor.specialty}</p>
+        </div>
+      ),
+    },
+    {
+      key: "orderedOn",
+      header: "Ordered On",
+      cell: (order) => <span className="text-sm text-slate-600">{order.orderedAt}</span>,
+    },
+    {
+      key: "tests",
+      header: "Tests",
+      cell: (order) => (
+        <span className="text-sm font-semibold text-slate-700">
+          {order.tests.length} test{order.tests.length !== 1 ? "s" : ""}
+        </span>
+      ),
+    },
+    {
+      key: "testValue",
+      header: "Test Value",
+      cell: (order) => <span className="text-sm font-bold text-slate-800">₹{getTotalTestValue(order)}</span>,
+    },
+    {
+      key: "status",
+      header: "Test Status",
+      cell: (order) => <TestStatusBadge status={getAggregateStatus(order)} />,
+    },
+    {
+      key: "payment",
+      header: "Payment",
+      cell: (order) => <PaymentStatusBadge status={order.paymentStatus} />,
+    },
+    {
+      key: "actions",
+      header: "Action",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (order) => (
+        <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)} className="border-blue-200 text-blue-700">
+          <Eye className="mr-1 h-4 w-4" />
+          View Details
+        </Button>
+      ),
+    },
+  ];
+
+  function renderCard(order: PathologyOPDOrder) {
+    return (
+      <OpsGridCard
+        avatar={order.patient.name.charAt(0).toUpperCase()}
+        title={order.patient.name}
+        subtitle={order.patient.uhid}
+        badge={<PaymentStatusBadge status={order.paymentStatus} />}
+        context={
+          <>
+            <p className="text-sm font-semibold text-slate-700">{order.doctor.name}</p>
+            <p className="mt-1 text-xs text-slate-500">{order.doctor.specialty} · {order.appointmentId}</p>
+          </>
+        }
+        stats={[
+          { label: "Total Tests", value: order.tests.length },
+          { label: "Total Value", value: `₹${getTotalTestValue(order)}` },
+        ]}
+        footerTags={
+          <>
+            <TestStatusBadge status={getAggregateStatus(order)} />
+            <span className="text-xs text-slate-400">{order.orderedAt}</span>
+          </>
+        }
+        action={{
+          label: "Process Tests",
+          icon: Eye,
+          onClick: () => setSelectedOrder(order),
+        }}
+      />
+    );
+  }
+
+  const isAnyFilterActive = Boolean(
+    filters.search || filters.date || filters.doctor || filters.category ||
+    filters.status !== "All" || filters.paymentStatus !== "All"
+  );
+
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1600px] space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">
-                Pathology OPD Orders
-              </h1>
-              <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
-                Laboratory Queue
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">
-              Collect samples, process diagnostic tests, finalize reports, and
-              collect laboratory payments.
-            </p>
-          </div>
+      <PageShellHeader
+        title="Pathology OPD Orders"
+        description="Collect samples, process diagnostic tests, finalize reports, and collect laboratory payments."
+        meta={<span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">Laboratory Queue</span>}
+        actions={
           <div className="flex items-center gap-2 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700">
             <TestTube2 className="h-4 w-4" />
             {stats.pendingTests} tests pending completion
           </div>
-        </header>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <PathologyOrderStat
-            icon={<IndianRupee className="h-5 w-5" />}
-            label="Total Pathology Income"
-            value={`₹${stats.totalIncome}`}
-            subtitle="Collected payments"
-            tone="emerald"
-          />
-          <PathologyOrderStat
-            icon={<ReceiptText className="h-5 w-5" />}
-            label="Total OPD Orders"
-            value={String(stats.totalOrders)}
-            subtitle={`${stats.totalTests} ordered tests`}
-            tone="blue"
-          />
-          <PathologyOrderStat
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            label="Reports Ready"
-            value={String(stats.reportsReady)}
-            subtitle="Finalized laboratory reports"
-            tone="violet"
-          />
-          <PathologyOrderStat
-            icon={<Clock3 className="h-5 w-5" />}
-            label="Pending / Unpaid"
-            value={`${stats.pendingTests} / ${stats.unpaid}`}
-            subtitle="Tests pending / orders unpaid"
-            tone="amber"
+        }
+      />
+
+      <main className="py-6">
+        <StatsRow items={infoCards} />
+
+        <div className="my-6">
+          <FilterBar
+            search={filters.search}
+            searchPlaceholder="Patient, UHID, appointment or pathology order..."
+            onSearch={(v) => updateFilter("search", v)}
+            canClear={isAnyFilterActive}
+            onClear={() => setFilters(initialFilters)}
+            viewSupported
+            viewMode={view}
+            onViewChange={setView}
+            filters={[
+              {
+                key: "doctor",
+                label: "Doctor",
+                placeholder: "All Doctors",
+                selected: filters.doctor,
+                options: [{ value: "", label: "All Doctors" }, ...PATHOLOGY_DOCTORS.map((d) => ({ value: d, label: d }))],
+              },
+              {
+                key: "category",
+                label: "Category",
+                placeholder: "All Categories",
+                selected: filters.category,
+                options: [{ value: "", label: "All Categories" }, ...PATHOLOGY_CATEGORIES.map((c) => ({ value: c, label: c }))],
+              },
+              {
+                key: "status",
+                label: "Status",
+                placeholder: "All Status",
+                selected: filters.status,
+                options: [
+                  { value: "All", label: "All Status" },
+                  { value: "Ordered", label: "Ordered" },
+                  { value: "Sample Collected", label: "Sample Collected" },
+                  { value: "Processing", label: "Processing" },
+                  { value: "Report Ready", label: "Report Ready" },
+                ],
+              },
+              {
+                key: "date",
+                label: "Date",
+                placeholder: "All Dates",
+                selected: filters.date,
+                options: [{ value: "", label: "All Dates" }, ...dateOptions.map((d) => ({ value: d, label: d }))],
+              },
+              {
+                key: "paymentStatus",
+                label: "Payment",
+                placeholder: "All Payments",
+                selected: filters.paymentStatus,
+                options: [
+                  { value: "All", label: "All Payments" },
+                  { value: "Paid", label: "Paid" },
+                  { value: "Unpaid", label: "Unpaid" },
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => updateFilter(key as keyof PathologyOrderFilters, value as never)}
           />
         </div>
-        <Filters
-          filters={filters}
-          results={filteredOrders.length}
-          doctors={PATHOLOGY_DOCTORS}
-          categories={PATHOLOGY_CATEGORIES}
-          onChange={updateFilter}
-          onReset={() => setFilters(initialFilters)}
-        />
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-500">
-            Showing{" "}
-            <span className="font-bold text-slate-800">
-              {filteredOrders.length}
-            </span>{" "}
-            pathology OPD order{filteredOrders.length !== 1 ? "s" : ""}
-          </p>
-          <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-            <button
-              type="button"
-              onClick={() => setView("list")}
-              className={`rounded-lg px-3 py-2 text-xs font-semibold ${view === "list" ? "bg-violet-50 text-violet-700" : "text-slate-500"}`}
-            >
-              <LayoutList className="inline h-4 w-4" />{" "}
-              <span className="hidden sm:inline">List</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("grid")}
-              className={`rounded-lg px-3 py-2 text-xs font-semibold ${view === "grid" ? "bg-violet-50 text-violet-700" : "text-slate-500"}`}
-            >
-              <Grid2X2 className="inline h-4 w-4" />{" "}
-              <span className="hidden sm:inline">Grid</span>
-            </button>
-          </div>
-        </div>
+
         {view === "list" ? (
-          <PathologyOrdersList
-            orders={filteredOrders}
-            onView={setSelectedOrder}
-          />
+          <OpsTable data={filteredOrders} rowKey={(o) => o.id} columns={columns} showColumnToggle />
         ) : (
-          <PathologyOrdersGrid
-            orders={filteredOrders}
-            onView={setSelectedOrder}
-          />
+          <OpsGrid data={filteredOrders} rowKey={(o) => o.id} renderCard={renderCard} pageSize={6} />
         )}
+
         <PathologyOrderDetailDrawer
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onUpdateTest={updateTest}
           onCollectPayment={collectPayment}
         />
-      </div>
+      </main>
     </div>
   );
 }
+

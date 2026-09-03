@@ -1,27 +1,25 @@
 // app/(dashboard)/billing/ipd/page.tsx
 "use client";
 import { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Grid2X2, LayoutList, TrendingUp, Wallet } from "lucide-react";
-import type { VisibilityState } from "@tanstack/react-table";
-import { DataTable } from "@/components/ui/data-table";
+import { AlertTriangle, CheckCircle2, TrendingUp, Wallet } from "lucide-react";
 import type { BillingFilters as BillingFiltersState, BillingPatient } from "@/types/billing/ipd/billing-types";
 import { BILLING_PATIENTS, BILLING_WARDS, THIS_MONTH_PREFIX, TODAY_ISO } from "@/lib/billing/ipd/billing-data";
 import { computeBilling, formatCurrency } from "@/lib/billing/ipd/billing-calculations";
-import { BillingStat } from "./_components/billing-stats";
-import { BillingFilters } from "./_components/billing-filters";
-import { getBillingColumns, defaultBillingColumnVisibility } from "./_components/billing-columns";
-import { BillingGrid } from "./_components/billing-grid";
 import { BillingDetailDrawer } from "./_components/drawer/billing-detail-drawer";
-import { PharmacyIpdColumnToggle as ColumnToggle } from "@/app/(dashboard)/pharmacy/ipd/orders/_components/pharmacy-ipd-column-toggle";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import type { KpiCardProps } from "@/components/dashboard";
+import { BillingStatusBadge } from "./_components/billing-badges";
 
-type ViewMode = "table" | "grid";
+type ViewMode = "list" | "grid";
 const initialFilters: BillingFiltersState = { search: "", ward: "All", status: "All" };
+
+const previousDay = { collectedToday: 81250, collectedMonth: 1260000, due: 980000, fullyPaid: 14 };
 
 export default function IpdBillingPage() {
   const [patients, setPatients] = useState<BillingPatient[]>(BILLING_PATIENTS);
   const [filters, setFilters] = useState<BillingFiltersState>(initialFilters);
-  const [view, setView] = useState<ViewMode>("table");
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defaultBillingColumnVisibility);
+  const [view, setView] = useState<ViewMode>("list");
   const [viewingPatient, setViewingPatient] = useState<BillingPatient | null>(null);
 
   const filtered = useMemo(() => patients.filter((patient) => {
@@ -37,20 +35,18 @@ export default function IpdBillingPage() {
     let collectedThisMonth = 0;
     let totalDue = 0;
     let fullyPaidCount = 0;
-    let dueCount = 0;
 
     patients.forEach((patient) => {
       const computed = computeBilling(patient);
       totalDue += computed.dueAmount;
       if (computed.status === "Fully Paid") fullyPaidCount += 1;
-      if (computed.status !== "Fully Paid") dueCount += 1;
       patient.payments.forEach((payment) => {
         if (payment.date === TODAY_ISO) collectedToday += payment.totalAmount;
         if (payment.date.startsWith(THIS_MONTH_PREFIX)) collectedThisMonth += payment.totalAmount;
       });
     });
 
-    return { collectedToday, collectedThisMonth, totalDue, fullyPaidCount, dueCount };
+    return { collectedToday, collectedThisMonth, totalDue, fullyPaidCount };
   }, [patients]);
 
   function updateFilter<K extends keyof BillingFiltersState>(key: K, value: BillingFiltersState[K]) {
@@ -62,47 +58,90 @@ export default function IpdBillingPage() {
     setViewingPatient(updated);
   }
 
-  const columns = useMemo(() => getBillingColumns(setViewingPatient), []);
-  const columnIds = useMemo(() => columns.map((column) => column.id as string).filter(Boolean), [columns]);
+  const columns = useMemo<OpsColumn<BillingPatient>[]>(() => [
+    { key: "Patient", header: "Patient", cell: (row) => <div><p className="font-semibold text-slate-800">{row.patientName}</p><p className="text-xs text-slate-400">{row.uhid}</p></div> },
+    { key: "IPD ID", header: "IPD ID", cell: (row) => <span className="text-sm text-slate-600">{row.ipdId}</span> },
+    { key: "Ward / Bed", header: "Ward / Bed", cell: (row) => <div className="text-sm text-slate-600">{row.ward}<p className="text-xs text-slate-400">{row.room} · {row.bed}</p></div> },
+    { key: "Doctor", header: "Doctor", cell: (row) => <span className="text-sm text-slate-600">{row.admittingDoctor}</span> },
+    { key: "Net Payable", header: "Net Payable", cell: (row) => <span className="text-sm font-bold text-slate-800">{formatCurrency(computeBilling(row).netPayable)}</span> },
+    { key: "Collected", header: "Collected", cell: (row) => <span className="text-sm font-semibold text-emerald-600">{formatCurrency(computeBilling(row).totalCollected)}</span> },
+    { key: "Due", header: "Due", cell: (row) => { const due = computeBilling(row).dueAmount; return <span className={`text-sm font-bold ${due > 0 ? "text-red-600" : "text-slate-400"}`}>{formatCurrency(due)}</span>; } },
+    { key: "Status", header: "Status", cell: (row) => <BillingStatusBadge status={computeBilling(row).status} /> },
+    { key: "Action", header: "Action", enableHiding: false, headerClassName: "text-right", cell: (row) => (<div className="text-right"><button type="button" onClick={() => setViewingPatient(row)} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">View Details</button></div>) },
+  ], []);
+
+  const infoCards: KpiCardProps[] = [
+    { label: "Collected Today", value: formatCurrency(stats.collectedToday), icon: Wallet, accent: "emerald", footer: "24 Aug 2026", trend: buildTrend(stats.collectedToday, previousDay.collectedToday, "vs yesterday") },
+    { label: "Collected This Month", value: formatCurrency(stats.collectedThisMonth), icon: TrendingUp, accent: "blue", footer: "August 2026", trend: buildTrend(stats.collectedThisMonth, previousDay.collectedMonth, "vs yesterday") },
+    { label: "Total Outstanding Due", value: formatCurrency(stats.totalDue), icon: AlertTriangle, accent: "rose", footer: "Across all patients", trend: buildTrend(stats.totalDue, previousDay.due, "vs yesterday") },
+    { label: "Fully Paid Bills", value: String(stats.fullyPaidCount), icon: CheckCircle2, accent: "violet", footer: "Fully settled accounts", trend: buildTrend(stats.fullyPaidCount, previousDay.fullyPaid, "vs yesterday") },
+  ];
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1700px] space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">IPD Billing</h1>
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">Billing Department</span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">Track charges, discounts, payments, and insurance coverage for every admitted patient.</p>
-          </div>
-        </header>
+      <PageShellHeader
+        title="IPD Billing"
+        description="Track charges, discounts, payments, and insurance coverage for every admitted patient."
+        meta={
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            Billing Department
+          </span>
+        }
+      />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <BillingStat icon={<Wallet className="h-5 w-5" />} label="Collected Today" value={formatCurrency(stats.collectedToday)} subtitle="24 Aug 2026" tone="emerald" />
-          <BillingStat icon={<TrendingUp className="h-5 w-5" />} label="Collected This Month" value={formatCurrency(stats.collectedThisMonth)} subtitle="August 2026" tone="blue" />
-          <BillingStat icon={<AlertTriangle className="h-5 w-5" />} label="Total Outstanding Due" value={formatCurrency(stats.totalDue)} subtitle="Across all patients" tone="rose" />
-          <BillingStat icon={<CheckCircle2 className="h-5 w-5" />} label="Fully Paid Bills" value={String(stats.fullyPaidCount)} subtitle="Fully settled accounts" tone="violet" />
-          <BillingStat icon={<Clock3 className="h-5 w-5" />} label="Pending / Partial Bills" value={String(stats.dueCount)} subtitle="Require follow-up" tone="amber" />
-        </div>
+      <div className="flex flex-col gap-4">
+        <StatsRow items={infoCards} />
 
-        <BillingFilters filters={filters} results={filtered.length} wards={BILLING_WARDS} onChange={updateFilter} onReset={() => setFilters(initialFilters)} />
+        <FilterBar
+          search={filters.search}
+          searchPlaceholder="Patient, UHID, or IPD ID..."
+          onSearch={(value) => setFilters((p) => ({ ...p, search: value }))}
+          canClear={Boolean(filters.search || filters.ward !== "All" || filters.status !== "All")}
+          onClear={() => setFilters(initialFilters)}
+          viewSupported
+          viewMode={view}
+          onViewChange={(v) => setView(v as ViewMode)}
+          filters={[
+            { key: "ward", label: "Filter by ward", placeholder: "All Wards", selected: filters.ward, options: BILLING_WARDS.map((item) => ({ value: item, label: item })) },
+            { key: "status", label: "Filter by status", placeholder: "All Statuses", selected: filters.status, options: ["Fully Paid", "Partially Paid", "Fully Due"].map((item) => ({ value: item, label: item })) },
+          ]}
+          onFilterChange={(key, value) => updateFilter(key as keyof BillingFiltersState, value as BillingFiltersState[keyof BillingFiltersState])}
+        />
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="min-w-0 shrink text-sm text-slate-500">Showing <span className="font-bold text-slate-800">{filtered.length}</span> bill{filtered.length !== 1 ? "s" : ""}</p>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-            {view === "table" && <ColumnToggle columnIds={columnIds} visibility={columnVisibility as Record<string, boolean>} onToggle={(id, visible) => setColumnVisibility((previous) => ({ ...previous, [id]: visible }))} />}
-            <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-              <button type="button" onClick={() => setView("table")} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${view === "table" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}><LayoutList className="inline h-4 w-4" /> <span className="hidden sm:inline">Table</span></button>
-              <button type="button" onClick={() => setView("grid")} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${view === "grid" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}><Grid2X2 className="inline h-4 w-4" /> <span className="hidden sm:inline">Grid</span></button>
-            </div>
-          </div>
-        </div>
-
-        {view === "table" ? (
-          <DataTable columns={columns} data={filtered} columnVisibility={columnVisibility} onColumnVisibilityChange={setColumnVisibility} pageSize={8} />
+        {view === "list" ? (
+          <OpsTable
+            columns={columns}
+            data={filtered}
+            rowKey={(row) => row.uhid}
+            onRowClick={setViewingPatient}
+          />
         ) : (
-          <BillingGrid patients={filtered} onView={setViewingPatient} />
+          <OpsGrid
+            data={filtered}
+            rowKey={(row) => row.uhid}
+            renderCard={(row) => (
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+                <div className="mb-1 h-1 rounded-full bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 font-bold text-white">{row.patientName.charAt(0)}</div>
+                    <div><p className="font-bold text-slate-800">{row.patientName}</p><p className="text-xs text-slate-400">{row.uhid}</p></div>
+                  </div>
+                  <BillingStatusBadge status={computeBilling(row).status} />
+                </div>
+                <div className="mt-4 rounded-xl bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-700">{row.admittingDoctor}</p>
+                  <p className="mt-1 text-xs text-slate-500">{row.ward} · {row.room} · {row.bed}</p>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-lg border border-slate-100 p-2"><p className="text-[9px] uppercase text-slate-400">Net Payable</p><p className="mt-1 text-sm font-bold text-slate-800">{formatCurrency(computeBilling(row).netPayable)}</p></div>
+                  <div className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-2"><p className="text-[9px] uppercase text-emerald-500">Collected</p><p className="mt-1 text-sm font-bold text-emerald-700">{formatCurrency(computeBilling(row).totalCollected)}</p></div>
+                  <div className="rounded-lg border border-red-100 bg-red-50/40 p-2"><p className="text-[9px] uppercase text-red-500">Due</p><p className="mt-1 text-sm font-bold text-red-700">{formatCurrency(computeBilling(row).dueAmount)}</p></div>
+                </div>
+                <button type="button" onClick={() => setViewingPatient(row)} className="mt-4 w-full rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">View Details</button>
+              </div>
+            )}
+          />
         )}
 
         <BillingDetailDrawer patient={viewingPatient} onClose={() => setViewingPatient(null)} onPatientUpdate={handlePatientUpdate} />

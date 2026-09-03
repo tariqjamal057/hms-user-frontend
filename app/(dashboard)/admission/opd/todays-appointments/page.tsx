@@ -5,16 +5,16 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
-  Grid2X2,
-  LayoutList,
-  RefreshCcw,
-  Search,
-  SlidersHorizontal,
+  Eye,
+  RefreshCw,
+  Stethoscope,
   UserCheck,
+  Calendar,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type {
   Appointment,
   AppointmentFilters,
@@ -24,26 +24,54 @@ import {
   SPECIALTIES,
   getEffectiveStatus,
 } from "@/lib/admission-desk/opd/appointment-data";
-import { Stat } from "../appointments/_components/stat";
-import { FilterSelect } from "../appointments/_components/filterSelect";
-import { AppointmentTable } from "../appointments/_components/appointmentTable";
-import { AppointmentGrid } from "../appointments/_components/appointmentGrid";
+import {
+  PageShellHeader,
+  StatsRow,
+  FilterBar,
+  OpsTable,
+  OpsGrid,
+  OpsGridCard,
+  buildTrend,
+} from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import type { KpiCardProps } from "@/components/dashboard";
 import { AppointmentDetailDrawer } from "../appointments/_components/appointment-detail-drawer";
 import { RescheduleAppointmentDrawer } from "../appointments/_components/reschedule-appointment-drawer";
+import { StatusBadge } from "../appointments/_components/appointment-detail-drawer";
 
 type ViewMode = "list" | "grid";
 
+const previousDay = {
+  total: 28,
+  waiting: 3,
+  checkedIn: 8,
+  completed: 12,
+};
+
 function getTodayDate() {
   return new Date().toISOString().split("T")[0];
+}
+
+function formatAppointmentDate(date: string) {
+  if (!date) return "—";
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getTypeStyle(type: Appointment["appointmentType"]) {
+  return type === "New Registration"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : "border-violet-200 bg-violet-50 text-violet-700";
 }
 
 export default function TodaysAppointmentsPage() {
   const today = getTodayDate();
 
   const [appointments, setAppointments] = useState<Appointment[]>(APPOINTMENTS);
-
   const [view, setView] = useState<ViewMode>("list");
-
   const [filters, setFilters] = useState<Omit<AppointmentFilters, "date">>({
     search: "",
     type: "All",
@@ -54,7 +82,6 @@ export default function TodaysAppointmentsPage() {
 
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
-
   const [rescheduleAppointment, setRescheduleAppointment] =
     useState<Appointment | null>(null);
 
@@ -66,10 +93,8 @@ export default function TodaysAppointmentsPage() {
 
   const visibleAppointments = useMemo(() => {
     const searchQuery = filters.search.trim().toLowerCase();
-
     return todayAppointments.filter((appointment) => {
       const effectiveStatus = getEffectiveStatus(appointment);
-
       const searchableText = [
         appointment.id,
         appointment.patient.uhid,
@@ -82,24 +107,17 @@ export default function TodaysAppointmentsPage() {
       ]
         .join(" ")
         .toLowerCase();
-
-      const matchesSearch =
-        !searchQuery || searchableText.includes(searchQuery);
-
+      const matchesSearch = !searchQuery || searchableText.includes(searchQuery);
       const matchesType =
         filters.type === "All" || appointment.appointmentType === filters.type;
-
       const matchesStatus =
         filters.status === "All" || effectiveStatus === filters.status;
-
       const matchesSpecialty =
         filters.specialty === "All" ||
         appointment.specialty === filters.specialty;
-
       const matchesDoctor =
         filters.doctorId === "All" ||
         appointment.doctor.id === filters.doctorId;
-
       return (
         matchesSearch &&
         matchesType &&
@@ -112,30 +130,19 @@ export default function TodaysAppointmentsPage() {
 
   const stats = useMemo(() => {
     const waiting = todayAppointments.filter(
-      (appointment) => getEffectiveStatus(appointment) === "Waiting",
+      (a) => getEffectiveStatus(a) === "Waiting",
     ).length;
-
     const checkedIn = todayAppointments.filter(
-      (appointment) => getEffectiveStatus(appointment) === "Checked In",
+      (a) => getEffectiveStatus(a) === "Checked In",
     ).length;
-
     const completed = todayAppointments.filter(
-      (appointment) => getEffectiveStatus(appointment) === "Completed",
+      (a) => getEffectiveStatus(a) === "Completed",
     ).length;
-
-    const remaining = todayAppointments.filter((appointment) => {
-      const status = getEffectiveStatus(appointment);
-
+    const remaining = todayAppointments.filter((a) => {
+      const status = getEffectiveStatus(a);
       return status === "Booked" || status === "Waiting";
     }).length;
-
-    return {
-      total: todayAppointments.length,
-      waiting,
-      checkedIn,
-      completed,
-      remaining,
-    };
+    return { total: todayAppointments.length, waiting, checkedIn, completed, remaining };
   }, [todayAppointments]);
 
   const hasActiveFilters =
@@ -149,10 +156,7 @@ export default function TodaysAppointmentsPage() {
     key: K,
     value: (typeof filters)[K],
   ) {
-    setFilters((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
+    setFilters((previous) => ({ ...previous, [key]: value }));
   }
 
   function resetFilters() {
@@ -172,10 +176,7 @@ export default function TodaysAppointmentsPage() {
   ) {
     setAppointments((previous) =>
       previous.map((appointment) => {
-        if (appointment.id !== appointmentId) {
-          return appointment;
-        }
-
+        if (appointment.id !== appointmentId) return appointment;
         return {
           ...appointment,
           appointmentDate: newDate,
@@ -189,9 +190,7 @@ export default function TodaysAppointmentsPage() {
         };
       }),
     );
-
     setRescheduleAppointment(null);
-
     toast.success(
       "Appointment rescheduled successfully. It has been moved from today's queue.",
     );
@@ -199,249 +198,292 @@ export default function TodaysAppointmentsPage() {
 
   const formattedToday = new Date(`${today}T12:00:00`).toLocaleDateString(
     "en-IN",
-    {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    },
+    { weekday: "long", day: "numeric", month: "long", year: "numeric" },
   );
+
+  const infoCards: KpiCardProps[] = [
+    {
+      label: "Today's Appointments",
+      value: String(stats.total),
+      icon: CalendarDays,
+      accent: "blue",
+      footer: "Scheduled",
+      trend: buildTrend(stats.total, previousDay.total),
+    },
+    {
+      label: "Waiting Patients",
+      value: String(stats.waiting),
+      icon: Clock3,
+      accent: "amber",
+      footer: "Need check-in",
+      trend: buildTrend(stats.waiting, previousDay.waiting),
+    },
+    {
+      label: "Checked In",
+      value: String(stats.checkedIn),
+      icon: UserCheck,
+      accent: "violet",
+      footer: "In queue",
+      trend: buildTrend(stats.checkedIn, previousDay.checkedIn),
+    },
+    {
+      label: "Completed",
+      value: String(stats.completed),
+      icon: CheckCircle2,
+      accent: "emerald",
+      footer: "Consulted",
+      trend: buildTrend(stats.completed, previousDay.completed),
+    },
+  ];
+
+  const columns: OpsColumn<Appointment>[] = [
+    {
+      key: "patient",
+      header: "Patient",
+      cell: (a) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-sm font-bold text-white">
+            {a.patient.firstName[0]}
+            {a.patient.lastName[0]}
+          </div>
+          <div>
+            <p className="font-semibold text-slate-800">
+              {a.patient.firstName} {a.patient.lastName}
+            </p>
+            <p className="text-xs text-slate-400">
+              {a.patient.age} yrs · {a.patient.gender}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "ids",
+      header: "UHID / Appointment",
+      cell: (a) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{a.patient.uhid}</p>
+          <p className="text-xs text-slate-400">{a.id}</p>
+        </div>
+      ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      cell: (a) => (
+        <span className="text-sm text-slate-600">{a.appointmentType}</span>
+      ),
+    },
+    {
+      key: "doctor",
+      header: "Doctor / Specialty",
+      cell: (a) => (
+        <div>
+          <p className="text-sm font-medium text-slate-700">{a.doctor.name}</p>
+          <p className="text-xs text-slate-400">{a.specialty}</p>
+        </div>
+      ),
+    },
+    {
+      key: "date",
+      header: "Slot",
+      cell: (a) => (
+        <div>
+          <span className="text-sm text-slate-600">{a.slot.period}</span>
+          <p className="text-xs text-slate-400">{a.slot.startTime}</p>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (a) => <StatusBadge status={getEffectiveStatus(a)} />,
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (a) => {
+        const status = getEffectiveStatus(a);
+        return (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedAppointment(a)}
+            >
+              <Eye className="mr-1 h-4 w-4" /> View
+            </Button>
+            {["Booked", "Waiting"].includes(status) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRescheduleAppointment(a)}
+                className="border-orange-200 text-orange-700 hover:bg-orange-50"
+              >
+                Reschedule
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  function renderCard(a: Appointment) {
+    const status = getEffectiveStatus(a);
+    const canReschedule = status === "Booked" || status === "Waiting";
+
+    return (
+      <OpsGridCard
+        avatar={`${a.patient.firstName.charAt(0)}${a.patient.lastName.charAt(0)}`}
+        title={`${a.patient.firstName} ${a.patient.lastName}`}
+        subtitle={a.patient.uhid}
+        badge={<StatusBadge status={status} />}
+        context={
+          <p className="text-sm font-semibold text-slate-700">{a.doctor.name} · {a.specialty}</p>
+        }
+        stats={[
+          { label: "Appointment Date", value: formatAppointmentDate(a.appointmentDate) },
+          { label: "Consultation Slot", value: a.slot.period },
+          { label: "Paid Amount", value: `₹${a.totalAmount.toLocaleString("en-IN")}` },
+          { label: "Payment", value: a.paymentMethod },
+        ]}
+        footerTags={
+          <Badge variant="outline" className={getTypeStyle(a.appointmentType)}>
+            <UserPlus className="mr-1 h-3 w-3" />
+            {a.appointmentType}
+          </Badge>
+        }
+        action={{
+          label: "View Details",
+          icon: Eye,
+          onClick: () => setSelectedAppointment(a),
+        }}
+      >
+        {canReschedule && (
+          <Button
+            variant="outline"
+            className="mt-2 w-full gap-2 border-orange-200 text-orange-700 hover:bg-orange-50"
+            onClick={() => setRescheduleAppointment(a)}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Reschedule
+          </Button>
+        )}
+      </OpsGridCard>
+    );
+  }
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1600px] space-y-6">
-        {/* Page heading */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">
-                Today&apos;s OPD Appointments
-              </h1>
-
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                Live Queue
-              </span>
-            </div>
-
-            <p className="mt-1 text-sm text-slate-500">
-              {formattedToday} · Monitor and manage today&apos;s patient
-              consultation queue.
-            </p>
-          </div>
-
+      <PageShellHeader
+        title="Today's OPD Appointments"
+        description={`${formattedToday} · Monitor and manage today's patient consultation queue.`}
+        meta={
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            Live Queue
+          </span>
+        }
+        actions={
           <div className="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">
             <Clock3 className="h-4 w-4" />
             {stats.remaining} pending consultation
             {stats.remaining !== 1 ? "s" : ""}
           </div>
+        }
+      />
+
+      <main className="py-6">
+        <StatsRow items={infoCards} />
+
+        <div className="my-6">
+          <FilterBar
+            search={filters.search}
+            onSearch={(v) => updateFilter("search", v)}
+            searchPlaceholder="Search patient, UHID, mobile or appointment ID..."
+            canClear={hasActiveFilters}
+            onClear={resetFilters}
+            viewSupported
+            viewMode={view}
+            onViewChange={setView}
+            filters={[
+              {
+                key: "type",
+                label: "Patient type",
+                placeholder: "All Types",
+                selected: filters.type,
+                options: [
+                  { value: "All", label: "All Types" },
+                  { value: "New Registration", label: "New Registration" },
+                  { value: "Follow-up", label: "Follow-up" },
+                ],
+              },
+              {
+                key: "status",
+                label: "Status",
+                placeholder: "All Status",
+                selected: filters.status,
+                options: [
+                  { value: "All", label: "All Status" },
+                  { value: "Booked", label: "Booked" },
+                  { value: "Waiting", label: "Waiting" },
+                  { value: "Checked In", label: "Checked In" },
+                  { value: "Completed", label: "Completed" },
+                  { value: "Rescheduled", label: "Rescheduled" },
+                ],
+              },
+              {
+                key: "specialty",
+                label: "Specialty",
+                placeholder: "All Specialties",
+                selected: filters.specialty,
+                options: [
+                  { value: "All", label: "All Specialties" },
+                  ...SPECIALTIES.map((s) => ({ value: s.name, label: s.name })),
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => {
+              if (key === "type") updateFilter("type", value as typeof filters.type);
+              if (key === "status") updateFilter("status", value as typeof filters.status);
+              if (key === "specialty") updateFilter("specialty", value);
+            }}
+          />
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Stat
-            icon={<CalendarDays className="h-5 w-5" />}
-            label="Today's Appointments"
-            value={String(stats.total)}
-            tone="blue"
-            subtitle="Scheduled"
-          />
-
-          <Stat
-            icon={<Clock3 className="h-5 w-5" />}
-            label="Waiting Patients"
-            value={String(stats.waiting)}
-            tone="amber"
-            subtitle="Need check-in"
-          />
-
-          <Stat
-            icon={<UserCheck className="h-5 w-5" />}
-            label="Checked In"
-            value={String(stats.checkedIn)}
-            tone="violet"
-            subtitle="In queue"
-          />
-
-          <Stat
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            label="Completed"
-            value={String(stats.completed)}
-            tone="emerald"
-            subtitle="Consulted"
-          />
-        </div>
-
-        {/* Filter section */}
-        <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/40 px-4 py-3 sm:px-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                  <SlidersHorizontal className="h-4 w-4" />
-                </div>
-
-                <div>
-                  <p className="text-sm font-bold text-slate-800">
-                    Filter Today&apos;s Queue
-                  </p>
-
-                  <p className="text-xs text-slate-500">
-                    Search, filter, and manage today&apos;s appointments.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                  >
-                    <RefreshCcw className="h-3.5 w-3.5" />
-                    Reset
-                  </button>
-                )}
-
-                <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                  {visibleAppointments.length} Result
-                  {visibleAppointments.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <CardContent className="p-4 sm:p-5">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <div className="relative md:col-span-2 xl:col-span-2">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                <Input
-                  className="h-10 border-slate-200 bg-slate-50/50 pl-9 transition focus:border-blue-400 focus:bg-white focus:ring-blue-100"
-                  placeholder="Search patient, UHID, mobile or appointment ID..."
-                  value={filters.search}
-                  onChange={(event) =>
-                    updateFilter("search", event.target.value)
-                  }
-                />
-              </div>
-
-              <FilterSelect
-                value={filters.type}
-                onChange={(value) =>
-                  updateFilter("type", value as typeof filters.type)
-                }
-                items={["All", "New Registration", "Follow-up"]}
-                placeholder="Patient type"
-              />
-
-              <FilterSelect
-                value={filters.status}
-                onChange={(value) =>
-                  updateFilter("status", value as typeof filters.status)
-                }
-                items={[
-                  "All",
-                  "Booked",
-                  "Waiting",
-                  "Checked In",
-                  "Completed",
-                  "Rescheduled",
-                ]}
-                placeholder="Status"
-              />
-
-              <FilterSelect
-                value={filters.specialty}
-                onChange={(value) => updateFilter("specialty", value)}
-                items={[
-                  "All",
-                  ...SPECIALTIES.map((specialty) => specialty.name),
-                ]}
-                placeholder="Specialty"
-              />
-            </div>
-
-            <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-slate-500">
-                Showing{" "}
-                <span className="font-bold text-slate-800">
-                  {visibleAppointments.length}
-                </span>{" "}
-                appointment
-                {visibleAppointments.length !== 1 ? "s" : ""} scheduled for
-                today.
-              </p>
-
-              <div className="flex items-center justify-between gap-2 sm:justify-end">
-                <span className="text-xs font-medium text-slate-400">
-                  Display as
-                </span>
-
-                <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setView("list")}
-                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
-                      view === "list"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    <LayoutList className="h-4 w-4" />
-                    <span className="hidden sm:inline">List</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setView("grid")}
-                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
-                      view === "grid"
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    <Grid2X2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Grid</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Appointment view */}
         {view === "list" ? (
-          <AppointmentTable
-            appointments={visibleAppointments}
-            onView={setSelectedAppointment}
-            onReschedule={setRescheduleAppointment}
+          <OpsTable
+            data={visibleAppointments}
+            rowKey={(a) => a.id}
+            columns={columns}
+           
+            showColumnToggle
           />
         ) : (
-          <AppointmentGrid
-            appointments={visibleAppointments}
-            onView={setSelectedAppointment}
-            onReschedule={setRescheduleAppointment}
+          <OpsGrid
+            data={visibleAppointments}
+            rowKey={(a) => a.id}
+            renderCard={renderCard}
+            pageSize={6}
           />
         )}
-      </div>
+      </main>
 
-      {/* Shared appointment detail drawer */}
       <AppointmentDetailDrawer
         appointment={selectedAppointment}
         onClose={() => setSelectedAppointment(null)}
       />
-
-      {/* Shared reschedule drawer */}
       <RescheduleAppointmentDrawer
         appointment={rescheduleAppointment}
         onClose={() => setRescheduleAppointment(null)}
         onConfirm={(newDate, newSlot) => {
           if (!rescheduleAppointment) return;
-
           handleReschedule(rescheduleAppointment.id, newDate, newSlot);
         }}
       />
     </div>
   );
 }
+

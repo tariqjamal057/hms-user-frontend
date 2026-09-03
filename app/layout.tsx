@@ -11,7 +11,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CarePoint HIS — Hospital Management System",
+  title: "LTC HMS — Hospital Management System",
   description: "Integrated Hospital Management System for clinical, operational, and administrative workflows",
 };
 

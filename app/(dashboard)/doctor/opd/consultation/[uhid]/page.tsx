@@ -135,7 +135,7 @@ export default function DoctorConsultationPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
+    <div className="min-h-screen">
       {/* Top Navigation */}
       <header className="border-b border-slate-200 bg-white sticky top-0 z-20">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">

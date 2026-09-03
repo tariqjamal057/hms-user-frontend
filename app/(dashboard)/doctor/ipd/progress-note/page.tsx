@@ -107,7 +107,7 @@ export default function ProgressNotesPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden text-slate-800">
+    <div className="min-h-screen text-slate-800">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3">
@@ -782,3 +782,4 @@ function FieldLabel({
     </div>
   );
 }
+

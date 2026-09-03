@@ -10,7 +10,8 @@ export type KpiAccent =
   | "emerald"
   | "amber"
   | "rose"
-  | "violet";
+  | "violet"
+  | "slate";
 
 export interface TrendInfo {
   /** A number like 12.8 or -6.2; sign is used when direction is not provided */

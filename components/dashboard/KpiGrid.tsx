@@ -4,7 +4,7 @@ import type { KpiCardProps } from "./types";
 
 interface KpiGridProps {
   items: KpiCardProps[];
-  columns?: 2 | 3 | 4;
+  columns?: 2 | 3 | 4 | 5;
   className?: string;
 }
 
@@ -12,6 +12,7 @@ const GRID_COLS: Record<NonNullable<KpiGridProps["columns"]>, string> = {
   2: "sm:grid-cols-2",
   3: "sm:grid-cols-2 xl:grid-cols-3",
   4: "sm:grid-cols-2 xl:grid-cols-4",
+  5: "sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5",
 };
 
 export default function KpiGrid({

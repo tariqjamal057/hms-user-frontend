@@ -1,96 +1,395 @@
 // app/(dashboard)/rmo/ipd/all-patients/page.tsx
 "use client";
 import { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, Eye, Grid2X2, LayoutList, UserRound } from "lucide-react";
-import type { VisibilityState } from "@tanstack/react-table";
-import { DataTable } from "@/components/ui/data-table";
-import type { RmoFilters as RmoFiltersState, RmoPatient } from "@/types/rmo/ipd/rmo-types";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  Eye,
+  UserRound,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import type {
+  RmoFilters as RmoFiltersState,
+  RmoPatient,
+} from "@/types/rmo/ipd/rmo-types";
 import { RMO_PATIENTS, RMO_WARDS, RMO_DEPARTMENTS } from "@/lib/rmo/ipd/rmo-data";
-import { RmoStat } from "./_components/rmo-stats";
-import { RmoFilters } from "./_components/rmo-filters";
-import { getRmoColumns, defaultRmoColumnVisibility } from "./_components/rmo-columns";
-import { RmoPatientsGrid } from "./_components/rmo-grid";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, buildTrend } from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import { KpiCardProps } from "@/components/dashboard";
+import { PatientStatusBadge } from "./_components/rmo-badges";
 import { RmoDetailDrawer } from "./_components/drawer/rmo-detail-drawer";
-import { PharmacyIpdColumnToggle as ColumnToggle } from "@/app/(dashboard)/pharmacy/ipd/orders/_components/pharmacy-ipd-column-toggle";
 
-type ViewMode = "table" | "grid";
-const initialFilters: RmoFiltersState = { search: "", ward: "All", status: "All", department: "All" };
+type ViewMode = "list" | "grid";
+const initialFilters: RmoFiltersState = {
+  search: "",
+  ward: "All",
+  status: "All",
+  department: "All",
+};
+
+const previousDay = {
+  total: 26,
+  stable: 14,
+  underObservation: 7,
+  critical: 5,
+};
 
 export default function RmoAllPatientsPage() {
   const [patients, setPatients] = useState<RmoPatient[]>(RMO_PATIENTS);
   const [filters, setFilters] = useState<RmoFiltersState>(initialFilters);
-  const [view, setView] = useState<ViewMode>("table");
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defaultRmoColumnVisibility);
+  const [view, setView] = useState<ViewMode>("list");
   const [viewingPatient, setViewingPatient] = useState<RmoPatient | null>(null);
 
-  const filtered = useMemo(() => patients.filter((patient) => {
-    const query = filters.search.trim().toLowerCase();
-    const matchesSearch = !query || [patient.patientName, patient.uhid, patient.ipdId].join(" ").toLowerCase().includes(query);
-    const matchesWard = filters.ward === "All" || patient.ward === filters.ward;
-    const matchesStatus = filters.status === "All" || patient.status === filters.status;
-    return matchesSearch && matchesWard && matchesStatus;
-  }), [patients, filters]);
+  const filtered = useMemo(
+    () =>
+      patients.filter((patient) => {
+        const query = filters.search.trim().toLowerCase();
+        const matchesSearch =
+          !query ||
+          [patient.patientName, patient.uhid, patient.ipdId]
+            .join(" ")
+            .toLowerCase()
+            .includes(query);
+        const matchesWard =
+          filters.ward === "All" || patient.ward === filters.ward;
+        const matchesStatus =
+          filters.status === "All" || patient.status === filters.status;
+        return matchesSearch && matchesWard && matchesStatus;
+      }),
+    [patients, filters],
+  );
 
-  const stats = useMemo(() => ({
-    total: patients.length,
-    stable: patients.filter((p) => p.status === "Stable").length,
-    underObservation: patients.filter((p) => p.status === "Under Observation").length,
-    critical: patients.filter((p) => p.status === "Critical").length,
-  }), [patients]);
+  const stats = useMemo(
+    () => ({
+      total: patients.length,
+      stable: patients.filter((p) => p.status === "Stable").length,
+      underObservation: patients.filter(
+        (p) => p.status === "Under Observation",
+      ).length,
+      critical: patients.filter((p) => p.status === "Critical").length,
+    }),
+    [patients],
+  );
 
-  function updateFilter<K extends keyof RmoFiltersState>(key: K, value: RmoFiltersState[K]) {
+  function updateFilter<K extends keyof RmoFiltersState>(
+    key: K,
+    value: RmoFiltersState[K],
+  ) {
     setFilters((previous) => ({ ...previous, [key]: value }));
   }
 
   function handlePatientUpdate(updated: RmoPatient) {
-    setPatients((previous) => previous.map((p) => p.uhid === updated.uhid ? updated : p));
+    setPatients((previous) =>
+      previous.map((p) => (p.uhid === updated.uhid ? updated : p)),
+    );
     setViewingPatient(updated);
   }
 
-  const columns = useMemo(() => getRmoColumns(setViewingPatient), []);
-  const columnIds = useMemo(() => columns.map((column) => column.id as string).filter(Boolean), [columns]);
+  const hasActiveFilters =
+    filters.search ||
+    filters.ward !== "All" ||
+    filters.status !== "All" ||
+    filters.department !== "All";
+
+  const infoCards: KpiCardProps[] = [
+    {
+      label: "Total Patients",
+      value: String(stats.total),
+      icon: UserRound,
+      accent: "blue",
+      footer: "Under RMO care",
+      trend: buildTrend(stats.total, previousDay.total),
+    },
+    {
+      label: "Stable",
+      value: String(stats.stable),
+      icon: CheckCircle2,
+      accent: "emerald",
+      footer: "No active concerns",
+      trend: buildTrend(stats.stable, previousDay.stable),
+    },
+    {
+      label: "Under Observation",
+      value: String(stats.underObservation),
+      icon: Clock3,
+      accent: "amber",
+      footer: "Being closely monitored",
+      trend: buildTrend(
+        stats.underObservation,
+        previousDay.underObservation,
+      ),
+    },
+    {
+      label: "Critical",
+      value: String(stats.critical),
+      icon: AlertTriangle,
+      accent: "rose",
+      footer: "Require urgent attention",
+      trend: buildTrend(stats.critical, previousDay.critical),
+    },
+  ];
+
+  const columns: OpsColumn<RmoPatient>[] = [
+    {
+      key: "patient",
+      header: "Patient",
+      cell: (p) => (
+        <div>
+          <p className="font-semibold text-slate-800">{p.patientName}</p>
+          <p className="text-xs text-slate-400">{p.uhid}</p>
+        </div>
+      ),
+    },
+    {
+      key: "ipdId",
+      header: "IPD ID",
+      cell: (p) => (
+        <span className="text-sm text-slate-600">{p.ipdId}</span>
+      ),
+    },
+    {
+      key: "ageGender",
+      header: "Age / Gender",
+      cell: (p) => (
+        <span className="text-sm text-slate-600">
+          {p.age} yrs · {p.gender}
+        </span>
+      ),
+    },
+    {
+      key: "ward",
+      header: "Ward / Bed",
+      cell: (p) => (
+        <div className="text-sm text-slate-600">
+          {p.ward}
+          <p className="text-xs text-slate-400">
+            {p.room} · {p.bed}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "diagnosis",
+      header: "Diagnosis",
+      cell: (p) => {
+        const latest = p.diagnoses[0];
+        return latest ? (
+          <div>
+            <p className="text-sm text-slate-700">{latest.name}</p>
+            <p className="text-xs text-slate-400">{latest.code}</p>
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400">Not yet added</span>
+        );
+      },
+    },
+    {
+      key: "doctor",
+      header: "Attending Doctor",
+      cell: (p) => (
+        <span className="text-sm text-slate-600">{p.attendingDoctor}</span>
+      ),
+    },
+    {
+      key: "department",
+      header: "Department",
+      cell: (p) => (
+        <span className="text-sm text-slate-600">{p.department}</span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (p) => <PatientStatusBadge status={p.status} />,
+    },
+    {
+      key: "action",
+      header: "Action",
+      headerClassName: "text-right",
+      className: "text-right",
+      enableHiding: false,
+      cell: (p) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setViewingPatient(p)}
+          className="gap-1 border-blue-200 text-blue-700"
+        >
+          <Eye className="h-4 w-4" />
+          View Details
+        </Button>
+      ),
+    },
+  ];
+
+  function renderCard(p: RmoPatient) {
+    const latestDiagnosis = p.diagnoses[0];
+    const pendingDoses = p.doses.filter((d) => d.status === "Pending").length;
+    return (
+      <Card className="overflow-hidden border-slate-200 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+        <div className="h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500" />
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 font-bold text-white">
+                {p.patientName.charAt(0)}
+              </div>
+              <div>
+                <p className="font-bold text-slate-800">{p.patientName}</p>
+                <p className="text-xs text-slate-400">{p.uhid}</p>
+              </div>
+            </div>
+            <PatientStatusBadge status={p.status} />
+          </div>
+
+          <div className="mt-4 rounded-xl bg-slate-50 p-3">
+            <p className="text-sm font-semibold text-slate-700">
+              {p.attendingDoctor}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {p.ward} · {p.room} · {p.bed}
+            </p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-slate-100 p-3">
+              <p className="text-[10px] uppercase text-slate-400">
+                Diagnosis
+              </p>
+              <p className="mt-1 truncate text-sm font-bold text-slate-700">
+                {latestDiagnosis?.name ?? "Not yet added"}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-100 p-3">
+              <p className="text-[10px] uppercase text-slate-400">
+                Pending Doses
+              </p>
+              <p
+                className={`mt-1 text-sm font-bold ${pendingDoses > 0 ? "text-amber-600" : "text-emerald-600"}`}
+              >
+                {pendingDoses}
+              </p>
+            </div>
+          </div>
+
+          <Button
+            className="mt-4 w-full gap-2 border-blue-200 text-blue-700"
+            variant="outline"
+            onClick={() => setViewingPatient(p)}
+          >
+            <Eye className="h-4 w-4" />
+            View Details
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1700px] space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">RMO — All IPD Patients</h1>
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">Resident Medical Officer</span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">Full clinical overview: vitals, diagnosis, medicines, labs, notes, billing, and discharge in one place.</p>
-          </div>
-        </header>
+      <PageShellHeader
+        title="RMO — All IPD Patients"
+        description="Full clinical overview: vitals, diagnosis, medicines, labs, notes, billing, and discharge in one place."
+        meta={
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            Resident Medical Officer
+          </span>
+        }
+      />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <RmoStat icon={<UserRound className="h-5 w-5" />} label="Total Patients" value={String(stats.total)} subtitle="Under RMO care" tone="blue" />
-          <RmoStat icon={<CheckCircle2 className="h-5 w-5" />} label="Stable" value={String(stats.stable)} subtitle="No active concerns" tone="emerald" />
-          <RmoStat icon={<Clock3 className="h-5 w-5" />} label="Under Observation" value={String(stats.underObservation)} subtitle="Being closely monitored" tone="amber" />
-          <RmoStat icon={<AlertTriangle className="h-5 w-5" />} label="Critical" value={String(stats.critical)} subtitle="Require urgent attention" tone="rose" />
+      <main className="py-6">
+        <StatsRow items={infoCards} />
+
+        <div className="my-6">
+          <FilterBar
+            search={filters.search}
+            searchPlaceholder="Patient, UHID, or IPD ID..."
+            onSearch={(v) => updateFilter("search", v)}
+            canClear={!!hasActiveFilters}
+            onClear={() => setFilters(initialFilters)}
+            viewSupported
+            viewMode={view}
+            onViewChange={setView}
+            filters={[
+              {
+                key: "ward",
+                label: "Ward",
+                placeholder: "All Wards",
+                selected: filters.ward,
+                options: [
+                  { value: "All", label: "All Wards" },
+                  ...RMO_WARDS.map((w) => ({ value: w, label: w })),
+                ],
+              },
+              {
+                key: "status",
+                label: "Status",
+                placeholder: "All Statuses",
+                selected: filters.status,
+                options: [
+                  { value: "All", label: "All Statuses" },
+                  { value: "Stable", label: "Stable" },
+                  { value: "Under Observation", label: "Under Observation" },
+                  { value: "Critical", label: "Critical" },
+                  { value: "Discharged", label: "Discharged" },
+                ],
+              },
+              {
+                key: "department",
+                label: "Department",
+                placeholder: "All Departments",
+                selected: filters.department,
+                options: [
+                  { value: "All", label: "All Departments" },
+                  ...RMO_DEPARTMENTS.map((d) => ({
+                    value: d,
+                    label: d,
+                  })),
+                ],
+              },
+            ]}
+            onFilterChange={(key, value) => {
+              if (key === "ward") updateFilter("ward", value);
+              if (key === "status")
+                updateFilter(
+                  "status",
+                  value as RmoFiltersState["status"],
+                );
+              if (key === "department")
+                updateFilter(
+                  "department",
+                  value as RmoFiltersState["department"],
+                );
+            }}
+          />
         </div>
 
-        <RmoFilters filters={filters} results={filtered.length} wards={RMO_WARDS} departments={RMO_DEPARTMENTS} onChange={updateFilter} onReset={() => setFilters(initialFilters)} />
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="min-w-0 shrink text-sm text-slate-500">Showing <span className="font-bold text-slate-800">{filtered.length}</span> patient{filtered.length !== 1 ? "s" : ""}</p>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-            {view === "table" && <ColumnToggle columnIds={columnIds} visibility={columnVisibility as Record<string, boolean>} onToggle={(id, visible) => setColumnVisibility((previous) => ({ ...previous, [id]: visible }))} />}
-            <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-              <button type="button" onClick={() => setView("table")} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${view === "table" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}><LayoutList className="inline h-4 w-4" /> <span className="hidden sm:inline">Table</span></button>
-              <button type="button" onClick={() => setView("grid")} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${view === "grid" ? "bg-blue-50 text-blue-700" : "text-slate-500"}`}><Grid2X2 className="inline h-4 w-4" /> <span className="hidden sm:inline">Grid</span></button>
-            </div>
-          </div>
-        </div>
-
-        {view === "table" ? (
-          <DataTable columns={columns} data={filtered} columnVisibility={columnVisibility} onColumnVisibilityChange={setColumnVisibility} pageSize={8} />
+        {view === "list" ? (
+          <OpsTable
+            data={filtered}
+            rowKey={(p) => p.uhid}
+            columns={columns}
+           
+            showColumnToggle
+          />
         ) : (
-          <RmoPatientsGrid patients={filtered} onView={setViewingPatient} />
+          <OpsGrid
+            data={filtered}
+            rowKey={(p) => p.uhid}
+            renderCard={renderCard}
+            pageSize={6}
+          />
         )}
 
-        <RmoDetailDrawer patient={viewingPatient} onClose={() => setViewingPatient(null)} onPatientUpdate={handlePatientUpdate} />
-      </div>
+        <RmoDetailDrawer
+          patient={viewingPatient}
+          onClose={() => setViewingPatient(null)}
+          onPatientUpdate={handlePatientUpdate}
+        />
+      </main>
     </div>
   );
 }
+
