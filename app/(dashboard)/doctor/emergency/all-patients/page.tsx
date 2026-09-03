@@ -82,11 +82,13 @@ export default function DoctorEmergencyAllPatientsPage() {
     {
       key: "incidentType",
       header: "Incident",
+      hideOn: "md",
       cell: (p) => <span className="text-sm text-slate-600">{p.incidentType}</span>,
     },
     {
       key: "attendingDoctor",
       header: "Attending Doctor",
+      hideOn: "lg",
       cell: (p) => (
         <span className={p.attendingDoctor === "Unassigned" ? "font-semibold text-amber-600" : "text-sm text-slate-600"}>
           {p.attendingDoctor}
@@ -182,13 +184,14 @@ export default function DoctorEmergencyAllPatientsPage() {
         </div>
 
         {viewMode === "list" ? (
-          <OpsTable
-            data={filtered}
-            rowKey={(p) => p.emergencyNumber}
-            columns={columns}
-           
-            showColumnToggle
-          />
+          <div className="min-w-0 w-full">
+            <OpsTable
+              data={filtered}
+              rowKey={(p) => p.emergencyNumber}
+              columns={columns}
+              showColumnToggle
+            />
+          </div>
         ) : (
           <OpsGrid
             data={filtered}

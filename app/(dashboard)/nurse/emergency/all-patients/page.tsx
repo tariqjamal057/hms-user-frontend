@@ -86,11 +86,13 @@ export default function NurseEmergencyAllPatientsPage() {
     {
       key: "incidentType",
       header: "Incident",
+      hideOn: "md",
       cell: (p) => <span className="text-sm text-slate-600">{p.incidentType}</span>,
     },
     {
       key: "assignedNurse",
       header: "Assigned Nurse",
+      hideOn: "lg",
       cell: (p) => (
         <span className={p.assignedNurse === "Unassigned" ? "font-semibold text-amber-600" : "text-slate-600"}>
           {p.assignedNurse}
@@ -184,14 +186,15 @@ export default function NurseEmergencyAllPatientsPage() {
         </div>
 
         {view === "list" ? (
-          <OpsTable
-            data={filtered}
-            rowKey={(p) => p.emergencyNumber}
-            columns={columns}
-           
-            showColumnToggle
-            onRowClick={(p) => setDrawerPatient(p)}
-          />
+          <div className="min-w-0 w-full">
+            <OpsTable
+              data={filtered}
+              rowKey={(p) => p.emergencyNumber}
+              columns={columns}
+              showColumnToggle
+              onRowClick={(p) => setDrawerPatient(p)}
+            />
+          </div>
         ) : (
           <OpsGrid data={filtered} rowKey={(p) => p.emergencyNumber} renderCard={renderCard} pageSize={6} />
         )}

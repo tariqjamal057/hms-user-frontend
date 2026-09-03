@@ -179,6 +179,7 @@ export default function EmergencyAllPatientsPage() {
     {
       key: "ageGender",
       header: "Age / Gender",
+      hideOn: "md",
       cell: (p) => (
         <span className="text-sm text-slate-600">
           {p.age ? `${p.age} yrs` : "—"} · {p.gender}
@@ -188,6 +189,7 @@ export default function EmergencyAllPatientsPage() {
     {
       key: "incidentType",
       header: "Incident",
+      hideOn: "md",
       cell: (p) => (
         <span className="text-sm text-slate-600">{p.incidentType}</span>
       ),
@@ -195,6 +197,7 @@ export default function EmergencyAllPatientsPage() {
     {
       key: "arrivalMode",
       header: "Arrival Mode",
+      hideOn: "lg",
       cell: (p) => (
         <span className="text-sm text-slate-600">{p.arrivalMode}</span>
       ),
@@ -202,6 +205,7 @@ export default function EmergencyAllPatientsPage() {
     {
       key: "doctor",
       header: "Attending Doctor",
+      hideOn: "lg",
       cell: (p) => (
         <span className="text-sm text-slate-600">{p.attendingDoctor}</span>
       ),
@@ -209,6 +213,7 @@ export default function EmergencyAllPatientsPage() {
     {
       key: "bedOrBay",
       header: "Bed / Bay",
+      hideOn: "xl",
       cell: (p) => (
         <span className="text-sm text-slate-600">{p.bedOrBay}</span>
       ),
@@ -216,6 +221,7 @@ export default function EmergencyAllPatientsPage() {
     {
       key: "policeCase",
       header: "Police Case",
+      hideOn: "2xl",
       cell: (p) =>
         p.police.caseType !== "None" ? (
           <Badge
@@ -369,13 +375,14 @@ export default function EmergencyAllPatientsPage() {
         </div>
 
         {view === "list" ? (
-          <OpsTable
-            data={filtered}
-            rowKey={(p) => p.emergencyNumber}
-            columns={columns}
-           
-            showColumnToggle
-          />
+          <div className="min-w-0 w-full">
+            <OpsTable
+              data={filtered}
+              rowKey={(p) => p.emergencyNumber}
+              columns={columns}
+              showColumnToggle
+            />
+          </div>
         ) : (
           <OpsGrid
             data={filtered}

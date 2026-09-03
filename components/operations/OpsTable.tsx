@@ -83,6 +83,7 @@ interface OpsTableProps<T> {
   onSelectionChange?: (keys: Set<string | number>) => void;
   bulkActions?: (selected: T[], clearSelection: () => void) => React.ReactNode;
   className?: string;
+  minWidth?: string;
 }
 
 export default function OpsTable<T>({
@@ -99,6 +100,7 @@ export default function OpsTable<T>({
   onSelectionChange,
   bulkActions,
   className,
+  minWidth = "min-w-[900px]",
 }: OpsTableProps<T>) {
   const [pageIndex, setPageIndex] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(pageSize);
@@ -160,10 +162,10 @@ export default function OpsTable<T>({
   const hasSelection = selection && selectedRows.length > 0;
 
   return (
-    <div className="w-full max-w-full space-y-3">
-      <div className="w-full max-w-full rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+    <div className="w-full max-w-full min-w-0 space-y-3">
+      <div className="w-full max-w-full min-w-0 rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         {(hasColumnToggle || hasSelection) && (
-          <div className="flex flex-col gap-2 border-b border-slate-100 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="flex flex-row items-center justify-between gap-2 border-b border-slate-100 px-3 py-2.5 sm:px-4">
             <p className="text-xs font-medium text-slate-500">
               {hasSelection
                 ? `${selectedRows.length} of ${data.length} selected`
@@ -188,7 +190,7 @@ export default function OpsTable<T>({
                       className="gap-2 border-slate-200 text-slate-600"
                     >
                       <Columns3 className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Columns</span>
+                      <span>Columns</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
@@ -213,7 +215,7 @@ export default function OpsTable<T>({
         )}
 
         <div className="w-full overflow-x-auto">
-          <table className={cn("w-full min-w-[680px] table-auto", className)}>
+          <table className={cn("w-full table-auto", minWidth, className)}>
             <thead>
               <tr className="bg-slate-50">
                 {selection && (

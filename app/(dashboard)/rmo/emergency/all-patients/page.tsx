@@ -218,6 +218,7 @@ export default function RmoEmergencyAllPatientsPage() {
     {
       key: "incident",
       header: "Incident",
+      hideOn: "md",
       cell: (p) => (
         <span className="text-sm text-slate-600">{p.incidentType}</span>
       ),
@@ -225,6 +226,7 @@ export default function RmoEmergencyAllPatientsPage() {
     {
       key: "doctor",
       header: "Attending Doctor",
+      hideOn: "md",
       cell: (p) => (
         <span
           className={
@@ -240,6 +242,7 @@ export default function RmoEmergencyAllPatientsPage() {
     {
       key: "nurse",
       header: "Assigned Nurse",
+      hideOn: "lg",
       cell: (p) => (
         <span
           className={
