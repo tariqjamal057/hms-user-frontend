@@ -68,7 +68,6 @@ export function TreatmentPlanForm({
           value={form.title}
           onChange={(v) => set("title", v)}
           placeholder="e.g. ACS Protocol, Antibiotic Therapy"
-          required
         />
         <FormTextarea
           label="Description"
@@ -76,7 +75,6 @@ export function TreatmentPlanForm({
           onChange={(v) => set("description", v)}
           placeholder="Detailed treatment instructions"
           rows={4}
-          required
         />
         <div className="grid grid-cols-2 gap-3">
           <SuffixedInput
@@ -84,7 +82,6 @@ export function TreatmentPlanForm({
             value={form.orderedBy}
             onChange={(v) => set("orderedBy", v)}
             placeholder="Doctor / RMO name"
-            required
           />
           <SingleSelect
             label="Role"

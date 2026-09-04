@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Banknote, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { BillingSnapshot } from "@/types/rmo/ipd/rmo-types";
-import { DateFilterBar } from "./date-filter-bar";
+import { DateField } from "@/components/forms/form-controls";
 
 const statusTone: Record<BillingSnapshot["status"], string> = {
   "Fully Paid": "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -29,7 +29,7 @@ export function SectionBilling({ billing }: { billing: BillingSnapshot }) {
           <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><Wallet className="h-4 w-4 text-emerald-600" />Payment History</p>
           <Badge variant="outline" className={statusTone[billing.status]}>{billing.status}</Badge>
         </div>
-        <div className="mt-3"><DateFilterBar value={date} onChange={setDate} /></div>
+        <div className="mt-3"><DateField label="Filter payments by date" value={date} onChange={setDate} /></div>
         <div className="mt-3 space-y-2">
           {filtered.map((payment) => (
             <div key={payment.id} className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">

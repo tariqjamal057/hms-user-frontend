@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Pill, Stethoscope, TestTube, UserCog } from "lucide-react";
+import { InfoTile } from "@/components/patient-detail/info-tile";
+import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
+import { DateField } from "@/components/forms/form-controls";
 import type {
   FluidBalanceEntry,
   ProgressNote,
@@ -50,8 +53,9 @@ import {
 
 import { TabOverview } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-overview";
 import { TabVitals } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-vitals";
-import { TabProgressNotes } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-progress-notes";
-import { TabFluidBalance } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-fluid-balance";
+import { ProgressNotesSection } from "@/components/patient-detail/progress-notes-section";
+import { FluidBalanceSection } from "@/components/patient-detail/fluid-balance-section";
+import { CURRENT_RMO } from "@/lib/rmo/ipd/rmo-data";
 
 import { TabVentilation } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/tab-ventilation";
 import { TabOxygenTherapy } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/tab-oxygen-therapy";
@@ -191,6 +195,263 @@ export default function RmoIcuPatientDetailPage() {
           ? "bg-amber-50 text-amber-700"
           : "bg-blue-50 text-blue-700";
 
+  // ====== Tables ======
+
+  const medicineColumns: DataColumn<(typeof filteredDoses)[number]>[] = [
+    {
+      key: "medicineName",
+      label: "Medicine",
+      render: (d) => (
+        <div>
+          <p className="font-semibold text-slate-800">{d.medicineName}</p>
+          <p className="text-xs text-slate-400">{d.strength} · {d.route}</p>
+        </div>
+      ),
+    },
+    {
+      key: "slot",
+      label: "Slot",
+      render: (d) => (
+        <Badge variant="outline" className="border-slate-200 bg-white text-slate-600">
+          {d.slot}
+        </Badge>
+      ),
+    },
+    {
+      key: "scheduledTime",
+      label: "Scheduled",
+      render: (d) => (
+        <span className="text-slate-600">
+          {d.scheduledTime} · Qty {d.qtyRequired}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (d) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge
+            variant="outline"
+            className={
+              d.status === "Given"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : d.status === "Pending"
+                  ? "border-amber-200 bg-amber-50 text-amber-700"
+                  : "border-slate-200 bg-slate-50 text-slate-600"
+            }
+          >
+            {d.status}
+          </Badge>
+          {d.urgency === "Urgent" && (
+            <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">
+              Urgent
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "given",
+      label: "Given",
+      render: (d) =>
+        d.givenBy && d.givenAt ? (
+          <span className="flex items-center gap-1 text-xs text-slate-600">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            {d.givenBy} · {d.givenAt}
+          </span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+    },
+  ];
+
+  const labColumns: DataColumn<DoctorLabOrder>[] = [
+    {
+      key: "tests",
+      label: "Tests",
+      render: (o) => (
+        <div className="space-y-1">
+          {o.orders.map((lab, idx) => (
+            <p key={idx} className="text-sm">
+              <span className="font-semibold text-slate-800">{lab.testName}</span>
+              <span className="ml-1 text-xs text-slate-400">{lab.category}</span>
+            </p>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: "priority",
+      label: "Priority",
+      render: (o) => {
+        const first = o.orders[0]?.priority;
+        return (
+          <Badge
+            variant="outline"
+            className="border-amber-200 bg-amber-50 text-amber-700"
+          >
+            {first ?? "—"}
+          </Badge>
+        );
+      },
+    },
+    {
+      key: "orderedBy",
+      label: "Ordered",
+      render: (o) => (
+        <span className="text-xs text-slate-500">
+          {o.orderedBy}
+          <br />
+          <span className="text-[10px] text-slate-400">
+            {new Date(o.orderedAt).toLocaleString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (o) => (
+        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+          {o.status}
+        </Badge>
+      ),
+    },
+  ];
+
+  const planColumns: DataColumn<(typeof plans)[number]>[] = [
+    {
+      key: "title",
+      label: "Plan",
+      render: (p) => (
+        <div>
+          <p className="font-semibold text-slate-800">{p.title}</p>
+          <p className="mt-0.5 line-clamp-2 max-w-[420px] text-xs text-slate-500">
+            {p.description}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "ordered",
+      label: "Ordered",
+      render: (p) => (
+        <span className="text-xs text-slate-500">
+          {p.orderedBy} · {p.orderedOn}
+        </span>
+      ),
+    },
+    {
+      key: "follow",
+      label: "Status",
+      render: (p) =>
+        p.followStatus === "Following" ? (
+          <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700">
+            <CheckCircle2 className="h-3 w-3" />
+            Following
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-slate-600">
+            Not Following
+          </Badge>
+        ),
+    },
+  ];
+
+  const diagnosisColumns: DataColumn<DiagnosisItem>[] = [
+    {
+      key: "name",
+      label: "Diagnosis",
+      render: (d) => (
+        <div>
+          <p className="font-semibold text-slate-800">{d.name}</p>
+          <p className="text-xs text-slate-400">Code: {d.code}</p>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (d) => (
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${diagnosisTabStatusStyle(d.status)}`}>
+          {d.status}
+        </span>
+      ),
+    },
+    {
+      key: "notedBy",
+      label: "Noted By",
+      render: (d) => (
+        <span className="text-xs text-slate-500">
+          {d.notedBy}
+          <br />
+          <span className="text-[10px] text-slate-400">
+            {new Date(d.notedAt).toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </span>
+        </span>
+      ),
+    },
+  ];
+
+  const shiftColumns: DataColumn<(typeof nurseAssignments)[number]>[] = [
+    {
+      key: "date",
+      label: "Date",
+      render: (a) => (
+        <span className="text-slate-700">
+          {new Date(a.date).toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })}
+        </span>
+      ),
+    },
+    {
+      key: "shift",
+      label: "Shift",
+      render: (a) => (
+        <Badge
+          variant="outline"
+          className={
+            a.shift === "Morning"
+              ? "border-amber-200 bg-amber-50 text-amber-700"
+              : a.shift === "Afternoon"
+                ? "border-blue-200 bg-blue-50 text-blue-700"
+                : "border-indigo-200 bg-indigo-50 text-indigo-700"
+          }
+        >
+          {a.shift}
+        </Badge>
+      ),
+    },
+    {
+      key: "nurseName",
+      label: "Nurse",
+      render: (a) => <span className="font-medium text-slate-800">{a.nurseName}</span>,
+    },
+    {
+      key: "nurseId",
+      label: "Nurse ID",
+      render: (a) => <span className="text-slate-600">{a.nurseId}</span>,
+    },
+    {
+      key: "ward",
+      label: "Ward",
+      render: (a) => <span className="text-slate-700">{a.ward}</span>,
+    },
+  ];
+
   const tabs: PatientTab[] = [
     {
       value: "overview",
@@ -200,7 +461,7 @@ export default function RmoIcuPatientDetailPage() {
     {
       value: "vitals",
       label: "Vitals",
-      content: <TabVitals vitals={vitals} onAddVital={addVital} />,
+      content: <TabVitals vitals={vitals} onAddVital={addVital} recordVitalsPath={`/rmo/icu/all-patients/${patient.uhid}/record-vitals`} />,
     },
     {
       value: "ventilation",
@@ -239,111 +500,28 @@ export default function RmoIcuPatientDetailPage() {
       label: "Medicines",
       content: (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-800">
-              Medicine Orders
-            </h3>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">Date:</label>
-              <input
-                type="date"
-                value={selectedMedicineDate}
-                onChange={(e) => setSelectedMedicineDate(e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
-              />
-            </div>
+          <div className="grid grid-cols-3 gap-3">
+            <InfoTile label="Given" value={String(filteredDoses.filter((d) => d.status === "Given").length)} tone="emerald" />
+            <InfoTile label="Pending" value={String(filteredDoses.filter((d) => d.status === "Pending").length)} tone="amber" />
+            <InfoTile label="Total" value={String(filteredDoses.length)} tone="slate" />
           </div>
-
-          {filteredDoses.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
-              No medicines administered on{" "}
-              {new Date(selectedMedicineDate).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredDoses.map((dose) => (
-                <div
-                  key={dose.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-slate-800">
-                          {dose.medicineName}
-                        </p>
-                        <Badge
-                          className={
-                            dose.status === "Given"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : dose.status === "Pending"
-                                ? "bg-amber-50 text-amber-700 border-amber-200"
-                                : "bg-slate-100 text-slate-700 border-slate-200"
-                          }
-                        >
-                          {dose.status}
-                        </Badge>
-                        {dose.urgency === "Urgent" && (
-                          <Badge className="border-red-200 bg-red-50 text-red-700">
-                            Urgent
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {dose.strength} · {dose.route} · Slot: {dose.slot}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Scheduled: {dose.scheduledTime} · Qty: {dose.qtyRequired}
-                      </p>
-                      {dose.instructions && (
-                        <p className="mt-1 text-xs italic text-slate-600">
-                          {dose.instructions}
-                        </p>
-                      )}
-                      {dose.givenBy && dose.givenAt && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          <p className="text-xs text-slate-600">
-                            Given by{" "}
-                            <span className="font-semibold">{dose.givenBy}</span>{" "}
-                            at{" "}
-                            <span className="font-semibold">{dose.givenAt}</span>
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-emerald-600">
-                  {filteredDoses.filter((d) => d.status === "Given").length}
-                </p>
-                <p className="text-xs text-slate-600">Given</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-amber-600">
-                  {filteredDoses.filter((d) => d.status === "Pending").length}
-                </p>
-                <p className="text-xs text-slate-600">Pending</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-600">
-                  {filteredDoses.length}
-                </p>
-                <p className="text-xs text-slate-600">Total</p>
-              </div>
-            </div>
+          <div className="w-full sm:w-56">
+            <DateField
+              label="Filter by date"
+              value={selectedMedicineDate}
+              onChange={setSelectedMedicineDate}
+            />
           </div>
+          <DataTable
+            card
+            title="Medicine Administration"
+            titleIcon={<Pill className="h-4 w-4" />}
+            rows={filteredDoses}
+            columns={medicineColumns}
+            rowKey={(d) => d.id}
+            countLabel="doses"
+            emptyText={`No medicines administered on ${new Date(selectedMedicineDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
+          />
         </div>
       ),
     },
@@ -351,122 +529,62 @@ export default function RmoIcuPatientDetailPage() {
       value: "laboratory",
       label: "Laboratory",
       content: (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-800">
-              Laboratory Orders
-            </h3>
-          </div>
-          {labOrders.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
-              No lab orders yet. Click &quot;Order Lab Tests&quot; to create orders.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {labOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-slate-800">
-                        {order.orders.length} Tests Ordered
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Ordered by {order.orderedBy} ·{" "}
-                        {new Date(order.orderedAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {order.orders.map((lab, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-lg bg-slate-50 p-3 text-sm"
-                      >
-                        <p className="font-semibold text-slate-800">
-                          {lab.testName} · {lab.category}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          Priority: {lab.priority} ·{" "}
-                          {lab.clinicalNotes || "No notes"}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <DataTable
+          card
+          title="Lab Orders"
+          titleIcon={<TestTube className="h-4 w-4" />}
+          rows={labOrders}
+          columns={labColumns}
+          rowKey={(o) => o.id}
+          countLabel="orders"
+          emptyText="No lab orders yet."
+        />
       ),
     },
     {
       value: "fluid",
       label: "Fluid Balance",
-      content: <TabFluidBalance entries={fluidEntries} onAddEntry={addFluidEntry} />,
+      content: (
+        <FluidBalanceSection
+          entries={fluidEntries}
+          onAddEntry={addFluidEntry}
+          authorName={CURRENT_RMO.name}
+          title="Fluid Balance Chart"
+        />
+      ),
     },
     {
       value: "notes",
       label: "Progress Notes",
-      content: <TabProgressNotes notes={notes} onAddNote={addNote} />,
+      content: (
+        <ProgressNotesSection
+          notes={notes}
+          onAddNote={addNote}
+          authorName={CURRENT_RMO.name}
+          authorRole="RMO"
+          soap
+          accent="violet"
+          categories={["RMO Review", "Doctor Round", "Nursing Update", "General"]}
+          title="ICU Progress Notes"
+        />
+      ),
     },
     {
       value: "treatment",
       label: "Treatment Plan",
       content: (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-800">Treatment Plan</h3>
-            <p className="text-xs text-slate-500">
-              Status updated by nursing staff
-            </p>
-          </div>
-          {plans.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
-              No treatment plans yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {plans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-bold text-slate-800">{plan.title}</p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {plan.description}
-                      </p>
-                      <p className="mt-2 text-xs text-slate-500">
-                        Ordered by {plan.orderedBy} · {plan.orderedOn}
-                      </p>
-                    </div>
-                    <div className="ml-4 shrink-0">
-                      {plan.followStatus === "Following" ? (
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                          <CheckCircle2 className="mr-1 h-3 w-3" />
-                          Following
-                        </Badge>
-                      ) : (
-                        <Badge className="text-slate-600">Not Following</Badge>
-                      )}
-                      {plan.lastUpdatedBy && (
-                        <p className="mt-1 text-[10px] text-slate-400">
-                          By {plan.lastUpdatedBy}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <p className="text-xs text-slate-500">Status updated by nursing staff.</p>
+          <DataTable
+            card
+            title="Treatment Plan"
+            titleIcon={<ClipboardCheck className="h-4 w-4" />}
+            rows={plans}
+            columns={planColumns}
+            rowKey={(p) => p.id}
+            countLabel="plans"
+            emptyText="No treatment plans yet."
+          />
         </div>
       ),
     },
@@ -474,114 +592,32 @@ export default function RmoIcuPatientDetailPage() {
       value: "diagnosis",
       label: "Diagnosis",
       content: (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-800">Diagnosis</h3>
-          </div>
-          {diagnoses.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
-              No diagnosis added yet. Click &quot;Add Diagnosis&quot; to create entries.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {diagnoses.map((diag) => (
-                <div
-                  key={diag.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-slate-800">{diag.name}</p>
-                      <p className="text-xs text-slate-500">
-                        Code: {diag.code} · Noted by {diag.notedBy} ·{" "}
-                        {new Date(diag.notedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${diagnosisTabStatusStyle(diag.status)}`}
-                    >
-                      {diag.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <DataTable
+          card
+          title="Diagnosis"
+          titleIcon={<Stethoscope className="h-4 w-4" />}
+          rows={diagnoses}
+          columns={diagnosisColumns}
+          rowKey={(d) => d.id}
+          countLabel="diagnoses"
+          emptyText="No diagnosis added yet."
+        />
       ),
     },
     {
       value: "nurses-shift",
       label: "Nurse Shift",
       content: (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h3 className="mb-4 text-lg font-bold text-slate-800">
-            Nurse Shift Assignments
-          </h3>
-          {nurseAssignments.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
-              No nurse shift assignments recorded yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b-2 border-slate-200 bg-slate-50">
-                    <th className="py-3 text-left font-semibold text-slate-600">
-                      Date
-                    </th>
-                    <th className="py-3 text-left font-semibold text-slate-600">
-                      Shift
-                    </th>
-                    <th className="py-3 text-left font-semibold text-slate-600">
-                      Nurse Name
-                    </th>
-                    <th className="py-3 text-left font-semibold text-slate-600">
-                      Nurse ID
-                    </th>
-                    <th className="py-3 text-left font-semibold text-slate-600">
-                      Ward
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {nurseAssignments.map((assignment) => (
-                    <tr
-                      key={assignment.id}
-                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                    >
-                      <td className="py-3 text-slate-800">
-                        {new Date(assignment.date).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="py-3">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            assignment.shift === "Morning"
-                              ? "bg-amber-50 text-amber-700"
-                              : assignment.shift === "Afternoon"
-                                ? "bg-blue-50 text-blue-700"
-                                : "bg-indigo-50 text-indigo-700"
-                          }`}
-                        >
-                          {assignment.shift}
-                        </span>
-                      </td>
-                      <td className="py-3 font-medium text-slate-800">
-                        {assignment.nurseName}
-                      </td>
-                      <td className="py-3 text-slate-600">{assignment.nurseId}</td>
-                      <td className="py-3 text-slate-800">{assignment.ward}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <DataTable
+          card
+          title="Nurse Shift Assignments"
+          titleIcon={<UserCog className="h-4 w-4" />}
+          rows={nurseAssignments}
+          columns={shiftColumns}
+          rowKey={(a) => a.id}
+          countLabel="assignments"
+          emptyText="No nurse shift assignments recorded yet."
+        />
       ),
     },
     {

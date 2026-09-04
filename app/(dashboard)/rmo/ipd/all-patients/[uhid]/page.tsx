@@ -92,7 +92,7 @@ export default function RmoPatientDetailPage() {
 
   const tabs: PatientTab[] = [
     { value: "overview", label: "Overview", content: <SectionOverview patient={patient} /> },
-    { value: "vitals", label: "Vitals", content: <SectionVitals vitals={patient.vitals} onAddVital={addVital} /> },
+    { value: "vitals", label: "Vitals", content: <SectionVitals vitals={patient.vitals} onAddVital={addVital} recordPath={`/rmo/ipd/all-patients/${patient.uhid}/record-vitals`} /> },
     { value: "diagnosis", label: "Diagnosis", content: <SectionDiagnosis diagnoses={patient.diagnoses} onAddDiagnosis={addDiagnosis} /> },
     { value: "medicines", label: "Medicines", content: <SectionMedicines doses={patient.doses} orders={patient.medicineOrders} onAddOrder={addMedicineOrder} /> },
     { value: "labs", label: "Lab Reports", content: <SectionLabReports reports={patient.labReports} /> },

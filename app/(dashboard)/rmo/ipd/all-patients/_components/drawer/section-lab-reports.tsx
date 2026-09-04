@@ -2,9 +2,10 @@
 "use client";
 import { useMemo, useState } from "react";
 import { FlaskConical, ImageIcon, Microscope, ScanLine } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import type { LabReport } from "@/types/rmo/ipd/rmo-types";
-import { DateFilterBar } from "./date-filter-bar";
+import { RadioGroup } from "@/components/forms/radio-group";
+import { DateField } from "@/components/forms/form-controls";
+import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
+import type { LabReport, PathologyResult } from "@/types/rmo/ipd/rmo-types";
 import { PathologyFlagBadge } from "../rmo-badges";
 
 type CategoryFilter = "All" | "Pathology" | "Radiology";
@@ -17,17 +18,38 @@ export function SectionLabReports({ reports }: { reports: LabReport[] }) {
   const pathology = filtered.filter((r) => r.category === "Pathology");
   const radiology = filtered.filter((r) => r.category === "Radiology");
 
+  const resultColumns: DataColumn<PathologyResult>[] = [
+    { key: "parameter", label: "Parameter", render: (r) => <span className="font-medium text-slate-700">{r.parameter}</span> },
+    { key: "value", label: "Value", render: (r) => <span className="text-slate-700">{r.value} <span className="text-xs text-slate-400">{r.unit}</span></span> },
+    { key: "refRange", label: "Reference Range", render: (r) => <span className="text-slate-500">{r.refRange}</span> },
+    { key: "flag", label: "Status", render: (r) => <PathologyFlagBadge flag={r.flag} /> },
+  ];
+
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><FlaskConical className="h-4 w-4 text-cyan-600" />Lab Reports</p>
-        <p className="mt-1 text-xs text-slate-500">Pathology results with reference ranges and Radiology reports with images, organized by date.</p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <DateFilterBar value={date} onChange={setDate} label="Filter by date" />
-          <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1">
-            {(["All", "Pathology", "Radiology"] as CategoryFilter[]).map((c) => (
-              <button key={c} onClick={() => setCategory(c)} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${category === c ? "bg-cyan-50 text-cyan-700" : "text-slate-500"}`}>{c}</button>
-            ))}
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 via-white to-blue-50 p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-500 text-white shadow-sm">
+            <FlaskConical className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-lg font-bold tracking-tight text-slate-800">Lab Reports</p>
+            <p className="text-xs text-slate-500">Pathology results with reference ranges and Radiology reports with images, organized by date.</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <RadioGroup
+            name="lab-category"
+            options={[
+              { value: "All", label: "All" },
+              { value: "Pathology", label: "Pathology" },
+              { value: "Radiology", label: "Radiology" },
+            ]}
+            value={category}
+            onChange={(v) => setCategory(v as CategoryFilter)}
+          />
+          <div className="w-full sm:w-56">
+            <DateField label="" value={date} onChange={setDate} placeholder="Filter by date" />
           </div>
         </div>
       </div>
@@ -43,20 +65,13 @@ export function SectionLabReports({ reports }: { reports: LabReport[] }) {
                   <span className="text-xs text-slate-400">{report.date}</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-400">Ordered by {report.orderedBy} · Reported {report.reportedAt}</p>
-                <div className="mt-3 overflow-x-auto">
-                  <table className="w-full min-w-[520px] text-sm">
-                    <thead><tr className="border-b border-slate-200 text-left text-[10px] uppercase text-slate-400"><th className="py-2 pr-4">Parameter</th><th className="pr-4">Value</th><th className="pr-4">Reference Range</th><th>Status</th></tr></thead>
-                    <tbody>
-                      {report.pathologyResults?.map((result, index) => (
-                        <tr key={index} className="border-b border-slate-100 last:border-0">
-                          <td className="py-2.5 pr-4 font-medium text-slate-700">{result.parameter}</td>
-                          <td className="pr-4 text-slate-700">{result.value} <span className="text-xs text-slate-400">{result.unit}</span></td>
-                          <td className="pr-4 text-slate-500">{result.refRange}</td>
-                          <td><PathologyFlagBadge flag={result.flag} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="mt-3">
+                  <DataTable
+                    rows={report.pathologyResults ?? []}
+                    columns={resultColumns}
+                    rowKey={(r) => r.parameter}
+                    emptyText="No parameters available."
+                  />
                 </div>
                 {report.reportImageUrl && (
                   <div className="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-500"><ImageIcon className="h-4 w-4" />Report image attached by lab</div>

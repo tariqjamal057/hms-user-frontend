@@ -157,7 +157,7 @@ export function RmoPatientDetailsDrawer({ patient, onClose, onUpdate }: { patien
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/40" onClick={() => setAddingTreatment(false)} />
           <div className="relative z-10 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <TreatmentPlanForm onSubmit={addTreatmentPlan} onClose={() => setAddingTreatment(false)} />
+            <TreatmentPlanForm onSubmit={addTreatmentPlan} onOpenChange={() => setAddingTreatment(false)} />
           </div>
         </div>
       )}

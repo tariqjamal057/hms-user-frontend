@@ -1,7 +1,8 @@
 // app/(dashboard)/admission-desk/emergency/all-patients/_components/drawer/section-vitals.tsx
 "use client";
 import { useMemo, useState } from "react";
-import { HeartPulse, Stethoscope, UserRound } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { HeartPulse, Plus, Stethoscope, UserRound } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   DataTable,
@@ -9,8 +10,10 @@ import {
 } from "@/components/patient-detail/data-table";
 import type { VitalRecord } from "@/types/emergency/emergency-types";
 import { DateFilterBar } from "./date-filter-bar";
+import { PillButton } from "@/components/forms/pill-button";
 
-export function SectionVitals({ vitals }: { vitals: VitalRecord[] }) {
+export function SectionVitals({ vitals, recordPath }: { vitals: VitalRecord[]; recordPath?: string }) {
+  const router = useRouter();
   const [date, setDate] = useState("");
   const filtered = useMemo(
     () => (date ? vitals.filter((v) => v.date === date) : vitals),
@@ -86,13 +89,24 @@ export function SectionVitals({ vitals }: { vitals: VitalRecord[] }) {
     <div className="space-y-4">
       <Card className="overflow-hidden border-slate-200 p-0 shadow-sm">
         <CardContent className="p-4 sm:p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-rose-500 text-white shadow-sm shadow-red-200">
-              <HeartPulse className="h-3.5 w-3.5" />
-            </span>
-            <p className="text-sm font-bold text-slate-800 sm:text-base">
-              Latest Vitals
-            </p>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-rose-500 text-white shadow-sm shadow-red-200">
+                <HeartPulse className="h-3.5 w-3.5" />
+              </span>
+              <p className="text-sm font-bold text-slate-800 sm:text-base">
+                Latest Vitals
+              </p>
+            </div>
+            {recordPath && (
+              <PillButton
+                size="sm"
+                icon={Plus}
+                onClick={() => router.push(recordPath)}
+              >
+                Add Vitals
+              </PillButton>
+            )}
           </div>
           {latest ? (
             <>

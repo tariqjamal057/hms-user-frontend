@@ -17,11 +17,11 @@ import { PillButton } from "@/components/forms/pill-button";
 import { InfoAlertCard } from "@/components/patient-detail/info-alert-card";
 import type {
   EmergencyStatus,
+  StatusChangeLog,
 } from "@/types/emergency/emergency-types";
 import type {
   BedOption,
   DeathRecord,
-  StatusChangeLog,
   RmoEmergencyPatient,
 } from "@/types/emergency/rmo-emergency-types";
 import { RMO_BEDS } from "@/lib/emergency/rmo-emergency-data";

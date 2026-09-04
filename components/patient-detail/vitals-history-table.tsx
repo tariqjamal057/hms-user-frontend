@@ -141,7 +141,7 @@ export function VitalsHistoryTable({
                 <tbody>
                   {rows.map((row, idx) => (
                     <tr
-                      key={`${row.date ?? row.dateTime ?? idx}`}
+                      key={`${row.date ?? row.dateTime ?? idx}-${idx}`}
                       className={cn(
                         "border-b border-slate-100 transition-colors last:border-0 hover:bg-blue-50/40",
                         idx % 2 === 1 && "bg-slate-50/40",

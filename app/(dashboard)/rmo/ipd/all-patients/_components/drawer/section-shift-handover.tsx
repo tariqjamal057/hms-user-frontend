@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowRightLeft, UserRound } from "lucide-react";
 import type { ShiftHandoverEntry } from "@/types/rmo/ipd/rmo-types";
-import { DateFilterBar } from "./date-filter-bar";
+import { DateField } from "@/components/forms/form-controls";
 
 export function SectionShiftHandover({ handovers }: { handovers: ShiftHandoverEntry[] }) {
   const [date, setDate] = useState("");
@@ -14,7 +14,7 @@ export function SectionShiftHandover({ handovers }: { handovers: ShiftHandoverEn
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><ArrowRightLeft className="h-4 w-4 text-blue-600" />Shift Handover Logs</p>
         <p className="mt-1 text-xs text-slate-500">When a nurse hands over the shift to the next nurse, with date and time.</p>
-        <div className="mt-3"><DateFilterBar value={date} onChange={setDate} /></div>
+        <div className="mt-3"><DateField label="Filter by date" value={date} onChange={setDate} /></div>
       </div>
 
       <div className="space-y-3">

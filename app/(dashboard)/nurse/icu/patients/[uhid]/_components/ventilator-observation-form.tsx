@@ -1,27 +1,35 @@
 // app/(dashboard)/nurse/icu/patients/[uhid]/_components/ventilator-observation-form.tsx
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertTriangle, Bell, Check, Fan, HeartPulse, Wind, X } from "lucide-react";
+import { ConsultationDrawer, DrawerSection } from "@/components/consultation/drawer";
+import { FormButton, FormTextarea, SuffixedInput } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { RadioGroup } from "@/components/forms/radio-group";
+import { PillButton } from "@/components/forms/pill-button";
 import type { VentilatorAdministration, VentilatorObservation, VentilatorOrder, PatientVentStatus } from "@/types/nurse/icu/ventilation-types";
 import { PATIENT_VENT_STATUS_OPTIONS } from "@/lib/nurse/icu/ventilation-data";
 import { VentilatorModeFields, formatVentilatorSettings } from "./ventilator-mode-fields";
 
+type EscalationReason = "Doctor order changed" | "Temporary clinical instruction" | "Device/clinical issue" | "Other";
+
 export function VentilatorObservationForm({
-  order, administration, patientName, nurseName, onSave, onClose,
+  open,
+  onOpenChange,
+  order,
+  administration,
+  patientName,
+  nurseName,
+  onSave,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   order: VentilatorOrder;
   administration: VentilatorAdministration;
   patientName: string;
   nurseName: string;
   onSave: (observation: VentilatorObservation) => void;
-  onClose: () => void;
 }) {
   const [ventSettings, setVentSettings] = useState<Record<string, number | string>>(administration.actualSettings);
   const [spo2, setSpo2] = useState("");
@@ -31,6 +39,23 @@ export function VentilatorObservationForm({
   const [bpDiastolic, setBpDiastolic] = useState("");
   const [patientStatus, setPatientStatus] = useState<PatientVentStatus>("Stable");
   const [remarks, setRemarks] = useState("");
+  const [escalationReason, setEscalationReason] = useState<EscalationReason>("Temporary clinical instruction");
+  const [notifyingDoctor, setNotifyingDoctor] = useState(false);
+
+  // Re-hydrate form state when the drawer re-opens
+  useEffect(() => {
+    if (!open) return;
+    setVentSettings(administration.actualSettings);
+    setSpo2("");
+    setRespiratoryRate("");
+    setHeartRate("");
+    setBpSystolic("");
+    setBpDiastolic("");
+    setPatientStatus("Stable");
+    setRemarks("");
+    setEscalationReason("Temporary clinical instruction");
+    setNotifyingDoctor(false);
+  }, [open, administration]);
 
   const hasDifference = useMemo(() => {
     return Object.keys(order.prescribedSettings).some((key) => {
@@ -39,9 +64,6 @@ export function VentilatorObservationForm({
       return prescribed !== observed;
     });
   }, [ventSettings, order.prescribedSettings]);
-
-  const [escalationReason, setEscalationReason] = useState<"Doctor order changed" | "Temporary clinical instruction" | "Device/clinical issue" | "Other">("Temporary clinical instruction");
-  const [notifyingDoctor, setNotifyingDoctor] = useState(false);
 
   function handleSave() {
     const stamp = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -69,104 +91,139 @@ export function VentilatorObservationForm({
     };
     onSave(observation);
     toast.success("Ventilator observation saved.");
-    onClose();
+    onOpenChange(false);
   }
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-bold text-slate-800">{patientName}</p>
-        <p className="text-xs text-slate-500">{order.icuBed}</p>
-        <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/60 p-3">
-          <p className="text-[10px] uppercase text-blue-500">Current Ventilator Order</p>
-          <p className="mt-1 text-sm font-bold text-blue-900">{order.mode}</p>
-          <p className="text-xs text-blue-700">{formatVentilatorSettings(order.mode, order.prescribedSettings)}</p>
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<Fan className="h-5 w-5" />}
+      title="Add Ventilator Observation"
+      description={`${patientName} · ${order.icuBed}`}
+      bodyClassName="space-y-4"
+      footer={
+        <div className="flex items-center gap-3">
+          <FormButton variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+            <X className="mr-1 h-4 w-4" />
+            Cancel
+          </FormButton>
+          <FormButton className="flex-1" onClick={handleSave}>
+            <Check className="mr-1 h-4 w-4" />
+            Save Observation
+          </FormButton>
         </div>
-      </div>
+      }
+    >
+      {/* Active ventilator order context */}
+      <DrawerSection
+        title="Ventilator Order"
+        caption="Current mode & prescribed settings"
+        icon={<Wind className="h-4 w-4 text-cyan-600" />}
+      >
+        <div className="flex items-center justify-between rounded-lg bg-gradient-to-br from-cyan-50 to-blue-50 px-3 py-2.5">
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-cyan-600">Mode</p>
+            <p className="mt-0.5 text-sm font-bold text-slate-800">{order.mode}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wide text-cyan-600">Prescribed Settings</p>
+            <p className="mt-0.5 text-sm font-bold text-slate-800">
+              {formatVentilatorSettings(order.mode, order.prescribedSettings)}
+            </p>
+          </div>
+        </div>
+      </DrawerSection>
 
-      {/* Actual Ventilator Settings */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <p className="mb-3 text-xs font-semibold uppercase text-slate-500">Actual Ventilator Settings / Readings</p>
+      {/* Actual ventilator settings */}
+      <DrawerSection
+        title="Actual Ventilator Settings / Readings"
+        caption="What the ventilator is currently delivering"
+        icon={<Fan className="h-4 w-4 text-slate-400" />}
+      >
         <VentilatorModeFields mode={order.mode} settings={ventSettings} onChange={setVentSettings} />
-      </div>
+      </DrawerSection>
 
+      {/* Setting difference / escalation */}
       {hasDifference && (
-        <div className="rounded-xl border border-red-300 bg-red-50 p-4">
-          <p className="flex items-center gap-2 text-sm font-bold text-red-800"><AlertTriangle className="h-4 w-4" />Ventilator Setting Difference</p>
-          <p className="mt-1 text-xs text-red-700">Ordered: {formatVentilatorSettings(order.mode, order.prescribedSettings)} · Observed: {formatVentilatorSettings(order.mode, ventSettings)}</p>
-          <div className="mt-3">
-            <Label className="text-xs text-slate-500">Reason / Action</Label>
-            <Select value={escalationReason} onValueChange={(v) => setEscalationReason(v as typeof escalationReason)}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Doctor order changed">Doctor order changed</SelectItem>
-                <SelectItem value="Temporary clinical instruction">Temporary clinical instruction</SelectItem>
-                <SelectItem value="Device/clinical issue">Device/clinical issue</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <Button size="sm" variant={notifyingDoctor ? "default" : "outline"} className={notifyingDoctor ? "gap-1.5 bg-red-600 hover:bg-red-700" : "gap-1.5 border-red-300 text-red-700"} onClick={() => setNotifyingDoctor((v) => !v)}>
-              <Bell className="h-3.5 w-3.5" />{notifyingDoctor ? "Doctor Will Be Notified" : "Notify Doctor"}
-            </Button>
-          </div>
-        </div>
+        <DrawerSection
+          title="Ventilator Setting Difference"
+          caption="Observed settings differ from the prescription"
+          icon={<AlertTriangle className="h-4 w-4 text-red-500" />}
+        >
+          <p className="text-xs text-red-700">
+            Ordered: {formatVentilatorSettings(order.mode, order.prescribedSettings)} · Observed: {formatVentilatorSettings(order.mode, ventSettings)}
+          </p>
+          <SingleSelect
+            label="Reason / Action"
+            value={escalationReason}
+            onChange={(v) => setEscalationReason(v as EscalationReason)}
+            options={[
+              { value: "Doctor order changed", label: "Doctor order changed" },
+              { value: "Temporary clinical instruction", label: "Temporary clinical instruction" },
+              { value: "Device/clinical issue", label: "Device/clinical issue" },
+              { value: "Other", label: "Other" },
+            ]}
+          />
+          <PillButton
+            size="sm"
+            variant={notifyingDoctor ? "gradient" : "danger"}
+            icon={Bell}
+            onClick={() => setNotifyingDoctor((v) => !v)}
+          >
+            {notifyingDoctor ? "Doctor Will Be Notified" : "Notify Doctor"}
+          </PillButton>
+        </DrawerSection>
       )}
 
-      {/* Patient Parameters */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <p className="mb-3 text-xs font-semibold uppercase text-slate-500">Patient Parameters</p>
+      {/* Patient parameters */}
+      <DrawerSection
+        title="Patient Parameters"
+        caption="Latest observed vital signs"
+        icon={<HeartPulse className="h-4 w-4 text-rose-500" />}
+      >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <div>
-            <Label className="text-xs text-slate-500">SpO₂ (%)</Label>
-            <Input type="number" className="mt-1" value={spo2} onChange={(e) => setSpo2(e.target.value)} placeholder="96" />
-          </div>
-          <div>
-            <Label className="text-xs text-slate-500">RR (/min)</Label>
-            <Input type="number" className="mt-1" value={respiratoryRate} onChange={(e) => setRespiratoryRate(e.target.value)} placeholder="19" />
-          </div>
-          <div>
-            <Label className="text-xs text-slate-500">HR (bpm)</Label>
-            <Input type="number" className="mt-1" value={heartRate} onChange={(e) => setHeartRate(e.target.value)} placeholder="110" />
-          </div>
-          <div>
-            <Label className="text-xs text-slate-500">BP Systolic</Label>
-            <Input type="number" className="mt-1" value={bpSystolic} onChange={(e) => setBpSystolic(e.target.value)} placeholder="105" />
-          </div>
-          <div>
-            <Label className="text-xs text-slate-500">BP Diastolic</Label>
-            <Input type="number" className="mt-1" value={bpDiastolic} onChange={(e) => setBpDiastolic(e.target.value)} placeholder="65" />
-          </div>
+          <SuffixedInput label="SpO₂ (%)" suffix="%" type="number" value={spo2} onChange={setSpo2} placeholder="96" />
+          <SuffixedInput label="RR (/min)" suffix="/min" type="number" value={respiratoryRate} onChange={setRespiratoryRate} placeholder="19" />
+          <SuffixedInput label="HR (bpm)" suffix="bpm" type="number" value={heartRate} onChange={setHeartRate} placeholder="110" />
+          <SuffixedInput label="BP Systolic" suffix="mmHg" type="number" value={bpSystolic} onChange={setBpSystolic} placeholder="105" />
+          <SuffixedInput label="BP Diastolic" suffix="mmHg" type="number" value={bpDiastolic} onChange={setBpDiastolic} placeholder="65" />
         </div>
-      </div>
+      </DrawerSection>
 
-      {/* Patient Status */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Patient-Ventilator Status</Label>
-        <RadioGroup value={patientStatus} onValueChange={(v) => setPatientStatus(v as PatientVentStatus)} className="mt-2 flex gap-3">
-          {PATIENT_VENT_STATUS_OPTIONS.map((opt) => (
-            <label key={opt} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm ${patientStatus === opt ? "border-cyan-400 bg-cyan-50" : "border-slate-200"}`}>
-              <RadioGroupItem value={opt} />{opt}
-            </label>
-          ))}
-        </RadioGroup>
-      </div>
+      {/* Patient-ventilator status */}
+      <DrawerSection
+        title="Patient-Ventilator Status"
+        caption="Overall patient-ventilator interface state"
+        icon={<Fan className="h-4 w-4 text-cyan-500" />}
+      >
+        <RadioGroup
+          name="vent-status"
+          options={PATIENT_VENT_STATUS_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
+          value={patientStatus}
+          onChange={(v) => setPatientStatus(v as PatientVentStatus)}
+        />
+      </DrawerSection>
 
       {/* Remarks */}
-      <div>
-        <Label className="text-xs font-semibold text-slate-600">Remarks</Label>
-        <Textarea className="mt-2" value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={2} placeholder="e.g. No obvious respiratory distress." />
-      </div>
+      <DrawerSection
+        title="Remarks"
+        caption="Optional notes for the team"
+        icon={<Wind className="h-4 w-4 text-slate-400" />}
+      >
+        <FormTextarea
+          label="Remarks (Optional)"
+          value={remarks}
+          onChange={setRemarks}
+          rows={2}
+          maxLength={300}
+          placeholder="e.g. No obvious respiratory distress."
+        />
+      </DrawerSection>
 
       <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-        Date & Time: <span className="font-semibold text-slate-700">Auto-generated on save</span> · Recorded By: <span className="font-semibold text-slate-700">{nurseName}</span>
+        Date &amp; Time: <span className="font-semibold text-slate-700">Auto-generated on save</span> · Recorded By: <span className="font-semibold text-slate-700">{nurseName}</span>
       </div>
-
-      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button className="gap-2 bg-cyan-600 hover:bg-cyan-700" onClick={handleSave}><Save className="h-4 w-4" />Save Observation</Button>
-      </div>
-    </div>
+    </ConsultationDrawer>
   );
 }

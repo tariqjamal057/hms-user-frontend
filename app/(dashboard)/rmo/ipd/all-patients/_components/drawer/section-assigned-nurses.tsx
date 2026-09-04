@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Moon, Sunrise, Sunset, UserCog } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ShiftAssignment, ShiftName } from "@/types/rmo/ipd/rmo-types";
-import { DateFilterBar } from "./date-filter-bar";
+import { DateField } from "@/components/forms/form-controls";
 
 const shiftIcon: Record<ShiftName, React.ElementType> = { Morning: Sunrise, Evening: Sunset, Night: Moon };
 const shiftTone: Record<ShiftName, string> = {
@@ -28,7 +28,7 @@ export function SectionAssignedNurses({ assignments }: { assignments: ShiftAssig
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><UserCog className="h-4 w-4 text-blue-600" />Assigned Nurses</p>
         <p className="mt-1 text-xs text-slate-500">Read-only view of nurse assignments — managed by the Nurse Admin.</p>
-        <div className="mt-3"><DateFilterBar value={date} onChange={setDate} /></div>
+        <div className="mt-3"><DateField label="Filter by date" value={date} onChange={setDate} /></div>
       </div>
 
       <div className="space-y-3">

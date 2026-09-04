@@ -106,7 +106,7 @@ function updatePatient(updated: RmoEmergencyPatient) {
     );
   }
 
-function assign(selection: AvailableDoctor | AvailableNurse) {
+function assign(selection: AvailableDoctor | AvailableNurse, role: AssignmentRole) {
     if (!assignment) return;
     const stamp = new Date().toLocaleString("en-IN", {
       day: "2-digit",
@@ -117,7 +117,7 @@ function assign(selection: AvailableDoctor | AvailableNurse) {
     });
     const p = assignment.patient;
     const updated: RmoEmergencyPatient =
-      assignment.role === "Doctor"
+      role === "Doctor"
         ? {
             ...p,
             attendingDoctor: selection.name,
@@ -420,7 +420,8 @@ function assign(selection: AvailableDoctor | AvailableNurse) {
           doctors={AVAILABLE_DOCTORS}
           nurses={AVAILABLE_NURSES}
           onClose={() => setAssignment(null)}
-          onAssign={(sel) => assign(sel)}
+          onAssign={(sel, role) => assign(sel, role)}
+          onRoleChange={(role) => setAssignment((a) => (a ? { ...a, role } : a))}
         />
       </main>
     </div>

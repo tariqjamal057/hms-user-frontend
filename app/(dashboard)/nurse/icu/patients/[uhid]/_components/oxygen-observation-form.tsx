@@ -1,26 +1,32 @@
 // app/(dashboard)/nurse/icu/patients/[uhid]/_components/oxygen-observation-form.tsx
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { AlertTriangle, Bell, Check, HeartPulse, Target, Wind, X } from "lucide-react";
+import { ConsultationDrawer, DrawerSection } from "@/components/consultation/drawer";
+import { FormButton, FormTextarea, SuffixedInput } from "@/components/forms/form-controls";
+import { RadioGroup } from "@/components/forms/radio-group";
+import { PillButton } from "@/components/forms/pill-button";
 import type { OxygenAdministration, OxygenObservation, OxygenOrder, OxygenResponse, PatientCondition } from "@/types/nurse/icu/oxygen-therapy-types";
 import { CONDITION_OPTIONS, RESPONSE_OPTIONS } from "@/lib/nurse/icu/oxygen-therapy-data";
 import { formatDeviceSettings } from "./oxygen-device-fields";
 
 export function OxygenObservationForm({
-  order, administration, patientName, nurseName, onSave, onClose,
+  open,
+  onOpenChange,
+  order,
+  administration,
+  patientName,
+  nurseName,
+  onSave,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   order: OxygenOrder;
   administration: OxygenAdministration;
   patientName: string;
   nurseName: string;
   onSave: (observation: OxygenObservation) => void;
-  onClose: () => void;
 }) {
   const [spo2, setSpo2] = useState("");
   const [respiratoryRate, setRespiratoryRate] = useState("");
@@ -30,10 +36,24 @@ export function OxygenObservationForm({
   const [remarks, setRemarks] = useState("");
   const [notifyingDoctor, setNotifyingDoctor] = useState(false);
 
+  // Re-hydrate form state when the drawer re-opens
+  useEffect(() => {
+    if (!open) return;
+    setSpo2("");
+    setRespiratoryRate("");
+    setHeartRate("");
+    setCondition("Comfortable");
+    setResponse("Stable");
+    setRemarks("");
+    setNotifyingDoctor(false);
+  }, [open]);
+
   const belowTarget = useMemo(() => {
     const val = Number(spo2);
     return spo2 !== "" && (val < order.targetSpo2Min || val > order.targetSpo2Max);
   }, [spo2, order.targetSpo2Min, order.targetSpo2Max]);
+
+  const valid = spo2 && respiratoryRate && heartRate;
 
   function handleSave() {
     if (!spo2 || !respiratoryRate || !heartRate) {
@@ -64,97 +84,133 @@ export function OxygenObservationForm({
 
     onSave(observation);
     toast.success("Oxygen observation saved.");
-    onClose();
+    onOpenChange(false);
   }
 
   return (
-    <div className="space-y-5">
-      {/* Patient + Active order context — auto-filled, not re-typed */}
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-bold text-slate-800">{patientName}</p>
-        <p className="text-xs text-slate-500">{order.icuBed}</p>
-        <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/60 p-3">
-          <p className="text-[10px] uppercase text-blue-500">Current Oxygen (Active Order)</p>
-          <p className="mt-1 text-sm font-bold text-blue-900">{formatDeviceSettings(order.settings)}</p>
-          <p className="text-xs text-blue-700">Target SpO₂: {order.targetSpo2Min}–{order.targetSpo2Max}%</p>
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<Wind className="h-5 w-5" />}
+      title="Add Oxygen Observation"
+      description={`${patientName} · ${order.icuBed}`}
+      bodyClassName="space-y-4"
+      footer={
+        <div className="flex items-center gap-3">
+          <FormButton variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+            <X className="mr-1 h-4 w-4" />
+            Cancel
+          </FormButton>
+          <FormButton className="flex-1" onClick={handleSave} disabled={!valid}>
+            <Check className="mr-1 h-4 w-4" />
+            Save Observation
+          </FormButton>
         </div>
-      </div>
+      }
+    >
+      {/* Active oxygen order context — auto-filled, not re-typed */}
+      <DrawerSection
+        title="Active Oxygen Order"
+        caption="Current prescribed device & target range"
+        icon={<Target className="h-4 w-4 text-cyan-600" />}
+      >
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="rounded-lg bg-gradient-to-br from-cyan-50 to-blue-50 px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-wide text-cyan-600">Current Device Setting</p>
+            <p className="mt-0.5 text-sm font-bold text-slate-800">{formatDeviceSettings(order.settings)}</p>
+          </div>
+          <div className="rounded-lg bg-gradient-to-br from-cyan-50 to-blue-50 px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-wide text-cyan-600">Target SpO₂</p>
+            <p className="mt-0.5 text-sm font-bold text-slate-800">{order.targetSpo2Min}–{order.targetSpo2Max}%</p>
+          </div>
+        </div>
+      </DrawerSection>
 
-      {/* Patient Observation */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <p className="mb-3 text-xs font-semibold uppercase text-slate-500">Patient Observation</p>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <Label className="text-xs text-slate-500">SpO₂ (%)</Label>
-            <Input type="number" className="mt-1" value={spo2} onChange={(e) => setSpo2(e.target.value)} placeholder="95" />
-          </div>
-          <div>
-            <Label className="text-xs text-slate-500">Resp. Rate (/min)</Label>
-            <Input type="number" className="mt-1" value={respiratoryRate} onChange={(e) => setRespiratoryRate(e.target.value)} placeholder="20" />
-          </div>
-          <div>
-            <Label className="text-xs text-slate-500">Heart Rate (bpm)</Label>
-            <Input type="number" className="mt-1" value={heartRate} onChange={(e) => setHeartRate(e.target.value)} placeholder="88" />
-          </div>
+      {/* Patient observation */}
+      <DrawerSection
+        title="Patient Observation"
+        caption="Enter the latest observed values"
+        icon={<HeartPulse className="h-4 w-4 text-rose-500" />}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <SuffixedInput label="SpO₂ *" suffix="%" type="number" value={spo2} onChange={setSpo2} placeholder="95" />
+          <SuffixedInput label="Resp. Rate *" suffix="/min" type="number" value={respiratoryRate} onChange={setRespiratoryRate} placeholder="20" />
+          <SuffixedInput label="Heart Rate *" suffix="bpm" type="number" value={heartRate} onChange={setHeartRate} placeholder="88" />
         </div>
 
         {belowTarget && (
-          <div className="mt-4 rounded-xl border border-red-300 bg-red-50 p-4">
-            <p className="flex items-center gap-2 text-sm font-bold text-red-800"><AlertTriangle className="h-4 w-4" />Below Prescribed Target</p>
-            <p className="mt-1 text-xs text-red-700">Current SpO₂: {spo2}% · Target: {order.targetSpo2Min}–{order.targetSpo2Max}%</p>
-            <p className="mt-2 text-xs font-semibold text-red-800">Review Required — follow hospital escalation protocol.</p>
-            <div className="mt-3 flex items-center gap-2">
-              <Button
+          <div className="rounded-xl border border-red-300 bg-red-50 p-4">
+            <p className="flex items-center gap-2 text-sm font-bold text-red-800">
+              <AlertTriangle className="h-4 w-4" />
+              Below Prescribed Target
+            </p>
+            <p className="mt-1 text-xs text-red-700">
+              Current SpO₂: {spo2}% · Target: {order.targetSpo2Min}–{order.targetSpo2Max}%
+            </p>
+            <p className="mt-2 text-xs font-semibold text-red-800">
+              Review Required — follow hospital escalation protocol.
+            </p>
+            <div className="mt-3">
+              <PillButton
                 size="sm"
-                variant={notifyingDoctor ? "default" : "outline"}
-                className={notifyingDoctor ? "gap-1.5 bg-red-600 hover:bg-red-700" : "gap-1.5 border-red-300 text-red-700"}
+                variant={notifyingDoctor ? "gradient" : "danger"}
+                icon={Bell}
                 onClick={() => setNotifyingDoctor((v) => !v)}
               >
-                <Bell className="h-3.5 w-3.5" />{notifyingDoctor ? "Doctor Will Be Notified" : "Notify Doctor"}
-              </Button>
+                {notifyingDoctor ? "Doctor Will Be Notified" : "Notify Doctor"}
+              </PillButton>
             </div>
           </div>
         )}
-      </div>
+      </DrawerSection>
 
-      {/* Patient Condition */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Patient Condition</Label>
-        <RadioGroup value={condition} onValueChange={(v) => setCondition(v as PatientCondition)} className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {CONDITION_OPTIONS.map((opt) => (
-            <label key={opt} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm ${condition === opt ? "border-cyan-400 bg-cyan-50" : "border-slate-200"}`}>
-              <RadioGroupItem value={opt} />{opt}
-            </label>
-          ))}
-        </RadioGroup>
-      </div>
+      {/* Patient condition */}
+      <DrawerSection
+        title="Patient Condition"
+        caption="Overall condition at the time of recording"
+        icon={<HeartPulse className="h-4 w-4 text-cyan-500" />}
+      >
+        <RadioGroup
+          name="oxygen-condition"
+          options={CONDITION_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
+          value={condition}
+          onChange={(v) => setCondition(v as PatientCondition)}
+        />
+      </DrawerSection>
 
-      {/* Oxygen Response */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Oxygen Response</Label>
-        <RadioGroup value={response} onValueChange={(v) => setResponse(v as OxygenResponse)} className="mt-2 flex gap-3">
-          {RESPONSE_OPTIONS.map((opt) => (
-            <label key={opt} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm ${response === opt ? "border-cyan-400 bg-cyan-50" : "border-slate-200"}`}>
-              <RadioGroupItem value={opt} />{opt}
-            </label>
-          ))}
-        </RadioGroup>
-      </div>
+      {/* Oxygen response */}
+      <DrawerSection
+        title="Oxygen Response"
+        caption="How is the patient responding to current therapy"
+        icon={<Target className="h-4 w-4 text-cyan-500" />}
+      >
+        <RadioGroup
+          name="oxygen-response"
+          options={RESPONSE_OPTIONS.map((opt) => ({ value: opt, label: opt }))}
+          value={response}
+          onChange={(v) => setResponse(v as OxygenResponse)}
+        />
+      </DrawerSection>
 
       {/* Remarks */}
-      <div>
-        <Label className="text-xs font-semibold text-slate-600">Remarks</Label>
-        <Textarea className="mt-2" value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={2} placeholder="e.g. Patient maintaining target saturation." />
-      </div>
+      <DrawerSection
+        title="Remarks"
+        caption="Optional notes for the team"
+        icon={<Wind className="h-4 w-4 text-slate-400" />}
+      >
+        <FormTextarea
+          label="Remarks (Optional)"
+          value={remarks}
+          onChange={setRemarks}
+          rows={2}
+          maxLength={300}
+          placeholder="e.g. Patient maintaining target saturation."
+        />
+      </DrawerSection>
 
       <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-        Date & Time: <span className="font-semibold text-slate-700">Auto-generated on save</span> · Recorded By: <span className="font-semibold text-slate-700">{nurseName}</span>
+        Date &amp; Time: <span className="font-semibold text-slate-700">Auto-generated on save</span> · Recorded By: <span className="font-semibold text-slate-700">{nurseName}</span>
       </div>
-
-      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button className="gap-2 bg-cyan-600 hover:bg-cyan-700" onClick={handleSave}><Save className="h-4 w-4" />Save Observation</Button>
-      </div>
-    </div>
+    </ConsultationDrawer>
   );
 }

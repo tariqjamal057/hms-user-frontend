@@ -6,6 +6,7 @@ import {
   Banknote,
   BedDouble,
   CheckCircle2,
+  Clock3,
   CreditCard,
   FileImage,
   IndianRupee,
@@ -15,20 +16,20 @@ import {
   ShieldCheck,
   Smartphone,
   Stethoscope,
+  Upload,
   UserRound,
-  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  ConsultationDrawer,
+  DrawerSection,
+} from "@/components/consultation/drawer";
+import { FormButton } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { RadioGroup } from "@/components/forms/radio-group";
+import { PillButton } from "@/components/forms/pill-button";
+import { InfoTileCard } from "@/components/patient-detail/info-tile-card";
+import { InfoAlertCard } from "@/components/patient-detail/info-alert-card";
 import type {
   RadiologyIpdOrder,
   RadiologyIpdTestItem,
@@ -56,11 +57,18 @@ interface Props {
   onSendToBillingDept: (orderId: string) => void;
   inline?: boolean;
 }
+
 const statusFlow: RadiologyOrderStatus[] = [
   "Ordered",
   "Processing",
   "Report Ready",
 ];
+
+const STATUS_TONE: Record<RadiologyOrderStatus, string> = {
+  Ordered: "border-slate-200 bg-slate-50 text-slate-700",
+  Processing: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  "Report Ready": "border-emerald-200 bg-emerald-50 text-emerald-700",
+};
 
 export function RadiologyIpdOrderDetailDrawer({
   order,
@@ -123,182 +131,184 @@ export function RadiologyIpdOrderDetailDrawer({
     (test) => test.status === "Report Ready",
   );
   const billSent = Boolean(selectedOrder.billSentToBillingDeptAt);
+  const totalValue = getTotalRadiologyIpdValue(selectedOrder);
 
   const content = (
-    <>
-      <main className={inline ? "space-y-5" : "space-y-5 p-5"}>
-          <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <Info
-              title="Patient Details"
-              icon={<UserRound className="h-4 w-4 text-sky-600" />}
-              lines={[
-                selectedOrder.patient.name,
-                `${selectedOrder.patient.age} years · ${selectedOrder.patient.gender} · ${selectedOrder.patient.uhid}`,
-              ]}
-            />
-            <Info
-              title="Ward / Bed"
-              icon={<BedDouble className="h-4 w-4 text-emerald-600" />}
-              lines={[
-                selectedOrder.patient.ward,
-                `${selectedOrder.patient.room} · ${selectedOrder.patient.bed}`,
-              ]}
-            />
-          </section>
-          <Info
-            title="Ordering Doctor"
-            icon={<Stethoscope className="h-4 w-4 text-violet-600" />}
-            lines={[
-              selectedOrder.doctor.name,
-              selectedOrder.doctor.specialty,
-              `Reg. No. ${selectedOrder.doctor.registrationNumber}`,
-            ]}
-          />
-          {selectedOrder.patient.diagnosis && (
-            <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4">
-              <p className="text-xs font-semibold text-violet-700">
-                Diagnosis / Clinical Indication
-              </p>
-              <p className="mt-1 text-sm font-medium text-slate-800">
-                {selectedOrder.patient.diagnosis}
-              </p>
-            </div>
-          )}
-          {selectedOrder.patient.allergies.length > 0 && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-              <p className="flex items-center gap-2 text-sm font-bold text-red-800">
-                <AlertTriangle className="h-4 w-4" />
-                Known Allergies
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {selectedOrder.patient.allergies.map((allergy) => (
-                  <Badge
-                    key={allergy}
-                    className="border-red-200 bg-white text-red-700"
-                  >
-                    {allergy}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-          <section>
-            <div className="mb-3">
-              <h3 className="flex items-center gap-2 font-bold text-slate-800">
-                <ScanLine className="h-5 w-5 text-sky-600" />
-                Ordered Radiology Tests
-              </h3>
-              <p className="mt-1 text-xs text-slate-500">
-                Workflow: Ordered → Processing → Report Ready. Report-ready
-                imaging is locked.
-              </p>
-            </div>
-            <div className="space-y-3">
-              {selectedOrder.tests.map((test, index) => (
-                <RadiologyTestCard
-                  key={test.id}
-                  test={test}
-                  index={index}
-                  onStatusChange={updateStatus}
-                  onFinalize={finalizeReport}
-                />
-              ))}
-            </div>
-          </section>
-        </main>
-        <footer className={inline ? "mt-5 border-t border-slate-200 bg-white p-5" : "sticky bottom-0 border-t border-slate-200 bg-white p-5"}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs text-slate-500">
-                Total radiology test value
-              </p>
-              <p className="text-2xl font-bold text-slate-800">
-                ₹{getTotalRadiologyIpdValue(selectedOrder)}
-              </p>
-            </div>
-            {selectedOrder.paymentStatus === "Paid" ? (
-              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                <CheckCircle2 className="h-5 w-5" />
-                Payment collected via {selectedOrder.paymentMethod}
-              </div>
-            ) : billSent ? (
-              <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
-                <CheckCircle2 className="h-5 w-5" />
-                Bill sent to Billing Department
-              </div>
-            ) : RADIOLOGY_IPD_DIRECT_PAYMENT_ENABLED ? (
-              <Button
-                disabled={!allReportsReady}
-                className="gap-2 bg-sky-600 hover:bg-sky-700"
-                onClick={() => setPaymentOpen(true)}
-              >
-                <CreditCard className="h-4 w-4" />
-                Continue Payment
-              </Button>
-            ) : (
-              <Button
-                disabled={!allReportsReady}
-                className="gap-2 bg-amber-600 hover:bg-amber-700"
-                onClick={() => onSendToBillingDept(selectedOrder.id)}
-              >
-                <PackageCheck className="h-4 w-4" />
-                Order Delivered & Send Bill to Billing Dept.
-              </Button>
-            )}
-          </div>
-          {!allReportsReady && (
-            <p className="mt-2 text-xs text-slate-400">
-              Complete all radiology reports before proceeding with billing.
-            </p>
-          )}
-        </footer>
-        {paymentOpen && (
-          <PaymentDialog
-            total={getTotalRadiologyIpdValue(selectedOrder)}
-            method={payment}
-            setMethod={setPayment}
-            onCancel={() => setPaymentOpen(false)}
-            onConfirm={() => {
-              onCollectPayment(selectedOrder.id, payment);
-              setPaymentOpen(false);
-            }}
-          />
-        )}
-      </>
-    );
-
-    if (inline) {
-      return (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50/60 px-5 py-3">
-            <h2 className="text-lg font-bold text-slate-800">Radiology IPD Order</h2>
-            <RadiologyIpdPaymentBadge status={selectedOrder.paymentStatus} />
-            {billSent && <RadiologyBillSentBadge />}
-            <span className="text-xs text-slate-500">{selectedOrder.id} · {selectedOrder.ipdId}</span>
-          </div>
-          <div className="p-5">{content}</div>
-        </div>
-      );
-    }
-
-    return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-slate-950/40" onClick={onClose} />
-      <aside className="absolute right-0 top-0 h-full w-full max-w-3xl overflow-y-auto bg-white shadow-2xl">
-        <header className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-5 py-4">
+    <div className="space-y-5">
+      {/* Hero header */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 via-white to-sky-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-500 text-white shadow-sm">
+            <ScanLine className="h-6 w-6" />
+          </span>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-800">Radiology IPD Order</h2>
+              <p className="text-lg font-bold tracking-tight text-slate-800">
+                Radiology IPD Order
+              </p>
               <RadiologyIpdPaymentBadge status={selectedOrder.paymentStatus} />
               {billSent && <RadiologyBillSentBadge />}
             </div>
-            <p className="mt-1 text-xs text-slate-500">{selectedOrder.id} · {selectedOrder.ipdId}</p>
+            <p className="text-xs text-slate-500">
+              {selectedOrder.id} · {selectedOrder.ipdId}
+            </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}><X className="h-5 w-5" /></Button>
-        </header>
-        {content}
-      </aside>
+        </div>
+      </div>
+
+      {/* Patient info tiles */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <InfoTileCard
+          title="Patient Details"
+          icon={<UserRound className="h-3.5 w-3.5" />}
+          tone="blue"
+          value={selectedOrder.patient.name}
+          subtitle={`${selectedOrder.patient.age} yrs · ${selectedOrder.patient.gender} · ${selectedOrder.patient.uhid}`}
+          multiline
+        />
+        <InfoTileCard
+          title="Ward / Bed"
+          icon={<BedDouble className="h-3.5 w-3.5" />}
+          tone="emerald"
+          value={selectedOrder.patient.ward}
+          subtitle={`${selectedOrder.patient.room} · ${selectedOrder.patient.bed}`}
+        />
+        <InfoTileCard
+          title="Ordering Doctor"
+          icon={<Stethoscope className="h-3.5 w-3.5" />}
+          tone="purple"
+          value={selectedOrder.doctor.name}
+          subtitle={`${selectedOrder.doctor.specialty} · Reg. No. ${selectedOrder.doctor.registrationNumber}`}
+          multiline
+        />
+        <InfoTileCard
+          title="Total Test Value"
+          icon={<IndianRupee className="h-3.5 w-3.5" />}
+          tone="emerald"
+          value={`₹${totalValue.toLocaleString("en-IN")}`}
+          subtitle={`${selectedOrder.tests.length} tests`}
+        />
+      </div>
+
+      {selectedOrder.patient.diagnosis && (
+        <InfoAlertCard
+          tone="blue"
+          icon={<Stethoscope className="h-3.5 w-3.5" />}
+          title="Diagnosis / Clinical Indication"
+          body={selectedOrder.patient.diagnosis}
+        />
+      )}
+
+      {selectedOrder.patient.allergies.length > 0 && (
+        <InfoAlertCard
+          tone="red"
+          icon={<AlertTriangle className="h-3.5 w-3.5" />}
+          title="Known Allergies"
+          body={selectedOrder.patient.allergies.join(" · ")}
+        />
+      )}
+
+      {/* Test workflow */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-sky-500 text-white shadow-sm">
+            <PackageCheck className="h-4 w-4" />
+          </span>
+          <p className="text-sm font-bold text-slate-800">Ordered Radiology Tests</p>
+          <Badge variant="outline" className={STATUS_TONE[selectedOrder.tests[0]?.status ?? "Ordered"]}>
+            {selectedOrder.tests[0]?.status ?? "—"}
+          </Badge>
+        </div>
+        <p className="text-xs text-slate-500">
+          Workflow: Ordered → Processing → Report Ready. Report-ready imaging is locked.
+        </p>
+        <div className="space-y-3">
+          {selectedOrder.tests.map((test, index) => (
+            <RadiologyTestCard
+              key={test.id}
+              test={test}
+              index={index}
+              onStatusChange={updateStatus}
+              onFinalize={finalizeReport}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Action footer */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs text-slate-500">Total radiology test value</p>
+          <p className="text-2xl font-bold text-slate-800">
+            ₹{totalValue.toLocaleString("en-IN")}
+          </p>
+        </div>
+        {selectedOrder.paymentStatus === "Paid" ? (
+          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+            <CheckCircle2 className="h-5 w-5" />
+            Payment collected via {selectedOrder.paymentMethod}
+          </div>
+        ) : billSent ? (
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+            <CheckCircle2 className="h-5 w-5" />
+            Bill sent to Billing Department
+          </div>
+        ) : RADIOLOGY_IPD_DIRECT_PAYMENT_ENABLED ? (
+          <PillButton
+            icon={CreditCard}
+            disabled={!allReportsReady}
+            onClick={() => setPaymentOpen(true)}
+          >
+            Continue Payment
+          </PillButton>
+        ) : (
+          <PillButton
+            icon={PackageCheck}
+            variant="gradient"
+            disabled={!allReportsReady}
+            onClick={() => onSendToBillingDept(selectedOrder.id)}
+          >
+            Order Delivered &amp; Send Bill
+          </PillButton>
+        )}
+      </div>
+      {!allReportsReady && (
+        <InfoAlertCard
+          tone="amber"
+          icon={<Clock3 className="h-3.5 w-3.5" />}
+          title="Tests pending"
+          body="Complete all radiology reports before proceeding with billing."
+        />
+      )}
     </div>
+  );
+
+  if (inline) {
+    return <div className="space-y-5">{content}</div>;
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50">
+        <div className="absolute inset-0 bg-slate-950/40" onClick={onClose} />
+        <aside className="absolute right-0 top-0 h-full w-full max-w-3xl overflow-y-auto bg-white shadow-2xl">
+          <div className="p-5">{content}</div>
+        </aside>
+      </div>
+      {paymentOpen && (
+        <PaymentDrawer
+          open={paymentOpen}
+          onOpenChange={setPaymentOpen}
+          total={totalValue}
+          method={payment}
+          setMethod={setPayment}
+          onConfirm={() => {
+            onCollectPayment(selectedOrder.id, payment);
+            setPaymentOpen(false);
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -324,7 +334,7 @@ function RadiologyTestCard({
   const [remarks, setRemarks] = useState(test.reportRemarks ?? "");
   const locked = test.status === "Report Ready";
   return (
-    <div className="rounded-xl border border-slate-200 p-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -347,71 +357,64 @@ function RadiologyTestCard({
       </div>
       {!locked && (
         <div className="mt-4 border-t border-slate-100 pt-4">
-          <p className="mb-1 text-xs font-medium text-slate-500">
-            Update Imaging Status
-          </p>
-          <Select
+          <SingleSelect
+            label="Update Imaging Status"
             value={test.status}
-            onValueChange={(value) =>
-              onStatusChange(test, value as RadiologyOrderStatus)
-            }
-          >
-            <SelectTrigger className="max-w-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statusFlow
-                .slice(statusFlow.indexOf(test.status))
-                .map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+            onChange={(v) => onStatusChange(test, v as RadiologyOrderStatus)}
+            options={statusFlow
+              .slice(statusFlow.indexOf(test.status))
+              .map((s) => ({ value: s, label: s }))}
+          />
         </div>
       )}
       {test.status === "Processing" && !locked && (
-        <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50/50 p-4">
-          <p className="text-sm font-bold text-slate-800">
-            Upload Radiology Report
-          </p>
+        <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50/40 p-4">
+          <p className="text-sm font-bold text-slate-800">Upload Radiology Report</p>
           <p className="mt-1 text-xs text-slate-500">
-            Upload the imaging report or scan image. No numerical test result or
-            reference range is required.
+            Upload the imaging report or scan image. No numerical test result or reference range is required.
           </p>
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <p className="mb-1 text-xs text-slate-500">Report Image / PDF</p>
-              <Input
-                type="file"
-                accept="image/*,.pdf"
-                onChange={(event) => setImage(event.target.files?.[0])}
-              />
+              <p className="mb-1 text-xs font-medium text-slate-500">Report Image / PDF</p>
+              <label className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-500 transition hover:border-cyan-300">
+                <Upload className="h-3.5 w-3.5" />
+                <span className="truncate">
+                  {image ? image.name : "Choose file…"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="hidden"
+                  onChange={(event) => setImage(event.target.files?.[0])}
+                />
+              </label>
             </div>
             <div>
-              <p className="mb-1 text-xs text-slate-500">
+              <p className="mb-1 text-xs font-medium text-slate-500">
                 Radiologist Remarks (Optional)
               </p>
-              <Textarea
+              <textarea
                 rows={2}
                 value={remarks}
                 onChange={(event) => setRemarks(event.target.value)}
-                placeholder="Enter radiology impression or report remarks..."
+                placeholder="Enter radiology impression or report remarks…"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm transition focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-200"
               />
             </div>
           </div>
-          <Button
-            disabled={!image && !test.reportImageName}
-            className="mt-3 bg-emerald-600 hover:bg-emerald-700"
-            onClick={() => onFinalize(test, image, remarks)}
-          >
-            Upload & Mark Report Ready
-          </Button>
+          <div className="mt-3 flex justify-end">
+            <PillButton
+              icon={CheckCircle2}
+              disabled={!image && !test.reportImageName}
+              onClick={() => onFinalize(test, image, remarks)}
+            >
+              Upload &amp; Mark Report Ready
+            </PillButton>
+          </div>
         </div>
       )}
       {locked && (
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
           <p className="flex items-center gap-2 font-semibold text-emerald-800">
             <FileImage className="h-4 w-4" />
             Radiology Report Uploaded
@@ -427,8 +430,7 @@ function RadiologyTestCard({
             </p>
           )}
           <p className="mt-2 text-xs text-emerald-700">
-            Report ready at {test.reportReadyAt}. Status is locked and cannot be
-            changed.
+            Report ready at {test.reportReadyAt}. Status is locked and cannot be changed.
           </p>
         </div>
       )}
@@ -436,158 +438,115 @@ function RadiologyTestCard({
   );
 }
 
-function PaymentDialog({
+function PaymentDrawer({
+  open,
+  onOpenChange,
   total,
   method,
   setMethod,
-  onCancel,
   onConfirm,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   total: number;
   method: RadiologyPaymentMethod;
   setMethod: (method: RadiologyPaymentMethod) => void;
-  onCancel: () => void;
   onConfirm: () => void;
 }) {
   const options: Array<{
     value: RadiologyPaymentMethod;
     label: string;
+    description: string;
     icon: React.ElementType;
-    tone: string;
-    selected: string;
   }> = [
-    {
-      value: "Cash",
-      label: "Cash",
-      icon: Banknote,
-      tone: "bg-emerald-100 text-emerald-600",
-      selected: "border-emerald-500 bg-emerald-50",
-    },
-    {
-      value: "UPI",
-      label: "UPI",
-      icon: Smartphone,
-      tone: "bg-violet-100 text-violet-600",
-      selected: "border-violet-500 bg-violet-50",
-    },
-    {
-      value: "Card",
-      label: "Card",
-      icon: CreditCard,
-      tone: "bg-blue-100 text-blue-600",
-      selected: "border-blue-500 bg-blue-50",
-    },
-    {
-      value: "Net Banking",
-      label: "Net Banking",
-      icon: Landmark,
-      tone: "bg-amber-100 text-amber-600",
-      selected: "border-amber-500 bg-amber-50",
-    },
+    { value: "Cash", label: "Cash", description: "Collect cash at counter", icon: Banknote },
+    { value: "UPI", label: "UPI", description: "QR or UPI application", icon: Smartphone },
+    { value: "Card", label: "Card", description: "Debit or credit card", icon: CreditCard },
+    { value: "Net Banking", label: "Net Banking", description: "Bank account transfer", icon: Landmark },
   ];
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="border-b border-slate-100 bg-gradient-to-r from-sky-50 via-cyan-50 to-white px-5 py-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-              <IndianRupee className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-800">
-                Collect Radiology Payment
-              </h3>
-              <p className="mt-1 text-xs text-slate-500">
-                Select the payment method used by the patient or attendant.
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="p-5">
-          <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-              Total Imaging Value
-            </p>
-            <p className="mt-1 text-3xl font-bold text-slate-800">
-              ₹{total.toLocaleString("en-IN")}
-            </p>
-          </div>
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {options.map((option) => {
-              const Icon = option.icon;
-              const isSelected = method === option.value;
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => setMethod(option.value)}
-                  className={`relative flex items-center gap-3 rounded-xl border p-3 text-left ${isSelected ? option.selected : "border-slate-200 hover:border-sky-200"}`}
-                >
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-lg ${option.tone}`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <span className="text-sm font-semibold text-slate-800">
-                    {option.label}
-                  </span>
-                  {isSelected && (
-                    <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-sky-600" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-            <p className="text-xs leading-5 text-emerald-800">
-              Confirming payment will mark the radiology order as paid and
-              record the selected method in the billing audit trail.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 p-5">
-          <Button
-            variant="outline"
-            className="flex-1 bg-white"
-            onClick={onCancel}
-          >
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<IndianRupee className="h-5 w-5" />}
+      title="Collect Radiology Payment"
+      description="Select the payment method used by the patient or attendant."
+      bodyClassName="space-y-4"
+      footer={
+        <div className="flex items-center gap-3">
+          <FormButton variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Cancel
-          </Button>
-          <Button
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-            onClick={onConfirm}
-          >
+          </FormButton>
+          <FormButton className="flex-1" onClick={onConfirm}>
+            <CheckCircle2 className="mr-1 h-4 w-4" />
             Collect ₹{total.toLocaleString("en-IN")}
-          </Button>
+          </FormButton>
         </div>
+      }
+    >
+      <div className="flex items-center justify-between rounded-xl border border-cyan-200 bg-cyan-50/70 p-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">
+            Total Imaging Value
+          </p>
+          <p className="mt-1 text-3xl font-bold tracking-tight text-slate-800">
+            ₹{total.toLocaleString("en-IN")}
+          </p>
+        </div>
+        <CheckCircle2 className="h-8 w-8 text-emerald-500" />
       </div>
-    </div>
-  );
-}
 
-function Info({
-  title,
-  icon,
-  lines,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  lines: string[];
-}) {
-  return (
-    <div className="rounded-xl border border-slate-200 p-4">
-      <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
-        {icon}
-        {title}
-      </p>
-      {lines.map((line, index) => (
-        <p
-          key={index}
-          className={`mt-${index === 0 ? "3" : "1"} text-sm ${index === 0 ? "font-semibold text-slate-700" : "text-slate-500"}`}
-        >
-          {line}
-        </p>
-      ))}
-    </div>
+      <DrawerSection
+        title="Payment Method"
+        caption="Choose one option"
+        icon={<CreditCard className="h-4 w-4" />}
+      >
+        <RadioGroup
+          name="radiology-ipd-payment-method"
+          options={options.map((o) => ({ value: o.value, label: o.label }))}
+          value={method}
+          onChange={(v) => setMethod(v as RadiologyPaymentMethod)}
+        />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {options.map((option) => {
+            const Icon = option.icon;
+            const isSelected = method === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setMethod(option.value)}
+                className={`flex flex-col items-start gap-1.5 rounded-xl border-2 p-2.5 text-left transition ${
+                  isSelected
+                    ? "border-cyan-500 bg-cyan-50 shadow-sm"
+                    : "border-slate-200 bg-white hover:border-cyan-200"
+                }`}
+              >
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                    isSelected
+                      ? "bg-cyan-600 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+                <p className="text-xs font-bold text-slate-800">{option.label}</p>
+                <p className="text-[10px] leading-tight text-slate-500">
+                  {option.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </DrawerSection>
+
+      <InfoAlertCard
+        tone="emerald"
+        icon={<ShieldCheck className="h-3.5 w-3.5" />}
+        title="Audit Trail"
+        body="Confirming payment will mark the radiology order as paid and record the selected method in the billing audit trail."
+      />
+    </ConsultationDrawer>
   );
 }

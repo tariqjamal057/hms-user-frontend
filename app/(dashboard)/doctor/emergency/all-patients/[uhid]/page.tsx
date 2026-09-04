@@ -184,11 +184,13 @@ export default function DoctorEmergencyPatientDetailPage() {
     const next = drafts.map((d, i) => ({
       id: `M-${Date.now()}-${i}`,
       medicineName: d.name,
+      medicineCode: "",
       strength: "",
       route: "",
       slot: "OD" as const,
       scheduledTime: "As ordered",
       status: "Pending" as const,
+      urgency: "Routine" as const,
       deliveredFromPharmacyAt: undefined,
       givenBy: undefined,
       givenAt: undefined,

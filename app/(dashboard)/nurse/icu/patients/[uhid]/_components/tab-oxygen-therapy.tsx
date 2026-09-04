@@ -1,9 +1,9 @@
 // app/(dashboard)/nurse/icu/patients/[uhid]/_components/tab-oxygen-therapy.tsx
 "use client";
 import { useState } from "react";
-import { Plus, Wind } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Activity, Plus, Wind } from "lucide-react";
 import type { OxygenAdministration, OxygenObservation, OxygenOrder } from "@/types/nurse/icu/oxygen-therapy-types";
+import { PillButton } from "@/components/forms/pill-button";
 import { OxygenActiveOrderCard } from "./oxygen-active-order-card";
 import { OxygenObservationForm } from "./oxygen-observation-form";
 import { OxygenMonitoringTimeline } from "./oxygen-monitoring-timeline";
@@ -39,14 +39,17 @@ export function TabOxygenTherapy({
       <OxygenActiveOrderCard order={activeOrder} administration={administration} nurseName={nurseName} onStartOxygen={onStartOxygen} />
 
       {administration?.isActive && (
-        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-bold text-slate-800">Oxygen Monitoring</p>
+            <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
+              <Activity className="h-4 w-4 text-cyan-600" />
+              Oxygen Monitoring
+            </p>
             <p className="text-xs text-slate-500">Record patient observations as per monitoring schedule.</p>
           </div>
-          <Button className="gap-2 bg-cyan-600 hover:bg-cyan-700" onClick={() => setAddingObservation(true)}>
-            <Plus className="h-4 w-4" />Add Oxygen Observation
-          </Button>
+          <PillButton icon={Plus} onClick={() => setAddingObservation(true)} className="self-start sm:self-auto">
+            Add Oxygen Observation
+          </PillButton>
         </div>
       )}
 
@@ -57,20 +60,16 @@ export function TabOxygenTherapy({
 
       {orderHistory.length > 1 && <OxygenOrderHistory orders={orderHistory} />}
 
-      {addingObservation && administration && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/40" onClick={() => setAddingObservation(false)} />
-          <div className="relative z-10 max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <OxygenObservationForm
-              order={activeOrder}
-              administration={administration}
-              patientName={patientName}
-              nurseName={nurseName}
-              onSave={onSaveObservation}
-              onClose={() => setAddingObservation(false)}
-            />
-          </div>
-        </div>
+      {administration && (
+        <OxygenObservationForm
+          open={addingObservation}
+          onOpenChange={setAddingObservation}
+          order={activeOrder}
+          administration={administration}
+          patientName={patientName}
+          nurseName={nurseName}
+          onSave={onSaveObservation}
+        />
       )}
     </div>
   );

@@ -95,7 +95,7 @@ export function BillingDetailDrawer({ patient, onClose, onPatientUpdate }: { pat
         )}
       </aside>
 
-      {collecting && <CollectPaymentModal dueAmount={computed.dueAmount} onCancel={() => setCollecting(false)} onCollect={handleCollectPayment} />}
+      {collecting && <CollectPaymentModal open dueAmount={computed.dueAmount} onCancel={() => setCollecting(false)} onCollect={handleCollectPayment} />}
     </div>
   );
 }

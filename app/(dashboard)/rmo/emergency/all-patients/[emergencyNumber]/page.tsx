@@ -61,7 +61,7 @@ export default function RmoEmergencyPatientDetailPage() {
 
   const tabs: PatientTab[] = [
     { value: "registration", label: "Registration", content: <SectionRegistration patient={patient} /> },
-    { value: "vitals", label: "Vitals", content: <SectionVitals vitals={patient.vitals} /> },
+    { value: "vitals", label: "Vitals", content: <SectionVitals vitals={patient.vitals} recordPath={`/rmo/emergency/all-patients/${patient.emergencyNumber}/record-vitals`} /> },
     { value: "diagnosis", label: "Diagnosis", content: <SectionDiagnosis diagnoses={patient.diagnoses} /> },
     { value: "medicines", label: "Medicines", content: <SectionMedicines doses={patient.doses} /> },
     { value: "labs", label: "Labs", content: <SectionLabReports reports={patient.labReports} /> },

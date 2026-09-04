@@ -110,7 +110,7 @@ export function RmoDetailDrawer({ patient, onClose, onPatientUpdate }: { patient
 
                 <div className="flex-1 overflow-y-auto p-5">
                     {section === "overview" && <SectionOverview patient={active} />}
-                    {section === "vitals" && <SectionVitals vitals={active.vitals} onAddVital={addVital} />}
+                    {section === "vitals" && <SectionVitals vitals={active.vitals} onAddVital={addVital} recordPath={`/rmo/ipd/all-patients/${active.uhid}/record-vitals`} />}
                     {section === "diagnosis" && <SectionDiagnosis diagnoses={active.diagnoses} onAddDiagnosis={addDiagnosis} />}
                     {section === "medicines" && <SectionMedicines doses={active.doses} orders={active.medicineOrders} onAddOrder={addMedicineOrder} />}
                     {section === "labs" && <SectionLabReports reports={active.labReports} />}

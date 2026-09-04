@@ -18,6 +18,8 @@ export type DataColumn<T> = {
   icon?: ReactNode;
   color?: string;
   unit?: string;
+  /** When true the column header + cells are hidden on small screens. */
+  hideOnMobile?: boolean;
   headerClassName?: string;
   cellClassName?: string;
   render?: (row: T, index: number) => ReactNode;
@@ -63,6 +65,7 @@ export function DataTable<T>({
                 className={cn(
                   "h-10 whitespace-nowrap px-3 py-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 sm:py-3 sm:text-xs",
                   ALIGN[col.align ?? "left"],
+                  col.hideOnMobile && "hidden sm:table-cell",
                   col.headerClassName,
                 )}
               >
@@ -107,6 +110,7 @@ export function DataTable<T>({
                     className={cn(
                       "whitespace-nowrap px-3 py-2.5 text-xs align-middle sm:py-3 sm:text-sm",
                       ALIGN[col.align ?? "left"],
+                      col.hideOnMobile && "hidden sm:table-cell",
                       col.cellClassName,
                     )}
                   >

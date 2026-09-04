@@ -66,8 +66,9 @@ import { NURSE_ICU_PATIENTS } from "@/lib/nurse/icu/nurse-icu-data";
 
 import { TabOverview } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-overview";
 import { TabVitals } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-vitals";
-import { TabFluidBalance } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-fluid-balance";
-import { TabProgressNotes } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-progress-notes";
+import { ProgressNotesSection } from "@/components/patient-detail/progress-notes-section";
+import { FluidBalanceSection } from "@/components/patient-detail/fluid-balance-section";
+import { CURRENT_DOCTOR } from "@/lib/doctor/icu/doctor-icu-data";
 
 import { TabVentilation } from "@/app/(dashboard)/doctor/icu/all-patients/[uhid]/_components/tab-ventilation";
 import { TabOxygenTherapy } from "@/app/(dashboard)/doctor/icu/all-patients/[uhid]/_components/tab-oxygen-therapy";
@@ -812,12 +813,30 @@ export default function DoctorIcuPatientDetailPage() {
     {
       value: "fluid",
       label: "Fluid Balance",
-      content: <TabFluidBalance entries={fluidEntries} onAddEntry={addFluidEntry} />,
+      content: (
+        <FluidBalanceSection
+          entries={fluidEntries}
+          onAddEntry={addFluidEntry}
+          authorName={CURRENT_DOCTOR.name}
+          title="Fluid Balance Chart"
+        />
+      ),
     },
     {
       value: "notes",
       label: "Progress Notes",
-      content: <TabProgressNotes notes={notes} onAddNote={addNote} />,
+      content: (
+        <ProgressNotesSection
+          notes={notes}
+          onAddNote={addNote}
+          authorName={CURRENT_DOCTOR.name}
+          authorRole="Doctor"
+          soap
+          accent="blue"
+          categories={["Doctor Round", "Nursing Update", "ICU Review", "General"]}
+          title="ICU Progress Notes"
+        />
+      ),
     },
     {
       value: "treatment",
