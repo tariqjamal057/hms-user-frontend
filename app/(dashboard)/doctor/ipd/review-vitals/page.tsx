@@ -43,13 +43,14 @@ import { NormalRangesWidget } from "./_components/normal-ranges-widget";
 import { AlertsWidget } from "./_components/alerts-widget";
 import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
-import { VitalsFormData } from "@/types/doctor/ipd/record-vitals-types";
-import { RecordVitalsDialog } from "./_components/record-vitals-dialog";
 
 export default function ReviewVitalsPage({
   uhid: propUhid,
   embedded = false,
-}: { uhid?: string; embedded?: boolean } = {}) {
+}: {
+  uhid?: string;
+  embedded?: boolean;
+} = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const uhid = propUhid ?? searchParams.get("uhid") ?? WARD_ROUND_PATIENTS[0].uhid;
@@ -57,8 +58,6 @@ export default function ReviewVitalsPage({
   const [changePatientOpen, setChangePatientOpen] = useState(false);
   const [viewBy, setViewBy] = useState("chart");
   const [timeRange, setTimeRange] = useState("72");
-
-  const [recordVitalsOpen, setRecordVitalsOpen] = useState(false);
 
   const patient = useMemo(() => getPatientByUhid(uhid), [uhid]);
   const records = useMemo(() => getVitalsForPatient(uhid), [uhid]);
@@ -86,27 +85,8 @@ export default function ReviewVitalsPage({
   }
 
   function handleAddRecordVitals() {
-    console.log("Add/Record vitals for UHID:", uhid);
-    toast.info("Opening record vitals form...");
-    setRecordVitalsOpen(true);
-  }
-
-  function handleSaveVitals(data: VitalsFormData) {
-    console.log("Vitals saved for", uhid, data);
-    toast.success("Vitals recorded. Refresh to see updated trend.");
-  }
-
-  function handleSaveAndContinue(data: VitalsFormData) {
-    console.log(
-      "Vitals saved, continuing to Diagnosis Update for",
-      uhid,
-      data,
-    );
-    router.push(`/doctor/ipd/diagnosis-update?uhid=${uhid}`);
-  }
-
-  function handleSaveDraft(data: VitalsFormData) {
-    console.log("Draft vitals saved for", uhid, data);
+    console.log("Open record vitals page for UHID:", uhid);
+    router.push(`/doctor/ipd/patient-detail/record-vitals?uhid=${uhid}`);
   }
 
   function handleViewTrend(type: string) {
@@ -380,16 +360,6 @@ export default function ReviewVitalsPage({
           onSelectPatient={handleSelectPatient}
         />
       )}
-
-      <RecordVitalsDialog
-        patient={patient}
-        previousVitals={records[0]}
-        open={recordVitalsOpen}
-        onOpenChange={setRecordVitalsOpen}
-        onSaveDraft={handleSaveDraft}
-        onSaveVitals={handleSaveVitals}
-        onSaveAndContinue={handleSaveAndContinue}
-      />
     </div>
   );
 }

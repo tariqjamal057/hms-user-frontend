@@ -13,6 +13,9 @@ export type PatientTab = {
   value: string;
   label: string;
   content: React.ReactNode;
+  /** When true, the tab is reachable programmatically (via activeTab prop or
+   *  imperative switch) but its trigger is not rendered in the tab bar. */
+  hidden?: boolean;
 };
 
 // Normalized patient model — adapt concrete module types (OPD/IPD/Emergency/ICU)
@@ -68,6 +71,11 @@ export type PatientDetailShellProps = {
   onStatusChange?: (status: string) => void;
   tabs: PatientTab[];
   defaultTab?: string;
+  /** Controlled active tab value. When provided, the shell renders this tab
+   *  instead of managing its own state. */
+  activeTab?: string;
+  /** Notified when the user clicks a tab trigger. */
+  onActiveTabChange?: (value: string) => void;
   // When true and there is exactly one tab, hide the tab bar (content still renders).
   hideSingleTab?: boolean;
   showStatusSelector?: boolean;
@@ -93,6 +101,8 @@ export function PatientDetailShell({
   onStatusChange,
   tabs,
   defaultTab,
+  activeTab: controlledActiveTab,
+  onActiveTabChange,
   hideSingleTab = false,
   showStatusSelector = false,
   showPatientSwitcher = false,
@@ -105,7 +115,13 @@ export function PatientDetailShell({
 }: PatientDetailShellProps) {
   const router = useRouter();
   const wrapped = containerClassName ?? "min-h-screen";
-  const [tab, setTab] = useState(defaultTab ?? tabs[0]?.value ?? "");
+  const [internalTab, setInternalTab] = useState(defaultTab ?? tabs[0]?.value ?? "");
+  const isControlled = controlledActiveTab !== undefined;
+  const tab = isControlled ? controlledActiveTab : internalTab;
+  const setTab = (next: string) => {
+    if (!isControlled) setInternalTab(next);
+    onActiveTabChange?.(next);
+  };
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -133,6 +149,7 @@ export function PatientDetailShell({
     );
   }, [patientList, search]);
 
+  const visibleTabs = useMemo(() => tabs.filter((t) => !t.hidden), [tabs]);
   const activeTab = tabs.find((t) => t.value === tab) ?? tabs[0];
 
   function handleSelectPatient(uhid: string) {
@@ -275,12 +292,12 @@ export function PatientDetailShell({
         {/* ── Tabs (separate, flush under header) ── */}
         {tabs.length > 0 && (
         <Tabs value={tab} onValueChange={handleTabChange}>
-          {!(hideSingleTab && tabs.length === 1) && (
+          {!(hideSingleTab && visibleTabs.length <= 1) && visibleTabs.length > 0 && (
           <TabsList
             variant="line"
             className="w-full justify-start overflow-x-auto rounded-none border border-slate-200 bg-white p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {tabs.map((t, idx) => {
+            {visibleTabs.map((t, idx) => {
               const active = t.value === tab;
               return (
                 <TabsTrigger
@@ -304,7 +321,7 @@ export function PatientDetailShell({
           </TabsList>
           )}
 
-            <div className={hideSingleTab && tabs.length === 1 ? "min-h-0" : "min-h-[240px]"}>
+            <div className={hideSingleTab && visibleTabs.length <= 1 ? "min-h-0" : "min-h-[240px]"}>
               <AnimatePresence mode="wait" custom={direction} initial={false}>
                 {activeTab && (
                   <motion.div
