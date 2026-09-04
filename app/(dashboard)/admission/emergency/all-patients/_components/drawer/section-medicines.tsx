@@ -3,10 +3,14 @@
 import { useMemo, useState } from "react";
 import { PackageX, Pill, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  DataTable,
+  type DataColumn,
+} from "@/components/patient-detail/data-table";
 import type { MedicineDose } from "@/types/emergency/emergency-types";
 import { DateFilterBar } from "./date-filter-bar";
 import { DoseStatusBadge } from "../emergency-badges";
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/forms/pill-button";
 
 export function SectionMedicines({
   doses,
@@ -41,6 +45,113 @@ export function SectionMedicines({
     });
   }, [filtered, todayIso]);
 
+  const baseColumns: DataColumn<MedicineDose>[] = useMemo(
+    () => [
+      {
+        key: "medicineName",
+        label: "Medicine",
+        render: (d) => (
+          <div>
+            <p className="font-medium text-slate-800">{d.medicineName}</p>
+            {(d.strength || d.route) && (
+              <p className="text-xs text-slate-400">
+                {d.strength} · {d.route}
+              </p>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: "slot",
+        label: "Slot",
+        render: (d) => (
+          <Badge
+            variant="outline"
+            className="border-slate-200 bg-white text-slate-600"
+          >
+            {d.slot}
+          </Badge>
+        ),
+      },
+      {
+        key: "scheduledTime",
+        label: "Scheduled Time",
+        render: (d) => (
+          <span className="text-slate-600">{d.scheduledTime}</span>
+        ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (d) => <DoseStatusBadge status={d.status} />,
+      },
+      {
+        key: "deliveredFromPharmacyAt",
+        label: "Pharmacy Delivery",
+        render: (d) =>
+          d.deliveredFromPharmacyAt ? (
+            <span className="flex items-center gap-1 text-slate-600">
+              <Truck className="h-3.5 w-3.5 text-cyan-600" />
+              {d.deliveredFromPharmacyAt}
+            </span>
+          ) : (
+            <span className="text-slate-400">—</span>
+          ),
+      },
+      {
+        key: "givenBy",
+        label: "Given By",
+        render: (d) =>
+          d.givenBy ? (
+            <span className="text-slate-600">
+              {d.givenBy} at {d.givenAt}
+            </span>
+          ) : (
+            <span className="text-slate-400">—</span>
+          ),
+      },
+      {
+        key: "remarks",
+        label: "Remarks",
+        render: (d) => (
+          <span className="text-slate-500">{d.outOfStockRemark ?? "—"}</span>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const columns: DataColumn<MedicineDose>[] = useMemo(
+    () =>
+      onUpdateStatus
+        ? [
+            ...baseColumns,
+            {
+              key: "action",
+              label: "Action",
+              align: "right",
+              headerClassName: "text-right",
+              render: (d) =>
+                d.status === "Pending" ? (
+                  <PillButton
+                    size="sm"
+                    onClick={() =>
+                      onUpdateStatus(
+                        d.id,
+                        d.medicineName,
+                        d.instructions || "",
+                      )
+                    }
+                  >
+                    Administer
+                  </PillButton>
+                ) : null,
+            },
+          ]
+        : baseColumns,
+    [baseColumns, onUpdateStatus],
+  );
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -49,8 +160,8 @@ export function SectionMedicines({
           Medicine Administration
         </p>
         <p className="mt-1 text-xs text-slate-500">
-          Today's and previous days' medicine, given/not given, out-of-stock,
-          and pharmacy delivery timing.
+          Today&apos;s and previous days&apos; medicine, given/not given,
+          out-of-stock, and pharmacy delivery timing.
         </p>
         <div className="mt-3">
           <DateFilterBar
@@ -85,12 +196,11 @@ export function SectionMedicines({
         {groupedByDate.map(([groupDate, rows]) => {
           const isToday = groupDate === todayIso;
           return (
-            <div
+            <DataTable
               key={groupDate}
-              className="rounded-2xl border border-slate-200 bg-white p-5"
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-bold text-slate-800">
+              card
+              title={
+                <span className="flex items-center gap-2">
                   {isToday
                     ? "Today"
                     : new Date(`${groupDate}T12:00:00`).toLocaleDateString(
@@ -105,102 +215,20 @@ export function SectionMedicines({
                   {isToday && (
                     <Badge
                       variant="outline"
-                      className="ml-2 border-blue-200 bg-blue-50 text-blue-700"
+                      className="border-blue-200 bg-blue-50 text-blue-700"
                     >
                       Today
                     </Badge>
                   )}
-                </p>
-                <span className="text-xs text-slate-500">
-                  {rows.length} dose{rows.length !== 1 ? "s" : ""}
                 </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-[10px] uppercase text-slate-400">
-                      <th className="py-2 pr-4">Medicine</th>
-                      <th className="pr-4">Slot</th>
-                      <th className="pr-4">Scheduled Time</th>
-                      <th className="pr-4">Status</th>
-                      <th className="pr-4">Pharmacy Delivery</th>
-                      <th className="pr-4">Given By</th>
-                      <th>Remarks</th>
-                      {onUpdateStatus && <th className="py-2 pr-4">Action</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((dose) => (
-                      <tr
-                        key={dose.id}
-                        className="border-b border-slate-100 last:border-0"
-                      >
-                        <td className="py-2.5 pr-4">
-                          <p className="font-medium text-slate-800">
-                            {dose.medicineName}
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            {dose.strength} · {dose.route}
-                          </p>
-                        </td>
-                        <td className="pr-4">
-                          <Badge
-                            variant="outline"
-                            className="border-slate-200 bg-white text-slate-600"
-                          >
-                            {dose.slot}
-                          </Badge>
-                        </td>
-                        <td className="pr-4 text-slate-600">
-                          {dose.scheduledTime}
-                        </td>
-                        <td className="pr-4">
-                          <DoseStatusBadge status={dose.status} />
-                        </td>
-                        <td className="pr-4 text-slate-600">
-                          {dose.deliveredFromPharmacyAt ? (
-                            <span className="flex items-center gap-1">
-                              <Truck className="h-3 w-3 text-cyan-600" />
-                              {dose.deliveredFromPharmacyAt}
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="pr-4 text-slate-600">
-                          {dose.givenBy
-                            ? `${dose.givenBy} at ${dose.givenAt}`
-                            : "—"}
-                        </td>
-                        <td className="text-slate-500">
-                          {dose.outOfStockRemark ?? "—"}
-                        </td>
-
-                        {onUpdateStatus && (
-                          <td className="pr-4">
-                            {dose.status === "Pending" && (
-                              <Button
-                                size="sm"
-                                className="bg-emerald-600 hover:bg-emerald-700"
-                                onClick={() =>
-                                  onUpdateStatus(
-                                    dose.id,
-                                    dose.medicineName,
-                                    dose.instructions || "",
-                                  )
-                                }
-                              >
-                                Administer
-                              </Button>
-                            )}
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              }
+              titleIcon={<Pill className="h-4 w-4" />}
+              rows={rows}
+              columns={columns}
+              rowKey={(d) => d.id}
+              countLabel="doses"
+              emptyText="No medicine records found for this date."
+            />
           );
         })}
         {groupedByDate.length === 0 && (
@@ -212,3 +240,4 @@ export function SectionMedicines({
     </div>
   );
 }
+

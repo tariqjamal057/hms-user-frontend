@@ -1,14 +1,23 @@
 // app/(dashboard)/doctor/emergency/all-patients/[uhid]/page.tsx
 "use client";
 import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
-import { Plus, FilePlus2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { PatientDetailShell, type PatientTab, type PatientDetailData, type PatientListItem } from "@/components/patient-detail/patient-detail-shell";
+import { useParams, useRouter } from "next/navigation";
+import { FilePlus2, HeartPulse, Stethoscope } from "lucide-react";
+import { toast } from "sonner";
+import { PillButton } from "@/components/forms/pill-button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  PatientDetailShell,
+  type PatientTab,
+  type PatientDetailData,
+  type PatientListItem,
+} from "@/components/patient-detail/patient-detail-shell";
 import type { RmoEmergencyPatient } from "@/types/emergency/rmo-emergency-types";
 import type { EmergencyPatient, TreatmentPlanItem } from "@/types/emergency/emergency-types";
 import { EMERGENCY_PATIENTS } from "@/lib/emergency/emergency-data";
-import { RmoEntryDrawer, type EntryKind } from "@/app/(dashboard)/rmo/emergency/all-patients/_components/rmo-entry-drawers";
+import { DiagnosisDrawer, type DiagnosisDraft } from "@/components/consultation/diagnosis-drawer";
+import { MedicineDrawer, type MedicineDraft } from "@/components/consultation/medicine-drawer";
+import { LabDrawer, type LabDraft } from "@/components/consultation/lab-drawer";
 import { EmergencyStatusWorkflow } from "@/app/(dashboard)/rmo/emergency/all-patients/_components/emergency-status-workflow";
 import { TreatmentPlanForm } from "@/app/(dashboard)/rmo/emergency/all-patients/_components/section-treatment-plan-form";
 import { SectionRegistration } from "@/app/(dashboard)/admission/emergency/all-patients/_components/drawer/section-registration";
@@ -41,36 +50,89 @@ function toDetailData(p: EmergencyPatient): PatientDetailData {
       { label: "Incident", value: p.incidentType },
       { label: "Arrival", value: p.arrivalMode },
       { label: "Attending Doctor", value: p.attendingDoctor || "Unassigned" },
-      { label: "Current Condition", value: p.currentCondition },
     ],
   };
 }
 
-function SectionAction({ title, onClick }: { title: string; onClick: () => void }) {
+type SectionTone = "blue" | "purple" | "emerald" | "amber" | "red";
+
+const TONE_BG: Record<SectionTone, string> = {
+  blue: "border-blue-200 bg-blue-50/60",
+  purple: "border-purple-200 bg-purple-50/60",
+  emerald: "border-emerald-200 bg-emerald-50/60",
+  amber: "border-amber-200 bg-amber-50/60",
+  red: "border-red-200 bg-red-50/60",
+};
+
+function SectionAction({
+  title,
+  count,
+  icon: Icon,
+  onAdd,
+  tone = "blue",
+  addLabel = "Add New",
+  secondaryLabel,
+  onSecondary,
+  secondaryTone = "outline",
+}: {
+  title: string;
+  count?: number;
+  icon?: React.ElementType;
+  onAdd: () => void;
+  tone?: SectionTone;
+  addLabel?: string;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+  secondaryTone?: "outline" | "gradient" | "danger";
+}) {
   return (
-    <div className="mb-4 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50/50 p-3">
-      <p className="text-sm font-bold text-blue-900">{title}</p>
-      <Button size="sm" className="gap-1 bg-blue-600 hover:bg-blue-700" onClick={onClick}>
-        <FilePlus2 className="h-4 w-4" />
-        Add New
-      </Button>
+    <div
+      className={`mb-4 flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${TONE_BG[tone]}`}
+    >
+      <div className="flex items-center gap-2">
+        {Icon && <Icon className="h-4 w-4 text-slate-600" />}
+        <p className="text-sm font-bold text-slate-800">{title}</p>
+        {typeof count === "number" && (
+          <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+            {count}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {secondaryLabel && onSecondary && (
+          <PillButton size="sm" variant={secondaryTone} onClick={onSecondary}>
+            {secondaryLabel}
+          </PillButton>
+        )}
+        <PillButton size="sm" icon={FilePlus2} onClick={onAdd}>
+          {addLabel}
+        </PillButton>
+      </div>
     </div>
   );
 }
 
 export default function DoctorEmergencyPatientDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const uhid = params.uhid as string;
 
   const all = useMemo(() => EMERGENCY_PATIENTS.map(toRmo), []);
-  const patient = useMemo(() => all.find((p) => p.uhid === uhid) ?? null, [all, uhid]);
+  const patient = useMemo(
+    () => all.find((p) => p.uhid === uhid) ?? null,
+    [all, uhid],
+  );
   const [version, setVersion] = useState<RmoEmergencyPatient | null>(patient);
   const active = version ?? patient;
 
-  const [entry, setEntry] = useState<EntryKind>(null);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [medOpen, setMedOpen] = useState(false);
+  const [labOpen, setLabOpen] = useState(false);
   const [addingTreatment, setAddingTreatment] = useState(false);
 
-  const detail: PatientDetailData | undefined = active ? toDetailData(active) : undefined;
+  const detail: PatientDetailData | undefined = active
+    ? toDetailData(active)
+    : undefined;
 
   const patientList: PatientListItem[] = useMemo(
     () =>
@@ -82,32 +144,125 @@ export default function DoctorEmergencyPatientDetailPage() {
     [all],
   );
 
-  function receive(payload: unknown) {
-    if (!active) return;
-    setVersion(appendPayload(active, entry, payload));
-    setEntry(null);
+  if (!active || !detail) {
+    return (
+      <div className="p-10 text-center text-sm text-slate-400">
+        Patient not found for UHID {uhid}
+      </div>
+    );
   }
 
-  function addTreatmentPlan(plan: Omit<TreatmentPlanItem, "id" | "orderedOn" | "followStatus">) {
+  function addDiagnoses(drafts: DiagnosisDraft[]) {
     if (!active) return;
-    const stamp = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-    const newPlan: TreatmentPlanItem = { ...plan, id: `T-${Date.now()}`, orderedOn: stamp, followStatus: "Following" };
+    const stamp = new Date().toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const next = drafts.map((d) => ({
+      id: `DG-${Date.now()}-${d.id}`,
+      name: d.name,
+      code: d.icd10 || "—",
+      type: (d.type === "active"
+        ? "Confirmed"
+        : d.type === "chronic"
+          ? "Confirmed"
+          : "Provisional") as "Confirmed" | "Provisional" | "Ruled Out",
+      notes: "",
+      addedBy: "Doctor",
+      addedAt: stamp,
+    }));
+    setVersion({ ...active, diagnoses: [...next, ...active.diagnoses] });
+    toast.success(`${next.length} diagnosis added`);
+  }
+
+  function addMedicines(drafts: MedicineDraft[]) {
+    if (!active) return;
+    const date = new Date().toISOString().slice(0, 10);
+    const next = drafts.map((d, i) => ({
+      id: `M-${Date.now()}-${i}`,
+      medicineName: d.name,
+      strength: "",
+      route: "",
+      slot: "OD" as const,
+      scheduledTime: "As ordered",
+      status: "Pending" as const,
+      deliveredFromPharmacyAt: undefined,
+      givenBy: undefined,
+      givenAt: undefined,
+      instructions: d.instructions,
+      outOfStockRemark: undefined,
+      date,
+    }));
+    setVersion({ ...active, doses: [...next, ...active.doses] });
+    toast.success(`${next.length} medicine(s) added`);
+  }
+
+  function addLabs(drafts: LabDraft[]) {
+    if (!active) return;
+    const date = new Date().toISOString().slice(0, 10);
+    const next = drafts.map((d, i) => ({
+      id: `L-${Date.now()}-${i}`,
+      testName: d.test,
+      category:
+        d.department === "pathology" ? ("Pathology" as const) : ("Radiology" as const),
+      date,
+      orderedBy: "Doctor",
+      reportedAt: "Ordered — awaiting lab",
+      pathologyResults: [],
+      reportImageUrl: undefined,
+      notes: "",
+    }));
+    setVersion({ ...active, labReports: [...next, ...active.labReports] });
+    toast.success(`${next.length} lab order(s) added`);
+  }
+
+  function addTreatmentPlan(
+    plan: Omit<TreatmentPlanItem, "id" | "orderedOn" | "followStatus">,
+  ) {
+    if (!active) return;
+    const stamp = new Date().toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const newPlan: TreatmentPlanItem = {
+      ...plan,
+      id: `T-${Date.now()}`,
+      orderedOn: stamp,
+      followStatus: "Following",
+    };
     setVersion({ ...active, treatmentPlans: [newPlan, ...active.treatmentPlans] });
     setAddingTreatment(false);
   }
 
-  if (!active || !detail) {
-    return <div className="p-10 text-center text-sm text-slate-400">Patient not found for UHID {uhid}</div>;
-  }
-
   const tabs: PatientTab[] = [
-    { value: "registration", label: "Registration", content: <SectionRegistration patient={active} /> },
+    {
+      value: "registration",
+      label: "Registration",
+      content: <SectionRegistration patient={active} />,
+    },
     {
       value: "vitals",
       label: "Vitals",
       content: (
         <>
-          <SectionAction title="Vitals History" onClick={() => setEntry("vital")} />
+          <SectionAction
+            title="Vitals History"
+            count={active.vitals.length}
+            icon={HeartPulse}
+            tone="blue"
+            addLabel="Record Vitals"
+            onAdd={() =>
+              router.push(
+                `/doctor/emergency/all-patients/${active.uhid}/record-vitals`,
+              )
+            }
+          />
           <SectionVitals vitals={active.vitals} />
         </>
       ),
@@ -117,7 +272,13 @@ export default function DoctorEmergencyPatientDetailPage() {
       label: "Diagnosis",
       content: (
         <>
-          <SectionAction title="Diagnosis" onClick={() => setEntry("diagnosis")} />
+          <SectionAction
+            title="Diagnosis"
+            count={active.diagnoses.length}
+            icon={Stethoscope}
+            tone="purple"
+            onAdd={() => setDiagOpen(true)}
+          />
           <SectionDiagnosis diagnoses={active.diagnoses} />
         </>
       ),
@@ -127,7 +288,12 @@ export default function DoctorEmergencyPatientDetailPage() {
       label: "Medicines",
       content: (
         <>
-          <SectionAction title="Medicine Orders" onClick={() => setEntry("medicine")} />
+          <SectionAction
+            title="Medicine Orders"
+            count={active.doses.length}
+            tone="emerald"
+            onAdd={() => setMedOpen(true)}
+          />
           <SectionMedicines doses={active.doses} />
         </>
       ),
@@ -137,7 +303,12 @@ export default function DoctorEmergencyPatientDetailPage() {
       label: "Labs",
       content: (
         <>
-          <SectionAction title="Lab Orders" onClick={() => setEntry("lab")} />
+          <SectionAction
+            title="Lab Orders"
+            count={active.labReports.length}
+            tone="amber"
+            onAdd={() => setLabOpen(true)}
+          />
           <SectionLabReports reports={active.labReports} />
         </>
       ),
@@ -147,7 +318,9 @@ export default function DoctorEmergencyPatientDetailPage() {
       label: "Progress Notes",
       content: (
         <>
-          <SectionAction title="Progress Notes" onClick={() => setEntry("note")} />
+          <ProgressNotesHeader
+            onAdd={() => toast.info("Use RMO drawer to add a note.")}
+          />
           <SectionProgressNotes notes={active.progressNotes} />
         </>
       ),
@@ -157,20 +330,42 @@ export default function DoctorEmergencyPatientDetailPage() {
       label: "Treatment",
       content: (
         <>
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50/50 p-3">
-            <p className="text-sm font-bold text-blue-900">Treatment Plans</p>
-            <Button size="sm" className="gap-1 bg-blue-600 hover:bg-blue-700" onClick={() => setAddingTreatment(true)}>
-              <Plus className="h-4 w-4" />
-              Add New
-            </Button>
-          </div>
+          <SectionAction
+            title="Treatment Plans"
+            count={active.treatmentPlans.length}
+            tone="purple"
+            onAdd={() => setAddingTreatment(true)}
+          />
           <SectionTreatmentPlan plans={active.treatmentPlans} />
         </>
       ),
     },
-    { value: "nurses", label: "Nurses", content: <SectionAssignedNurses assignments={active.assignedNurses} /> },
-    { value: "handover", label: "Handover", content: <SectionHandoverPolice handovers={active.handovers} police={active.police} onInformPolice={() => undefined} /> },
-    { value: "status", label: "Status Log", content: <EmergencyStatusWorkflow patient={active} onUpdate={(updated) => setVersion(updated)} /> },
+    {
+      value: "nurses",
+      label: "Nurses",
+      content: <SectionAssignedNurses assignments={active.assignedNurses} />,
+    },
+    {
+      value: "handover",
+      label: "Handover",
+      content: (
+        <SectionHandoverPolice
+          handovers={active.handovers}
+          police={active.police}
+          onInformPolice={() => undefined}
+        />
+      ),
+    },
+    {
+      value: "status",
+      label: "Status Log",
+      content: (
+        <EmergencyStatusWorkflow
+          patient={active}
+          onUpdate={(updated) => setVersion(updated)}
+        />
+      ),
+    },
   ];
 
   return (
@@ -180,36 +375,49 @@ export default function DoctorEmergencyPatientDetailPage() {
         patientList={patientList}
         patientsPath="/doctor/emergency/all-patients"
         tabs={tabs}
-        subtitle="Emergency Case"
+        subtitle={`Emergency Case · Bed ${active.bedOrBay}`}
       />
 
-      <RmoEntryDrawer kind={entry} patient={active} onClose={() => setEntry(null)} onSubmit={receive} />
-      {addingTreatment && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/40" onClick={() => setAddingTreatment(false)} />
-          <div className="relative z-10 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <TreatmentPlanForm onSubmit={addTreatmentPlan} onClose={() => setAddingTreatment(false)} />
-          </div>
-        </div>
-      )}
+      <DiagnosisDrawer
+        open={diagOpen}
+        onOpenChange={setDiagOpen}
+        onSubmit={addDiagnoses}
+      />
+      <MedicineDrawer
+        open={medOpen}
+        onOpenChange={setMedOpen}
+        onSubmit={addMedicines}
+      />
+      <LabDrawer
+        open={labOpen}
+        onOpenChange={setLabOpen}
+        onSubmit={addLabs}
+      />
+
+      <TreatmentPlanForm
+        open={addingTreatment}
+        onOpenChange={setAddingTreatment}
+        onSubmit={addTreatmentPlan}
+      />
     </>
   );
 }
 
-function appendPayload(patient: RmoEmergencyPatient, kind: EntryKind, payload: unknown): RmoEmergencyPatient {
-  const stamp = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-  const date = new Date().toISOString().slice(0, 10);
-  if (kind === "vital")
-    return { ...patient, vitals: [{ ...(payload as object), id: `V-${Date.now()}`, date, dateTime: stamp, recordedBy: "Doctor", recordedByRole: "Doctor" }, ...patient.vitals] as RmoEmergencyPatient["vitals"] };
-  if (kind === "medicine")
-    return { ...patient, doses: [...(payload as Array<Record<string, unknown>>).map((x, i) => ({ ...x, id: `M-${Date.now()}-${i}`, date, status: "Pending", scheduledTime: "As ordered" })), ...patient.doses] as RmoEmergencyPatient["doses"] };
-  if (kind === "lab")
-    return { ...patient, labReports: [...(payload as Array<Record<string, unknown>>).map((x, i) => ({ ...x, id: `L-${Date.now()}-${i}`, date, reportedAt: "Ordered — awaiting lab", orderedBy: "Doctor" })), ...patient.labReports] as RmoEmergencyPatient["labReports"] };
-  if (kind === "diagnosis")
-    return { ...patient, diagnoses: [{ ...(payload as object), id: `DG-${Date.now()}`, addedAt: stamp, addedBy: "Doctor" }, ...patient.diagnoses] as RmoEmergencyPatient["diagnoses"] };
-  if (kind === "note") {
-    const x = payload as Record<string, string>;
-    return { ...patient, progressNotes: [{ ...x, id: `PN-${Date.now()}`, date, createdAt: stamp, author: "Doctor", role: "Doctor", noteText: x.noteText || [x.subjective, x.objective, x.assessment, x.plan].filter(Boolean).join(" ") }, ...patient.progressNotes] as RmoEmergencyPatient["progressNotes"] };
-  }
-  return patient;
+function ProgressNotesHeader({ onAdd }: { onAdd: () => void }) {
+  return (
+    <Card className="mb-4 border-blue-200 bg-blue-50/60 p-0">
+      <CardContent className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Stethoscope className="h-4 w-4 text-blue-600" />
+          <p className="text-sm font-bold text-slate-800">Progress Notes</p>
+          <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+            Use Add New to record a new note
+          </span>
+        </div>
+        <PillButton size="sm" icon={FilePlus2} onClick={onAdd}>
+          Add Note
+        </PillButton>
+      </CardContent>
+    </Card>
+  );
 }

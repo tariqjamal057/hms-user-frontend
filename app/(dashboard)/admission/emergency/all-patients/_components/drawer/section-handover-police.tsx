@@ -1,68 +1,162 @@
 // app/(dashboard)/admission-desk/emergency/all-patients/_components/drawer/section-handover-police.tsx
 "use client";
 import { useState } from "react";
-import { AlertOctagon, ArrowRightLeft, CheckCircle2, Phone, ShieldAlert, UserRound } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import type { PoliceNotification, ShiftHandoverEntry } from "@/types/emergency/emergency-types";
+import {
+  AlertOctagon,
+  ArrowRightLeft,
+  CheckCircle2,
+  Phone,
+  ShieldAlert,
+} from "lucide-react";
+import {
+  DataTable,
+  type DataColumn,
+} from "@/components/patient-detail/data-table";
+import { InfoAlertCard } from "@/components/patient-detail/info-alert-card";
+import { SuffixedInput, FormTextarea } from "@/components/forms/form-controls";
+import { PillButton } from "@/components/forms/pill-button";
+import type {
+  PoliceNotification,
+  ShiftHandoverEntry,
+  ShiftName,
+} from "@/types/emergency/emergency-types";
 
-export function SectionHandoverPolice({ handovers, police, onInformPolice }: { handovers: ShiftHandoverEntry[]; police: PoliceNotification; onInformPolice: (firNumber: string, remarks: string) => void }) {
+const shiftBadge: Record<ShiftName, string> = {
+  Morning: "border-amber-200 bg-amber-50 text-amber-700",
+  Evening: "border-orange-200 bg-orange-50 text-orange-700",
+  Night: "border-indigo-200 bg-indigo-50 text-indigo-700",
+};
+
+export function SectionHandoverPolice({
+  handovers,
+  police,
+  onInformPolice,
+}: {
+  handovers: ShiftHandoverEntry[];
+  police: PoliceNotification;
+  onInformPolice: (firNumber: string, remarks: string) => void;
+}) {
   const [firNumber, setFirNumber] = useState("");
   const [remarks, setRemarks] = useState("");
 
+  const columns: DataColumn<ShiftHandoverEntry>[] = [
+    {
+      key: "fromNurse",
+      label: "From",
+      render: (h) => (
+        <div>
+          <p className="font-semibold text-slate-800">{h.fromNurse}</p>
+          <span
+            className={`mt-0.5 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${shiftBadge[h.fromShift]}`}
+          >
+            {h.fromShift}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "toNurse",
+      label: "To",
+      render: (h) => (
+        <div>
+          <p className="font-semibold text-slate-800">{h.toNurse}</p>
+          <span
+            className={`mt-0.5 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${shiftBadge[h.toShift]}`}
+          >
+            {h.toShift}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "handoverDateTime",
+      label: "Handover Time",
+      render: (h) => (
+        <span className="text-xs text-slate-500">{h.handoverDateTime}</span>
+      ),
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      render: (h) =>
+        h.notes ? (
+          <span className="text-sm italic text-slate-600">&quot;{h.notes}&quot;</span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
-      {police.caseType !== "None" && (
-        <div className={`rounded-2xl border p-5 ${police.informed ? "border-emerald-200 bg-emerald-50/40" : "border-red-200 bg-red-50/40"}`}>
-          <p className={`flex items-center gap-2 text-sm font-bold ${police.informed ? "text-emerald-800" : "text-red-800"}`}>
-            <ShieldAlert className="h-4 w-4" />Medico-Legal Case: {police.caseType}
-          </p>
-          <p className="mt-1 text-xs text-slate-500">Nearest Police Station: <span className="font-semibold text-slate-700">{police.nearestPoliceStation}</span></p>
-
-          {police.informed ? (
-            <div className="mt-3 space-y-2">
-              <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" />Police informed on {police.informedAt} by {police.informedBy}</p>
-              {police.firNumber && <p className="text-xs text-slate-500">FIR Number: <span className="font-semibold text-slate-700">{police.firNumber}</span></p>}
-              {police.remarks && <p className="text-xs text-slate-500">Remarks: {police.remarks}</p>}
-            </div>
-          ) : (
-            <div className="mt-3 space-y-3">
-              <input value={firNumber} onChange={(e) => setFirNumber(e.target.value)} placeholder="FIR Number (optional)" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Remarks (optional)" rows={2} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              <Button className="gap-2 bg-red-600 hover:bg-red-700" onClick={() => onInformPolice(firNumber, remarks)}>
-                <Phone className="h-4 w-4" />Inform {police.nearestPoliceStation}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+      {police.caseType !== "None" &&
+        (police.informed ? (
+          <InfoAlertCard
+            tone="emerald"
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            title={`Medico-Legal Case: ${police.caseType} — Police Informed`}
+            body={`Nearest Police Station: ${police.nearestPoliceStation}\nInformed on ${police.informedAt} by ${police.informedBy}${police.firNumber ? `\nFIR Number: ${police.firNumber}` : ""}${police.remarks ? `\nRemarks: ${police.remarks}` : ""}`}
+          />
+        ) : (
+          <InfoAlertCard
+            tone="red"
+            icon={<ShieldAlert className="h-4 w-4" />}
+            title={`Medico-Legal Case: ${police.caseType}`}
+            body={`Nearest Police Station: ${police.nearestPoliceStation}\nPolice notification pending.`}
+          />
+        ))}
 
       {police.caseType === "None" && (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
-          <AlertOctagon className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-2 text-sm text-slate-500">This is not a medico-legal case. No police notification required.</p>
+        <InfoAlertCard
+          tone="slate"
+          icon={<AlertOctagon className="h-4 w-4" />}
+          title="Not a Medico-Legal Case"
+          body="This is not a medico-legal case. No police notification required."
+        />
+      )}
+
+      {police.caseType !== "None" && !police.informed && (
+        <div className="rounded-2xl border border-red-200 bg-red-50/40 p-5">
+          <p className="flex items-center gap-2 text-sm font-bold text-red-800">
+            <Phone className="h-4 w-4" />
+            Inform {police.nearestPoliceStation}
+          </p>
+          <div className="mt-3 space-y-3">
+            <SuffixedInput
+              label="FIR Number (Optional)"
+              value={firNumber}
+              onChange={setFirNumber}
+              placeholder="Enter FIR number"
+            />
+            <FormTextarea
+              label="Remarks (Optional)"
+              rows={3}
+              maxLength={500}
+              value={remarks}
+              onChange={setRemarks}
+              placeholder="Add any remarks..."
+            />
+            <PillButton
+              variant="gradient"
+              icon={Phone}
+              onClick={() => onInformPolice(firNumber, remarks)}
+            >
+              Inform Police
+            </PillButton>
+          </div>
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><ArrowRightLeft className="h-4 w-4 text-blue-600" />Shift Handover Logs</p>
-        <div className="mt-3 space-y-3">
-          {handovers.map((entry) => (
-            <div key={entry.id} className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{entry.fromNurse}</span>
-                <span className="text-xs text-slate-400">({entry.fromShift})</span>
-                <ArrowRightLeft className="h-3.5 w-3.5 text-blue-500" />
-                <span className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{entry.toNurse}</span>
-                <span className="text-xs text-slate-400">({entry.toShift})</span>
-              </div>
-              <p className="mt-2 text-xs text-slate-400">{entry.handoverDateTime}</p>
-              {entry.notes && <p className="mt-2 text-sm italic text-slate-600">&quot;{entry.notes}&quot;</p>}
-            </div>
-          ))}
-          {handovers.length === 0 && <p className="py-4 text-center text-sm text-slate-400">No shift handovers recorded yet for this patient.</p>}
-        </div>
-      </div>
+      <DataTable
+        card
+        title="Shift Handover Logs"
+        titleIcon={<ArrowRightLeft className="h-4 w-4" />}
+        rows={handovers}
+        columns={columns}
+        rowKey={(h) => h.id}
+        countLabel="handovers"
+        emptyText="No shift handovers recorded yet for this patient."
+      />
     </div>
   );
 }

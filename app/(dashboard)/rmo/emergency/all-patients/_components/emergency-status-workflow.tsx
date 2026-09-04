@@ -5,26 +5,23 @@ import { toast } from "sonner";
 import {
   Activity,
   AlertTriangle,
-  BedDouble,
-  HeartCrack,
   History,
-  Send,
+  HeartCrack,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DataTable,
+  type DataColumn,
+} from "@/components/patient-detail/data-table";
+import { SingleSelect } from "@/components/forms/select";
+import { PillButton } from "@/components/forms/pill-button";
+import { InfoAlertCard } from "@/components/patient-detail/info-alert-card";
 import type {
-  EmergencyPatient,
   EmergencyStatus,
 } from "@/types/emergency/emergency-types";
 import type {
   BedOption,
   DeathRecord,
+  StatusChangeLog,
   RmoEmergencyPatient,
 } from "@/types/emergency/rmo-emergency-types";
 import { RMO_BEDS } from "@/lib/emergency/rmo-emergency-data";
@@ -82,7 +79,7 @@ export function EmergencyStatusWorkflow({
         {
           id: `S-${Date.now()}`,
           status,
-          changedBy: "RMO",
+          changedBy: "Doctor",
           changedAt: stamp,
           reason,
         },
@@ -115,7 +112,7 @@ export function EmergencyStatusWorkflow({
           patientEmergencyNumber: patient.emergencyNumber,
           notifiedTo: doctor,
           note,
-          notifiedBy: "RMO",
+          notifiedBy: "Doctor",
           notifiedAt: stamp,
         },
         ...patient.criticalNotifications,
@@ -124,7 +121,7 @@ export function EmergencyStatusWorkflow({
         {
           id: `S-${Date.now()}`,
           status: "Critical",
-          changedBy: "RMO",
+          changedBy: "Doctor",
           changedAt: stamp,
           reason: note,
         },
@@ -150,7 +147,7 @@ export function EmergencyStatusWorkflow({
         {
           id: `S-${Date.now()}`,
           status: "Patient Death",
-          changedBy: record.declaredBy || "RMO",
+          changedBy: record.declaredBy || "Doctor",
           changedAt: stamp,
           reason: record.causeOfDeath,
         },
@@ -160,95 +157,94 @@ export function EmergencyStatusWorkflow({
     setDeath(false);
     toast.success("Death documentation saved and status updated.");
   }
+
+  const logColumns: DataColumn<StatusChangeLog>[] = [
+    {
+      key: "status",
+      label: "Status",
+      render: (l) => <EmergencyStatusBadge status={l.status} />,
+    },
+    {
+      key: "changedBy",
+      label: "Changed By",
+      render: (l) => (
+        <span className="font-semibold text-slate-800">{l.changedBy}</span>
+      ),
+    },
+    {
+      key: "changedAt",
+      label: "Time",
+      render: (l) => <span className="text-xs text-slate-500">{l.changedAt}</span>,
+    },
+    {
+      key: "reason",
+      label: "Reason",
+      render: (l) =>
+        l.reason ? (
+          <span className="text-slate-600">{l.reason}</span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
+        <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-violet-600" />
-          Change Patient Status
-        </p>
+          <p className="text-sm font-bold text-slate-800">Change Patient Status</p>
+        </div>
         <p className="mt-1 text-xs text-slate-500">
           Special workflows open automatically for Critical, IPD, ICU, and
           Patient Death.
         </p>
-        <div className="mt-4 flex gap-2">
-          <Select
-            value={selected}
-            onValueChange={(v) => choose(v as EmergencyStatus)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statuses.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button className="shrink-0" onClick={() => saveStatus(selected)}>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <SingleSelect
+              label=""
+              value={selected}
+              onChange={(v) => choose(v as EmergencyStatus)}
+              options={statuses.map((s) => ({ value: s, label: s }))}
+              placeholder="Select status"
+            />
+          </div>
+          <PillButton onClick={() => saveStatus(selected)} className="shrink-0">
             Save Status
-          </Button>
+          </PillButton>
         </div>
       </div>
+
       {patient.criticalNotifications.length > 0 && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-          <p className="flex items-center gap-2 text-sm font-bold text-red-800">
-            <AlertTriangle className="h-4 w-4" />
-            Critical Notifications
-          </p>
-          {patient.criticalNotifications.map((n) => (
-            <p key={n.id} className="mt-2 text-xs text-slate-600">
-              {n.notifiedAt} · {n.notifiedTo} · {n.note}
-            </p>
-          ))}
-        </div>
+        <InfoAlertCard
+          tone="red"
+          icon={<AlertTriangle className="h-4 w-4" />}
+          title="Critical Notifications"
+          body={patient.criticalNotifications
+            .map((n) => `${n.notifiedAt} · ${n.notifiedTo} · ${n.note}`)
+            .join("\n")}
+        />
       )}
       {patient.deathRecord && (
-        <div className="rounded-xl border border-slate-300 bg-slate-100 p-4">
-          <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
-            <HeartCrack className="h-4 w-4" />
-            Death Documentation Saved
-          </p>
-          <p className="mt-2 text-xs text-slate-600">
-            Declared by {patient.deathRecord.declaredBy} · Cause:{" "}
-            {patient.deathRecord.causeOfDeath} · Manner:{" "}
-            {patient.deathRecord.manner}
-          </p>
-        </div>
+        <InfoAlertCard
+          tone="slate"
+          icon={<HeartCrack className="h-4 w-4" />}
+          title="Death Documentation Saved"
+          body={`Declared by ${patient.deathRecord.declaredBy} · Cause: ${patient.deathRecord.causeOfDeath} · Manner: ${patient.deathRecord.manner}`}
+        />
       )}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
-          <History className="h-4 w-4 text-slate-500" />
-          Status Change Log
-        </p>
-        <div className="mt-3 space-y-3">
-          {patient.statusLog.map((log) => (
-            <div
-              key={log.id}
-              className="flex items-start gap-3 border-b border-slate-100 pb-3 last:border-0"
-            >
-              <div className="mt-0.5 h-2 w-2 rounded-full bg-violet-500" />
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <EmergencyStatusBadge status={log.status} />
-                  <span className="text-xs text-slate-400">
-                    {log.changedAt}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  Changed by{" "}
-                  <span className="font-semibold text-slate-700">
-                    {log.changedBy}
-                  </span>
-                  {log.reason ? ` · ${log.reason}` : ""}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+
+      <DataTable
+        card
+        title="Status Change Log"
+        titleIcon={<History className="h-4 w-4" />}
+        rows={patient.statusLog}
+        columns={logColumns}
+        rowKey={(l) => l.id}
+        countLabel="entries"
+        emptyText="No status changes recorded yet."
+      />
+
       <BedAllocationDrawer
         patient={bedTarget ? patient : null}
         target={bedTarget || "Shifted to IPD"}
@@ -269,3 +265,4 @@ export function EmergencyStatusWorkflow({
     </div>
   );
 }
+

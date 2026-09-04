@@ -314,8 +314,8 @@ export function PatientDetailShell({
                       transition={{ type: "spring", stiffness: 380, damping: 34 }}
                     />
                   )}
-                  <span className="relative z-10">{t.label}</span>
-                </TabsTrigger>
+                <span className="relative z-10">{t.label}</span>
+              </TabsTrigger>
               );
             })}
           </TabsList>

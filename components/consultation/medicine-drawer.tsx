@@ -2,10 +2,9 @@
 
 import { useRef, useState } from "react";
 import { Check, Pill } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { ConsultationDrawer } from "@/components/consultation/drawer";
 import { SelectedItemCard } from "@/components/consultation/selected-item-card";
-import { FormButton } from "@/components/forms/form-controls";
+import { FormButton, SuffixedInput } from "@/components/forms/form-controls";
 import { SingleSelect } from "@/components/forms/select";
 import { SearchSelect, type SearchSelectOption } from "@/components/forms/search-select";
 
@@ -39,9 +38,6 @@ const FREQ_OPTIONS = [
   { value: "QID", label: "QID (Four Times Daily)" },
   { value: "SOS", label: "SOS (As Needed)" },
 ];
-
-const INPUT_CLS =
-  "h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs shadow-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 // Unified "Add Medicine" flow: search the formulary — each selection auto-adds a
 // new medicine card. Fine-tune dosing inline on each card, then submit all at
@@ -138,14 +134,12 @@ export function MedicineDrawer({ open, onOpenChange, onSubmit }: MedicineDrawerP
               footer={
                 <div className="w-full space-y-2.5">
                   <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Dosage &amp; Route</label>
-                      <Input
-                        value={med.dosage}
-                        onChange={(e) => updateField(med.id, "dosage", e.target.value)}
-                        className={`mt-0.5 ${INPUT_CLS}`}
-                      />
-                    </div>
+                    <SuffixedInput
+                      label="Dosage & Route"
+                      value={med.dosage}
+                      onChange={(v) => updateField(med.id, "dosage", v)}
+                      placeholder="e.g. 500 mg PO"
+                    />
                     <div>
                       <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Frequency</label>
                       <div className="mt-0.5">
@@ -158,22 +152,18 @@ export function MedicineDrawer({ open, onOpenChange, onSubmit }: MedicineDrawerP
                         />
                       </div>
                     </div>
-                    <div>
-                      <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Duration</label>
-                      <Input
-                        value={med.duration}
-                        onChange={(e) => updateField(med.id, "duration", e.target.value)}
-                        className={`mt-0.5 ${INPUT_CLS}`}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Instructions</label>
-                      <Input
-                        value={med.instructions}
-                        onChange={(e) => updateField(med.id, "instructions", e.target.value)}
-                        className={`mt-0.5 ${INPUT_CLS}`}
-                      />
-                    </div>
+                    <SuffixedInput
+                      label="Duration"
+                      value={med.duration}
+                      onChange={(v) => updateField(med.id, "duration", v)}
+                      placeholder="e.g. 5 days"
+                    />
+                    <SuffixedInput
+                      label="Instructions"
+                      value={med.instructions}
+                      onChange={(v) => updateField(med.id, "instructions", v)}
+                      placeholder="e.g. After food"
+                    />
                   </div>
                 </div>
               }
