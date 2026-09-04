@@ -14,10 +14,10 @@ import {
   FileText,
   History,
   CircleAlert,
-  LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -195,11 +195,6 @@ export default function InvestigationOrdersPage({
 
   function handleViewAllVitals() {
     router.push(`/doctor/ipd/review-vitals?uhid=${uhid}`);
-  }
-
-  function handleQuickAction(label: string) {
-    console.log("Quick action:", label, "for", uhid);
-    toast.info(label);
   }
 
   function handleDiagnosis() {
@@ -494,28 +489,25 @@ export default function InvestigationOrdersPage({
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="space-y-1 py-3">
-                <p className="mb-2 px-2 text-sm font-semibold text-slate-800">
-                  Quick Actions
-                </p>
-                <QuickAction
-                  icon={ClipboardCheck}
-                  label="View Treatment Plan"
-                  onClick={handleTreatmentPlan}
-                />
-                <QuickAction
-                  icon={CircleAlert}
-                  label="View Diagnosis"
-                  onClick={handleDiagnosis}
-                />
-                <QuickAction
-                  icon={FileText}
-                  label="View Medicine Orders"
-                  onClick={handleViewMedicineOrders}
-                />
-              </CardContent>
-            </Card>
+            <QuickActionsCard
+              actions={[
+                {
+                  label: "View Treatment Plan",
+                  icon: ClipboardCheck,
+                  onClick: handleTreatmentPlan,
+                },
+                {
+                  label: "View Diagnosis",
+                  icon: CircleAlert,
+                  onClick: handleDiagnosis,
+                },
+                {
+                  label: "View Medicine Orders",
+                  icon: FileText,
+                  onClick: handleViewMedicineOrders,
+                },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -578,28 +570,6 @@ function SummaryRow({
         )}
       </div>
     </div>
-  );
-}
-
-function QuickAction({
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm text-blue-600 hover:bg-blue-50"
-    >
-      <span className="flex items-center gap-2">
-        <Icon className="h-4 w-4" /> {label}
-      </span>
-    </button>
   );
 }
 

@@ -7,12 +7,12 @@ import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Info, Plus, Trash2,
   FileText,
-  LucideIcon,
   StickyNote,
   PillBottle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -260,14 +260,25 @@ export default function MedicineOrdersPage({
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="space-y-1 py-3">
-                <p className="mb-2 px-2 text-sm font-semibold text-slate-800">Quick Actions</p>
-                <QuickAction icon={FileText} label="View Lab Results" onClick={handleViewLabResults} />
-                <QuickAction icon={StickyNote} label="Add Progress Note" onClick={handleAddProgressNote} />
-                <QuickAction icon={PillBottle} label="Treatment Plan" onClick={handleTreatmentPlan} />
-              </CardContent>
-            </Card>
+            <QuickActionsCard
+              actions={[
+                {
+                  label: "View Lab Results",
+                  icon: FileText,
+                  onClick: handleViewLabResults,
+                },
+                {
+                  label: "Add Progress Note",
+                  icon: StickyNote,
+                  onClick: handleAddProgressNote,
+                },
+                {
+                  label: "Treatment Plan",
+                  icon: PillBottle,
+                  onClick: handleTreatmentPlan,
+                },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -318,14 +329,3 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm text-blue-600 hover:bg-blue-50"
-    >
-      <span className="flex items-center gap-2"><Icon className="h-4 w-4" /> {label}</span>
-    </button>
-  );
-}

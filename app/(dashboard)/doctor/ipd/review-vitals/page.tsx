@@ -16,13 +16,13 @@ import {
   ArrowLeft,
   ArrowRight,
   Info,
-  ChevronDown,
   History,
   Printer,
   FileDown,
-  LucideIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/forms/pill-button";
+import { QuickVitalsStrip } from "@/components/patient-detail/quick-vitals-strip";
+import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -42,7 +42,6 @@ import {
   getAlertsForPatient,
   NORMAL_RANGES,
 } from "@/lib/doctor/ipd/vitals-data";
-import { VitalSummaryCard } from "./_components/vital-summary-card";
 import { VitalsTrendChart } from "./_components/vitals-trend-chart";
 import { LatestVitalsPanel } from "./_components/latest-vitals-panel";
 import { VitalsRecordsTable } from "./_components/vitals-records-table";
@@ -171,19 +170,19 @@ export default function ReviewVitalsPage({
                 />
               </div>
 
-              <Button
+              <PillButton
                 variant="outline"
-                className="w-full gap-2 lg:w-auto"
+                className="w-full lg:w-auto"
                 onClick={() => setChangePatientOpen(true)}
               >
                 Change Patient
-              </Button>
+              </PillButton>
             </CardContent>
           </Card>
         )}
 
         {/* Main layout */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_300px] lg:items-start">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_300px] lg:items-start border p-3 rounded-lg">
           <div className="min-w-0 space-y-5">
             {/* Toolbar */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -221,76 +220,76 @@ export default function ReviewVitalsPage({
                     </SelectContent>
                   </Select>
                 </div>
-                <Button variant="outline" size="icon" onClick={handleRefresh}>
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-                <Button
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                <PillButton
+                  variant="outline"
+                  icon={RefreshCw}
+                  onClick={handleRefresh}
+                  aria-label="Refresh vitals"
+                >
+                  <span className="sr-only">Refresh</span>
+                </PillButton>
+                <PillButton
+                  variant="gradient"
+                  icon={PlusCircle}
                   onClick={handleAddRecordVitals}
                 >
-                  <PlusCircle className="h-4 w-4" /> Add/Record Vitals
-                </Button>
+                  Add/Record Vitals
+                </PillButton>
               </div>
             </div>
 
             {/* Vitals summary cards */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm p-0">
               <CardContent className="py-4">
                 <p className="mb-3 text-sm font-semibold text-slate-800">
                   Vitals Trend
                 </p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                  <VitalSummaryCard
-                    icon={Activity}
-                    label="BP"
-                    value={latest.bp}
-                    unit="mmHg"
-                    recordedOn={latest.dateTime}
-                    color="blue"
-                  />
-                  <VitalSummaryCard
-                    icon={HeartPulse}
-                    label="Pulse"
-                    value={String(latest.pulse)}
-                    unit="bpm"
-                    recordedOn={latest.dateTime}
-                    color="red"
-                  />
-                  <VitalSummaryCard
-                    icon={Wind}
-                    label="Resp. Rate"
-                    value={String(latest.respRate)}
-                    unit="/min"
-                    recordedOn={latest.dateTime}
-                    color="emerald"
-                  />
-                  <VitalSummaryCard
-                    icon={Droplets}
-                    label="SpO2"
-                    value={String(latest.spo2)}
-                    unit="%"
-                    recordedOn={latest.dateTime}
-                    color="purple"
-                    isAbnormal={latest.spo2 < 95}
-                  />
-                  <VitalSummaryCard
-                    icon={Thermometer}
-                    label="Temp."
-                    value={String(latest.temp)}
-                    unit="°F"
-                    recordedOn={latest.dateTime}
-                    color="amber"
-                    isAbnormal={latest.temp > 99}
-                  />
-                  <VitalSummaryCard
-                    icon={Gauge}
-                    label="Pain (NRS)"
-                    value={String(latest.pain)}
-                    unit="/10"
-                    recordedOn={latest.dateTime}
-                    color="sky"
-                  />
-                </div>
+                <QuickVitalsStrip
+                  vitals={[
+                    {
+                      label: "BP",
+                      value: latest.bp,
+                      unit: "mmHg",
+                      icon: Activity,
+                      recordedOn: latest.dateTime,
+                    },
+                    {
+                      label: "Pulse",
+                      value: String(latest.pulse),
+                      unit: "/min",
+                      icon: HeartPulse,
+                      recordedOn: latest.dateTime,
+                    },
+                    {
+                      label: "Temp",
+                      value: String(latest.temp),
+                      unit: "°F",
+                      icon: Thermometer,
+                      recordedOn: latest.dateTime,
+                    },
+                    {
+                      label: "RR",
+                      value: String(latest.respRate),
+                      unit: "/min",
+                      icon: Wind,
+                      recordedOn: latest.dateTime,
+                    },
+                    {
+                      label: "SpO₂",
+                      value: String(latest.spo2),
+                      unit: "%",
+                      icon: Droplets,
+                      recordedOn: latest.dateTime,
+                    },
+                    {
+                      label: "Pain",
+                      value: String(latest.pain),
+                      unit: "/10",
+                      icon: Gauge,
+                      recordedOn: latest.dateTime,
+                    },
+                  ]}
+                />
               </CardContent>
             </Card>
 
@@ -328,19 +327,21 @@ export default function ReviewVitalsPage({
                   from monitor and verified by nursing staff.
                 </p>
                 <div className="flex gap-2">
-                  <Button
+                  <PillButton
                     variant="outline"
-                    className="gap-2"
+                    icon={ArrowLeft}
                     onClick={handleBack}
                   >
-                    <ArrowLeft className="h-4 w-4" /> Back
-                  </Button>
-                  <Button
-                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    Back
+                  </PillButton>
+                  <PillButton
+                    variant="gradient"
+                    icon={ArrowRight}
                     onClick={handleDiagnosisUpdate}
+                    className="flex-row-reverse"
                   >
-                    Next: Diagnosis Update <ArrowRight className="h-4 w-4" />
-                  </Button>
+                    Next: Diagnosis Update
+                  </PillButton>
                 </div>
               </div>
             )}
@@ -350,33 +351,30 @@ export default function ReviewVitalsPage({
           <div className="space-y-5 lg:sticky lg:top-6">
             <NormalRangesWidget ranges={NORMAL_RANGES} />
             <AlertsWidget alerts={alerts} onViewTrend={handleViewTrend} />
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="space-y-1 py-3">
-                <p className="mb-2 px-2 text-sm font-semibold text-slate-800">
-                  Quick Actions
-                </p>
-                <QuickAction
-                  icon={PlusCircle}
-                  label="Add/Record Vitals"
-                  onClick={() => handleQuickAction("Add/Record Vitals")}
-                />
-                <QuickAction
-                  icon={History}
-                  label="View Vitals History"
-                  onClick={() => handleQuickAction("View Vitals History")}
-                />
-                <QuickAction
-                  icon={Printer}
-                  label="Print Vitals Report"
-                  onClick={() => handleQuickAction("Print Vitals Report")}
-                />
-                <QuickAction
-                  icon={FileDown}
-                  label="Download Vitals Chart"
-                  onClick={() => handleQuickAction("Download Vitals Chart")}
-                />
-              </CardContent>
-            </Card>
+            <QuickActionsCard
+              actions={[
+                {
+                  label: "Add/Record Vitals",
+                  icon: PlusCircle,
+                  onClick: () => handleQuickAction("Add/Record Vitals"),
+                },
+                {
+                  label: "View Vitals History",
+                  icon: History,
+                  onClick: () => handleQuickAction("View Vitals History"),
+                },
+                {
+                  label: "Print Vitals Report",
+                  icon: Printer,
+                  onClick: () => handleQuickAction("Print Vitals Report"),
+                },
+                {
+                  label: "Download Vitals Chart",
+                  icon: FileDown,
+                  onClick: () => handleQuickAction("Download Vitals Chart"),
+                },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -412,29 +410,6 @@ function InfoBlock({ label, value }: { label: string; value: string }) {
         {value}
       </p>
     </div>
-  );
-}
-
-function QuickAction({
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm text-blue-600 hover:bg-blue-50"
-    >
-      <span className="flex items-center gap-2">
-        <Icon className="h-4 w-4" /> {label}
-      </span>
-      <ChevronDown className="h-3.5 w-3.5 -rotate-90 text-slate-300" />
-    </button>
   );
 }
 

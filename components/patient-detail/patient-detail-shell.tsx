@@ -1,6 +1,7 @@
 // components/patient-detail/patient-detail-shell.tsx
 "use client";
 import { useMemo, useRef, useState } from "react";
+import type { ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, ArrowLeft, ChevronDown, Search, UserRound, X } from "lucide-react";
@@ -50,6 +51,10 @@ export type QuickVital = {
   label: string;
   value: string;
   unit?: string;
+  /** Optional icon rendered at the top of the card */
+  icon?: ComponentType<{ className?: string }>;
+  /** Optional timestamp caption shown under the label, e.g. "20 May 2024, 08:00 AM" */
+  recordedOn?: string;
   /** Tailwind bg/border/text classes override for this card, e.g. "bg-blue-50 border-blue-200 text-blue-700" */
   color?: string;
 };

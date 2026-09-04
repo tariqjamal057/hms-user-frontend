@@ -4,9 +4,10 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Info, Plus, ClipboardCheck, FileText, StickyNote, Upload, LucideIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, Info, Plus, ClipboardCheck, FileText, StickyNote, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -303,15 +304,30 @@ export default function TreatmentPlanPage({
 
             <LabAlertsMini alerts={labAlerts} />
 
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="space-y-1 py-3">
-                <p className="mb-2 px-2 text-sm font-semibold text-slate-800">Quick Actions</p>
-                <QuickAction icon={ClipboardCheck} label="View Clinical Examination" onClick={() => handleQuickAction("View Clinical Examination")} />
-                <QuickAction icon={FileText} label="View Lab Results" onClick={() => handleQuickAction("View Lab Results")} />
-                <QuickAction icon={StickyNote} label="Add Clinical Note" onClick={() => handleQuickAction("Add Clinical Note")} />
-                <QuickAction icon={Upload} label="Upload Document" onClick={() => handleQuickAction("Upload Document")} />
-              </CardContent>
-            </Card>
+            <QuickActionsCard
+              actions={[
+                {
+                  label: "View Clinical Examination",
+                  icon: ClipboardCheck,
+                  onClick: () => handleQuickAction("View Clinical Examination"),
+                },
+                {
+                  label: "View Lab Results",
+                  icon: FileText,
+                  onClick: () => handleQuickAction("View Lab Results"),
+                },
+                {
+                  label: "Add Clinical Note",
+                  icon: StickyNote,
+                  onClick: () => handleQuickAction("Add Clinical Note"),
+                },
+                {
+                  label: "Upload Document",
+                  icon: Upload,
+                  onClick: () => handleQuickAction("Upload Document"),
+                },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -345,14 +361,3 @@ function InfoBlock({ label, value }: { label: string; value: string }) {
   );
 }
 
-function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm text-blue-600 hover:bg-blue-50"
-    >
-      <span className="flex items-center gap-2"><Icon className="h-4 w-4" /> {label}</span>
-    </button>
-  );
-}

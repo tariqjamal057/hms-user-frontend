@@ -8,17 +8,17 @@ import {
   ArrowLeft,
   ArrowRight,
   Info,
-  ClipboardCheck,
   FileText,
   StickyNote,
-  Upload,
-  LucideIcon,
   Pill,
+  PlusCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { PillButton } from "@/components/forms/pill-button";
+import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
 
 import {
   WARD_ROUND_PATIENTS,
@@ -27,9 +27,9 @@ import {
 import { getVitalsForPatient } from "@/lib/doctor/ipd/vitals-data";
 import { getLabAlertsMini } from "@/lib/doctor/ipd/clinical-examination-data";
 import { getDiagnosisData } from "@/lib/doctor/ipd/diagnosis-data";
+import { DiagnosisDrawer, type DiagnosisDraft } from "@/components/consultation/diagnosis-drawer";
 import { CurrentDiagnosesTable } from "./_components/current-diagnoses-table";
 import { ResolvedDiagnosesTable } from "./_components/resolved-diagnoses-table";
-import { AddDiagnosisForm } from "./_components/add-diagnosis-form";
 
 import type {
   CurrentDiagnosis,
@@ -56,6 +56,7 @@ export default function DiagnosisUpdatePage({
   const initialData = useMemo(() => getDiagnosisData(uhid), [uhid]);
 
   const [changePatientOpen, setChangePatientOpen] = useState(false);
+  const [addDiagnosisOpen, setAddDiagnosisOpen] = useState(false);
   const [assessmentDateTime, setAssessmentDateTime] =
     useState("2024-05-20T10:45");
   const [currentDiagnoses, setCurrentDiagnoses] = useState<CurrentDiagnosis[]>(
@@ -68,9 +69,30 @@ export default function DiagnosisUpdatePage({
     initialData.clinicalImpression,
   );
 
-  function handleAddToList(diagnosis: CurrentDiagnosis) {
-    setCurrentDiagnoses((prev) => [...prev, diagnosis]);
-    toast.success(`"${diagnosis.diagnosis}" added to current diagnoses`);
+  function handleAddDiagnosisDrafts(items: DiagnosisDraft[]) {
+    const today = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    const mapped: CurrentDiagnosis[] = items.map((item) => ({
+      id: `D-${Date.now()}-${item.id}`,
+      diagnosis: item.name,
+      isPrimary: false,
+      type:
+        item.type === "active"
+          ? "Clinical"
+          : item.type === "chronic"
+            ? "Co-morbidity"
+            : "Provisional",
+      diagnosedOn: today,
+      status: "Active",
+      icd10: item.icd10 || undefined,
+    }));
+    setCurrentDiagnoses((prev) => [...prev, ...mapped]);
+    toast.success(
+      `${mapped.length} diagnosis${mapped.length > 1 ? "es" : ""} added to current diagnoses`,
+    );
   }
 
   function handleRemoveDiagnosis(id: string) {
@@ -230,14 +252,22 @@ export default function DiagnosisUpdatePage({
               </div> */}
             </div>
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              {/* Left column: Current diagnoses + clinical impression */}
-              <div className="space-y-5">
+            <div className="space-y-5">
                 <Card className="border-slate-200 shadow-sm">
                   <CardContent className="py-4">
-                    <p className="mb-3 text-sm font-semibold text-slate-800">
-                      Current Diagnoses
-                    </p>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-slate-800">
+                        Current Diagnoses
+                      </p>
+                      <PillButton
+                        size="sm"
+                        variant="gradient"
+                        icon={PlusCircle}
+                        onClick={() => setAddDiagnosisOpen(true)}
+                      >
+                        Add Diagnosis
+                      </PillButton>
+                    </div>
                     <CurrentDiagnosesTable
                       diagnoses={currentDiagnoses}
                       onRemove={handleRemoveDiagnosis}
@@ -264,52 +294,42 @@ export default function DiagnosisUpdatePage({
                 </Card>
               </div>
 
-              {/* Right column: Add new diagnosis */}
+              {/* Resolved / Inactive diagnoses */}
               <Card className="border-slate-200 shadow-sm">
                 <CardContent className="py-4">
-                  <p className="mb-3 text-sm font-semibold text-slate-800">
-                    Add New Diagnosis
+                  <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                    Resolved / Inactive Diagnoses{" "}
+                    <Info className="h-3.5 w-3.5 text-slate-300" />
                   </p>
-                  <AddDiagnosisForm onAddToList={handleAddToList} />
+                  <ResolvedDiagnosesTable diagnoses={resolvedDiagnoses} />
                 </CardContent>
               </Card>
+
+              {/* Footer note */}
+              {!embedded && (
+                <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                  <p className="flex items-center gap-2">
+                    <Info className="h-4 w-4 shrink-0" /> Ensure diagnosis is
+                    updated based on latest findings and clinical judgement.
+                  </p>
+                </div>
+              )}
+
+              {/* Navigation */}
+              {!embedded && (
+                <div className="flex justify-between gap-2">
+                  <Button variant="outline" className="gap-2" onClick={handleBack}>
+                    <ArrowLeft className="h-4 w-4" /> Back
+                  </Button>
+                  <Button
+                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    onClick={handleNextProgressNote}
+                  >
+                    Next: Progress Note <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
-
-            {/* Resolved / Inactive diagnoses */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="py-4">
-                <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-                  Resolved / Inactive Diagnoses{" "}
-                  <Info className="h-3.5 w-3.5 text-slate-300" />
-                </p>
-                <ResolvedDiagnosesTable diagnoses={resolvedDiagnoses} />
-              </CardContent>
-            </Card>
-
-            {/* Footer note */}
-            {!embedded && (
-              <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                <p className="flex items-center gap-2">
-                  <Info className="h-4 w-4 shrink-0" /> Ensure diagnosis is
-                  updated based on latest findings and clinical judgement.
-                </p>
-              </div>
-            )}
-
-            {/* Navigation */}
-            {!embedded && (
-              <div className="flex justify-between gap-2">
-                <Button variant="outline" className="gap-2" onClick={handleBack}>
-                  <ArrowLeft className="h-4 w-4" /> Back
-                </Button>
-                <Button
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
-                  onClick={handleNextProgressNote}
-                >
-                  Next: Progress Note <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
           </div>
 
           {/* Sidebar */}
@@ -320,40 +340,27 @@ export default function DiagnosisUpdatePage({
               alerts={labAlerts}
               onViewAll={handleViewAllLabResults}
             />
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="space-y-1 py-3">
-                <p className="mb-2 px-2 text-sm font-semibold text-slate-800">
-                  Quick Actions
-                </p>
-
-                {/*<QuickAction
-                  icon={ClipboardCheck}
-                  label="View Clinical Examination"
-                  onClick={handleClinicalExamination}
-                /> */}
-
-                <QuickAction
-                  icon={FileText}
-                  label="View Lab Results"
-                  onClick={handleViewLabResults}
-                />
-
-                <QuickAction
-                  icon={StickyNote}
-                  label="Add Progress Note"
-                  onClick={handleAddProgressNote}
-                />
-
-                <QuickAction
-                  icon={Pill}
-                  label="Medicine Orders"
-                  onClick={handleMedicineOrders}
-                />
-              </CardContent>
-            </Card>
+            <QuickActionsCard
+              actions={[
+                {
+                  label: "View Lab Results",
+                  icon: FileText,
+                  onClick: handleViewLabResults,
+                },
+                {
+                  label: "Add Progress Note",
+                  icon: StickyNote,
+                  onClick: handleAddProgressNote,
+                },
+                {
+                  label: "Medicine Orders",
+                  icon: Pill,
+                  onClick: handleMedicineOrders,
+                },
+              ]}
+            />
           </div>
         </div>
-      </div>
 
       {!embedded && (
         <ChangePatientDialog
@@ -364,6 +371,12 @@ export default function DiagnosisUpdatePage({
           onSelectPatient={handleSelectPatient}
         />
       )}
+
+      <DiagnosisDrawer
+        open={addDiagnosisOpen}
+        onOpenChange={setAddDiagnosisOpen}
+        onSubmit={handleAddDiagnosisDrafts}
+      />
     </div>
   );
 }
@@ -376,28 +389,6 @@ function InfoBlock({ label, value }: { label: string; value: string }) {
         {value}
       </p>
     </div>
-  );
-}
-
-function QuickAction({
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm text-blue-600 hover:bg-blue-50"
-    >
-      <span className="flex items-center gap-2">
-        <Icon className="h-4 w-4" /> {label}
-      </span>
-    </button>
   );
 }
 

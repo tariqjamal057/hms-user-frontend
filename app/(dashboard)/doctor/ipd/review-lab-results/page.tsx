@@ -4,9 +4,10 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { RefreshCw, ArrowLeft, ArrowRight, Info, FileEdit, Eye, PlusCircle, FileDown, LucideIcon } from "lucide-react";
+import { RefreshCw, ArrowLeft, ArrowRight, Info, FileEdit, Eye, PlusCircle, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -238,14 +239,25 @@ export default function ReviewLabResultsPage() {
             <CriticalAlertsWidget alerts={alerts} />
             <TestSummaryDonut normal={summary.normal} abnormal={summary.abnormal} borderline={summary.borderline} pending={summary.pending} />
             <TestHistoryWidget history={history} />
-            <Card className="border-slate-200 shadow-sm">
-              <CardContent className="space-y-1 py-3">
-                <p className="mb-2 px-2 text-sm font-semibold text-slate-800">Quick Actions</p>
-                <QuickAction icon={Eye} label="View Lab Report" onClick={() => toast.info("Opening lab report...")} />
-                <QuickAction icon={PlusCircle} label="Add Lab Order" onClick={handleAddLabOrder} />
-                <QuickAction icon={FileDown} label="Download Lab Summary" onClick={() => toast.info("Downloading lab summary...")} />
-              </CardContent>
-            </Card>
+            <QuickActionsCard
+              actions={[
+                {
+                  label: "View Lab Report",
+                  icon: Eye,
+                  onClick: () => toast.info("Opening lab report..."),
+                },
+                {
+                  label: "Add Lab Order",
+                  icon: PlusCircle,
+                  onClick: handleAddLabOrder,
+                },
+                {
+                  label: "Download Lab Summary",
+                  icon: FileDown,
+                  onClick: () => toast.info("Downloading lab summary..."),
+                },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -271,10 +283,3 @@ function InfoBlock({ label, value }: { label: string; value: string }) {
   );
 }
 
-function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm text-blue-600 hover:bg-blue-50">
-      <span className="flex items-center gap-2"><Icon className="h-4 w-4" /> {label}</span>
-    </button>
-  );
-}

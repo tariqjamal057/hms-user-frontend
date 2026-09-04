@@ -33,13 +33,13 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-white">
       <AppSidebar />
 
       <motion.div
         animate={{ marginLeft: isDesktop ? (sidebarCollapsed ? 72 : 256) : 0 }}
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-        className="flex flex-1 flex-col min-w-0"
+        className="flex flex-1 flex-col min-w-0 border-l border-slate-200"
       >
         <Header />
 
