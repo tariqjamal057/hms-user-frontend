@@ -1,31 +1,49 @@
 // app/(dashboard)/doctor/icu/patients/[uhid]/_components/ventilator-order-form.tsx
 "use client";
 import { useState } from "react";
-import { toast } from "sonner";
-import { Wind } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { AirwayType, VentilatorMode, VentilatorOrder, VentilationType, WeaningPlan } from "@/types/nurse/icu/ventilation-types";
-import { AIRWAY_TYPE_OPTIONS, VENTILATION_TYPE_OPTIONS, VENTILATOR_MODE_OPTIONS, WEANING_PLAN_OPTIONS } from "@/lib/nurse/icu/ventilation-data";
+import { Check, Wind, X } from "lucide-react";
+import { ConsultationDrawer } from "@/components/consultation/drawer";
+import { FormButton, FormTextarea, SuffixedInput } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { RadioGroup } from "@/components/forms/radio-group";
+import type {
+  AirwayType,
+  VentilatorMode,
+  VentilatorOrder,
+  VentilationType,
+  WeaningPlan,
+} from "@/types/nurse/icu/ventilation-types";
+import {
+  AIRWAY_TYPE_OPTIONS,
+  VENTILATION_TYPE_OPTIONS,
+  VENTILATOR_MODE_OPTIONS,
+  WEANING_PLAN_OPTIONS,
+} from "@/lib/nurse/icu/ventilation-data";
 import { VentilatorModeFields } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/ventilator-mode-fields";
 
-
-export function VentilatorOrderForm({
-  uhid, icuBed, patientName, orderedBy, orderedByRole, onSubmit, onClose,
-}: {
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   uhid: string;
   icuBed: string;
   patientName: string;
   orderedBy: string;
   orderedByRole: "Doctor" | "RMO";
   onSubmit: (order: VentilatorOrder) => void;
-  onClose: () => void;
-}) {
-  const [ventType, setVentType] = useState<VentilationType>("Invasive Mechanical Ventilation");
+};
+
+export function VentilatorOrderForm({
+  open,
+  onOpenChange,
+  uhid,
+  icuBed,
+  patientName,
+  orderedBy,
+  orderedByRole,
+  onSubmit,
+}: Props) {
+  const [ventType, setVentType] =
+    useState<VentilationType>("Invasive Mechanical Ventilation");
   const [airwayType, setAirwayType] = useState<AirwayType>("Endotracheal tube");
   const [airwayDetails, setAirwayDetails] = useState("");
   const [ventilatorName, setVentilatorName] = useState("");
@@ -35,18 +53,33 @@ export function VentilatorOrderForm({
   const [ventilationTarget, setVentilationTarget] = useState("");
   const [instructions, setInstructions] = useState("");
   const [monitoringFreq, setMonitoringFreq] = useState("");
-  const [weaningPlan, setWeaningPlan] = useState<WeaningPlan>("Continue current support");
+  const [weaningPlan, setWeaningPlan] =
+    useState<WeaningPlan>("Continue current support");
   const [weaningPlanOther, setWeaningPlanOther] = useState("");
 
+  function handleOpenChange(next: boolean) {
+    onOpenChange(next);
+  }
+
   function handleSubmit() {
-    const stamp = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const stamp = new Date().toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     const order: VentilatorOrder = {
       id: `VO-${Date.now()}`,
       uhid,
       icuBed,
       ventilationType: ventType,
-      airwayType: ventType === "Invasive Mechanical Ventilation" ? airwayType : "None",
-      airwayDetails: ventType === "Invasive Mechanical Ventilation" ? airwayDetails : undefined,
+      airwayType:
+        ventType === "Invasive Mechanical Ventilation" ? airwayType : "None",
+      airwayDetails:
+        ventType === "Invasive Mechanical Ventilation"
+          ? airwayDetails
+          : undefined,
       ventilatorName: ventilatorName || undefined,
       mode,
       prescribedSettings: settings,
@@ -55,96 +88,162 @@ export function VentilatorOrderForm({
       specialInstructions: instructions || undefined,
       monitoringFrequency: monitoringFreq || undefined,
       weaningPlan,
-      weaningPlanOther: weaningPlan === "Other" ? weaningPlanOther : undefined,
+      weaningPlanOther:
+        weaningPlan === "Other" ? weaningPlanOther : undefined,
       status: "Active",
       orderedBy,
       orderedByRole,
       orderedAt: stamp,
     };
     onSubmit(order);
-    onClose()
-    toast.success(`Mechanical Ventilation order placed for ${patientName}.`);
+    onOpenChange(false);
   }
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-2xl border border-cyan-200 bg-cyan-50/50 p-4">
-        <p className="flex items-center gap-2 text-sm font-bold text-cyan-900"><Wind className="h-4 w-4" />New Medical Order — Mechanical Ventilation</p>
-        <p className="mt-1 text-xs text-cyan-700">{patientName} · {icuBed}</p>
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={handleOpenChange}
+      icon={<Wind className="h-5 w-5" />}
+      title="Ventilator Order"
+      description={`New mechanical ventilation order for ${patientName} · ${icuBed}`}
+      bodyClassName="space-y-4"
+      footer={
+        <div className="flex items-center gap-3">
+          <FormButton
+            variant="outline"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="mr-1 h-4 w-4" />
+            Cancel
+          </FormButton>
+          <FormButton className="flex-1" onClick={handleSubmit}>
+            <Check className="mr-1 h-4 w-4" />
+            Place Order
+          </FormButton>
+        </div>
+      }
+    >
+      {/* Ventilation Type — unified RadioGroup */}
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-slate-700">Ventilation Type</p>
+        <RadioGroup
+          name="vent-type"
+          options={VENTILATION_TYPE_OPTIONS.map((v) => ({ value: v, label: v }))}
+          value={ventType}
+          onChange={(v) => setVentType(v as VentilationType)}
+        />
       </div>
 
-      {/* Ventilation Type */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Ventilation Type</Label>
-        <RadioGroup value={ventType} onValueChange={(v) => setVentType(v as VentilationType)} className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {VENTILATION_TYPE_OPTIONS.map((opt) => (
-            <label key={opt} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm ${ventType === opt ? "border-cyan-400 bg-cyan-50" : "border-slate-200"}`}>
-              <RadioGroupItem value={opt} />{opt}
-            </label>
-          ))}
-        </RadioGroup>
-      </div>
-
-      {/* Airway (if invasive) */}
+      {/* Airway — only when invasive */}
       {ventType === "Invasive Mechanical Ventilation" && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <Label className="text-xs font-semibold text-slate-600">Airway</Label>
-          <Select value={airwayType} onValueChange={(v) => setAirwayType(v as AirwayType)}>
-            <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
-            <SelectContent>{AIRWAY_TYPE_OPTIONS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-          </Select>
-          <Input className="mt-3" value={airwayDetails} onChange={(e) => setAirwayDetails(e.target.value)} placeholder="e.g. Size 7.5, depth 22 cm at lips" />
+        <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-3">
+          <SingleSelect
+            label="Airway"
+            value={airwayType}
+            onChange={(v) => setAirwayType(v as AirwayType)}
+            options={AIRWAY_TYPE_OPTIONS.map((a) => ({ value: a, label: a }))}
+          />
+          <div className="mt-3">
+            <SuffixedInput
+              label="Airway Details (optional)"
+              value={airwayDetails}
+              onChange={setAirwayDetails}
+              placeholder="e.g. Size 7.5, depth 22 cm at lips"
+            />
+          </div>
         </div>
       )}
 
-      {/* Ventilator Name */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Ventilator (optional)</Label>
-        <Input className="mt-2" value={ventilatorName} onChange={(e) => setVentilatorName(e.target.value)} placeholder="e.g. Ventilator-ICU-03" />
-      </div>
+      {/* Ventilator */}
+      <SuffixedInput
+        label="Ventilator (optional)"
+        value={ventilatorName}
+        onChange={setVentilatorName}
+        placeholder="e.g. Ventilator-ICU-03"
+      />
 
-      {/* Mode */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Mode</Label>
-        <Select value={mode} onValueChange={(v) => { setMode(v as VentilatorMode); setSettings({}); }}>
-          <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
-          <SelectContent>{VENTILATOR_MODE_OPTIONS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-        </Select>
-        <div className="mt-4">
-          <Label className="text-xs font-semibold text-slate-600">Prescribed Settings</Label>
-          <div className="mt-2">
-            <VentilatorModeFields mode={mode} settings={settings} onChange={setSettings} />
-          </div>
+      {/* Mode + Prescribed Settings */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-3">
+        <SingleSelect
+          label="Mode"
+          value={mode}
+          onChange={(v) => {
+            setMode(v as VentilatorMode);
+            setSettings({});
+          }}
+          options={VENTILATOR_MODE_OPTIONS.map((m) => ({ value: m, label: m }))}
+        />
+        <div className="mt-3">
+          <p className="mb-2 text-sm font-semibold text-slate-700">
+            Prescribed Settings
+          </p>
+          <VentilatorModeFields
+            mode={mode}
+            settings={settings}
+            onChange={setSettings}
+          />
         </div>
       </div>
 
-      {/* Clinical Targets */}
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
-        <Label className="text-xs font-semibold text-emerald-800">Clinical Targets / Instructions</Label>
-        <div className="mt-2 grid grid-cols-2 gap-3">
-          <Input value={oxygenationTarget} onChange={(e) => setOxygenationTarget(e.target.value)} placeholder="Oxygenation target (e.g. SpO2 94-98%)" />
-          <Input value={ventilationTarget} onChange={(e) => setVentilationTarget(e.target.value)} placeholder="Ventilation target (e.g. pCO2 35-45 mmHg)" />
+      {/* Clinical Targets + Instructions */}
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+        <p className="text-sm font-semibold text-emerald-800">
+          Clinical Targets / Instructions
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <SuffixedInput
+            label="Oxygenation Target"
+            value={oxygenationTarget}
+            onChange={setOxygenationTarget}
+            placeholder="e.g. SpO₂ 94-98%"
+          />
+          <SuffixedInput
+            label="Ventilation Target"
+            value={ventilationTarget}
+            onChange={setVentilationTarget}
+            placeholder="e.g. pCO₂ 35-45 mmHg"
+          />
         </div>
-        <Textarea className="mt-3" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={2} placeholder="Special instructions (e.g. weaning plan, monitoring frequency)" />
-        <Input className="mt-3" value={monitoringFreq} onChange={(e) => setMonitoringFreq(e.target.value)} placeholder="Monitoring frequency (e.g. Hourly, Continuous)" />
+        <div className="mt-3">
+          <FormTextarea
+            label="Special Instructions"
+            value={instructions}
+            onChange={setInstructions}
+            rows={3}
+            maxLength={500}
+            placeholder="Special instructions (e.g. weaning plan, monitoring frequency)"
+          />
+        </div>
+        <div className="mt-3">
+          <SuffixedInput
+            label="Monitoring Frequency"
+            value={monitoringFreq}
+            onChange={setMonitoringFreq}
+            placeholder="e.g. Hourly, Continuous"
+          />
+        </div>
       </div>
 
       {/* Weaning Plan */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Weaning / Respiratory Plan</Label>
-        <Select value={weaningPlan} onValueChange={(v) => setWeaningPlan(v as WeaningPlan)}>
-          <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
-          <SelectContent>{WEANING_PLAN_OPTIONS.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}</SelectContent>
-        </Select>
+      <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-3">
+        <SingleSelect
+          label="Weaning / Respiratory Plan"
+          value={weaningPlan}
+          onChange={(v) => setWeaningPlan(v as WeaningPlan)}
+          options={WEANING_PLAN_OPTIONS.map((w) => ({ value: w, label: w }))}
+        />
         {weaningPlan === "Other" && (
-          <Input className="mt-3" value={weaningPlanOther} onChange={(e) => setWeaningPlanOther(e.target.value)} placeholder="Specify plan" />
+          <div className="mt-3">
+            <SuffixedInput
+              label="Specify Plan"
+              value={weaningPlanOther}
+              onChange={setWeaningPlanOther}
+              placeholder="Describe the plan"
+            />
+          </div>
         )}
       </div>
-
-      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button className="gap-2 bg-cyan-600 hover:bg-cyan-700" onClick={handleSubmit}><Wind className="h-4 w-4" />Place Order</Button>
-      </div>
-    </div>
+    </ConsultationDrawer>
   );
 }

@@ -1,52 +1,225 @@
 // app/(dashboard)/nurse/ipd/patients/[uhid]/_components/tab-treatment-plan.tsx
 "use client";
-import { CheckCircle2, ClipboardCheck, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardCheck,
+  Clock,
+  History,
+  RotateCcw,
+  User,
+  XCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { PillButton } from "@/components/forms/pill-button";
+import { InfoTileCard } from "@/components/patient-detail/info-tile-card";
+import { InfoAlertCard } from "@/components/patient-detail/info-alert-card";
+import {
+  DataTable,
+  type DataColumn,
+} from "@/components/patient-detail/data-table";
 import type { TreatmentPlanItem } from "@/types/nurse/ipd/nurse-ipd-types";
 import { CURRENT_NURSE } from "@/lib/nurse/ipd/nurse-ipd-data";
 
-export function TabTreatmentPlan({ plans, onToggleFollow }: { plans: TreatmentPlanItem[]; onToggleFollow: (plan: TreatmentPlanItem) => void }) {
-  return (
-    <div className="space-y-4">
-      <Card className="border-slate-200">
-        <CardContent className="p-5">
-          <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><ClipboardCheck className="h-4 w-4 text-violet-600" />Doctor&apos;s Treatment Plan</p>
-          <p className="mt-1 text-xs text-slate-500">Mark each plan item as followed once implemented on the ward.</p>
-        </CardContent>
-      </Card>
+export function TabTreatmentPlan({
+  plans,
+  onToggleFollow,
+}: {
+  plans: TreatmentPlanItem[];
+  onToggleFollow: (plan: TreatmentPlanItem) => void;
+}) {
+  const followingCount = plans.filter((p) => p.followStatus === "Following").length;
+  const notFollowingCount = plans.filter(
+    (p) => p.followStatus === "Not Following",
+  ).length;
+  const completionPct = plans.length
+    ? Math.round((followingCount / plans.length) * 100)
+    : 0;
 
-      <div className="space-y-3">
-        {plans.map((plan) => (
-          <Card key={plan.id} className={`border-slate-200 ${plan.followStatus === "Following" ? "bg-emerald-50/20" : "bg-amber-50/20"}`}>
-            <CardContent className="p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <p className="font-bold text-slate-800">{plan.title}</p>
-                  <p className="mt-1 text-sm text-slate-600">{plan.description}</p>
-                  <p className="mt-2 text-xs text-slate-400">Ordered by {plan.orderedBy} · {plan.orderedOn}</p>
-                  {plan.lastUpdatedBy && <p className="text-xs text-slate-400">Last updated by {plan.lastUpdatedBy} · {plan.lastUpdatedAt}</p>}
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Badge variant="outline" className={plan.followStatus === "Following" ? "gap-1 border-emerald-200 bg-emerald-50 text-emerald-700" : "gap-1 border-amber-200 bg-amber-50 text-amber-700"}>
-                    {plan.followStatus === "Following" ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}{plan.followStatus}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className={plan.followStatus === "Following" ? "border-amber-300 text-amber-700 hover:bg-amber-50" : "border-emerald-300 text-emerald-700 hover:bg-emerald-50"}
-                    onClick={() => onToggleFollow({ ...plan, followStatus: plan.followStatus === "Following" ? "Not Following" : "Following", lastUpdatedBy: CURRENT_NURSE.name, lastUpdatedAt: new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) })}
-                  >
-                    Mark as {plan.followStatus === "Following" ? "Not Following" : "Following"}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {plans.length === 0 && <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">No treatment plan items recorded for this patient.</div>}
+  const columns: DataColumn<TreatmentPlanItem>[] = [
+    {
+      key: "title",
+      label: "Plan",
+      render: (p) => (
+        <div className="min-w-0">
+          <p className="font-semibold text-slate-800">{p.title}</p>
+          <p className="mt-0.5 line-clamp-2 max-w-[420px] text-xs text-slate-500">
+            {p.description}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "orderedBy",
+      label: "Ordered",
+      render: (p) => (
+        <div className="text-xs">
+          <p className="font-semibold text-slate-700">{p.orderedBy}</p>
+          <p className="text-[10px] text-slate-400">{p.orderedOn}</p>
+        </div>
+      ),
+    },
+    {
+      key: "lastUpdated",
+      label: "Last Update",
+      render: (p) =>
+        p.lastUpdatedBy ? (
+          <div className="text-xs">
+            <p className="font-semibold text-slate-700">{p.lastUpdatedBy}</p>
+            <p className="text-[10px] text-slate-400">{p.lastUpdatedAt}</p>
+          </div>
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+      hideOnMobile: true,
+    },
+    {
+      key: "followStatus",
+      label: "Status",
+      render: (p) =>
+        p.followStatus === "Following" ? (
+          <Badge
+            variant="outline"
+            className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Following
+          </Badge>
+        ) : (
+          <Badge
+            variant="outline"
+            className="gap-1 border-amber-200 bg-amber-50 text-amber-700"
+          >
+            <XCircle className="h-3 w-3" />
+            Not Following
+          </Badge>
+        ),
+    },
+    {
+      key: "actions",
+      label: "Action",
+      align: "right",
+      render: (p) => {
+        const isFollowing = p.followStatus === "Following";
+        return (
+          <button
+            type="button"
+            onClick={() =>
+              onToggleFollow({
+                ...p,
+                followStatus: isFollowing ? "Not Following" : "Following",
+                lastUpdatedBy: CURRENT_NURSE.name,
+                lastUpdatedAt: new Date().toLocaleString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              })
+            }
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
+              isFollowing
+                ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+            }`}
+          >
+            {isFollowing ? (
+              <>
+                <RotateCcw className="h-3 w-3" />
+                Mark Not Following
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-3 w-3" />
+                Mark Following
+              </>
+            )}
+          </button>
+        );
+      },
+    },
+  ];
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 text-white shadow-sm">
+            <ClipboardCheck className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-lg font-bold tracking-tight text-slate-800">
+              Treatment Plan
+            </p>
+            <p className="text-xs text-slate-500">
+              Doctor-prescribed plan items · mark each as followed once
+              implemented on the ward
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Summary tiles */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <InfoTileCard
+          title="Total Plans"
+          icon={<ClipboardCheck className="h-3.5 w-3.5" />}
+          tone="purple"
+          value={String(plans.length)}
+          subtitle="Doctor-prescribed"
+        />
+        <InfoTileCard
+          title="Following"
+          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+          tone="emerald"
+          value={String(followingCount)}
+          subtitle={`${completionPct}% adherence`}
+        />
+        <InfoTileCard
+          title="Not Following"
+          icon={<XCircle className="h-3.5 w-3.5" />}
+          tone="amber"
+          value={String(notFollowingCount)}
+          subtitle="Needs attention"
+        />
+        <InfoTileCard
+          title="Last Updated"
+          icon={<Clock className="h-3.5 w-3.5" />}
+          tone="slate"
+          value={plans[0]?.lastUpdatedAt ?? "—"}
+          subtitle={plans[0]?.lastUpdatedBy ?? "No updates yet"}
+        />
+      </div>
+
+      {/* Low-adherence alert */}
+      {plans.length > 0 && completionPct < 60 && (
+        <InfoAlertCard
+          tone="amber"
+          icon={<History className="h-3.5 w-3.5" />}
+          title="Plan Adherence Below Target"
+          body={`Only ${completionPct}% of treatment plan items are currently marked as followed. Consider reviewing with the attending team.`}
+        />
+      )}
+
+      {/* Plans table */}
+      <DataTable
+        card
+        title="Doctor's Treatment Plan"
+        titleIcon={<ClipboardCheck className="h-4 w-4" />}
+        rows={plans}
+        columns={columns}
+        rowKey={(p) => p.id}
+        countLabel="plans"
+        emptyText="No treatment plan items recorded for this patient."
+      />
+
+      {plans.length > 0 && (
+        <p className="flex items-center gap-1.5 text-xs text-slate-500">
+          <User className="h-3.5 w-3.5" />
+          Updates are signed as <span className="font-semibold text-slate-700">{CURRENT_NURSE.name}</span> ({CURRENT_NURSE.shift})
+        </p>
+      )}
     </div>
   );
 }

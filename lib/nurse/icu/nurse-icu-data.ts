@@ -53,9 +53,20 @@ export function getVitalsForPatient(uhid: string) { return VITALS_RECORDS[uhid] 
 
 export const EMAR_DOSES: Record<string, EmarDose[]> = {
   UHID12345685: [
+    // Given
     { id: "E1", medicineName: "Tab. Aspirin 75mg", strength: "75 mg", route: "Oral", slot: "Morning", scheduledTime: "08:00 AM", qtyRequired: 1, status: "Given", urgency: "Urgent", instructions: "After breakfast", givenBy: "Nurse Kavita", givenAt: "27 Aug 2026, 08:05 AM" },
-    { id: "E2", medicineName: "Tab. Metoprolol 25mg", strength: "25 mg", route: "Oral", slot: "Night", scheduledTime: "08:00 PM", qtyRequired: 1, status: "Pending", urgency: "Urgent", instructions: "After dinner" },
-    { id: "E3", medicineName: "Tab. Atorvastatin 40mg", strength: "40 mg", route: "Oral", slot: "Night", scheduledTime: "09:00 PM", qtyRequired: 1, status: "Pending", urgency: "Routine", instructions: "At bedtime" },
+    { id: "E2", medicineName: "Tab. Atorvastatin 40mg", strength: "40 mg", route: "Oral", slot: "Morning", scheduledTime: "08:00 AM", qtyRequired: 1, status: "Given", urgency: "Routine", instructions: "After breakfast", givenBy: "Nurse Kavita", givenAt: "27 Aug 2026, 08:10 AM" },
+    { id: "E3", medicineName: "Inj. Heparin 5000 IU", strength: "5000 IU", route: "SC", slot: "Morning", scheduledTime: "09:00 AM", qtyRequired: 1, status: "Given", urgency: "Urgent", instructions: "As per ACS protocol", givenBy: "Nurse Kavita", givenAt: "27 Aug 2026, 09:02 AM" },
+    { id: "E4", medicineName: "Inj. Pantoprazole 40mg", strength: "40 mg", route: "IV", slot: "Morning", scheduledTime: "10:00 AM", qtyRequired: 1, status: "Given", urgency: "Routine", instructions: "Slow IV push", givenBy: "Nurse Kavita", givenAt: "27 Aug 2026, 10:05 AM" },
+    // Not Given
+    { id: "E5", medicineName: "Tab. Metoprolol 25mg", strength: "25 mg", route: "Oral", slot: "Afternoon", scheduledTime: "02:00 PM", qtyRequired: 1, status: "Not Given", urgency: "Urgent", instructions: "After lunch" },
+    { id: "E6", medicineName: "Tab. Aspirin 75mg", strength: "75 mg", route: "Oral", slot: "Afternoon", scheduledTime: "02:00 PM", qtyRequired: 1, status: "Not Given", urgency: "Routine", instructions: "After lunch" },
+    // Pending
+    { id: "E7", medicineName: "Tab. Metoprolol 25mg", strength: "25 mg", route: "Oral", slot: "Night", scheduledTime: "08:00 PM", qtyRequired: 1, status: "Pending", urgency: "Urgent", instructions: "After dinner" },
+    { id: "E8", medicineName: "Tab. Atorvastatin 40mg", strength: "40 mg", route: "Oral", slot: "Night", scheduledTime: "09:00 PM", qtyRequired: 1, status: "Pending", urgency: "Routine", instructions: "At bedtime" },
+    // Out of Stock
+    { id: "E9", medicineName: "Tab. Clopidogrel 75mg", strength: "75 mg", route: "Oral", slot: "Morning", scheduledTime: "08:00 AM", qtyRequired: 1, status: "Out of Stock", urgency: "Urgent", instructions: "After breakfast", remarks: "Batch exhausted, pharmacy notified" },
+    { id: "E10", medicineName: "Tab. Spironolactone 25mg", strength: "25 mg", route: "Oral", slot: "Morning", scheduledTime: "08:00 AM", qtyRequired: 1, status: "Out of Stock", urgency: "Routine", instructions: "After breakfast", remarks: "Awaiting next pharmacy delivery" },
   ],
   UHID12398211: [
     { id: "E4", medicineName: "Inj. Piperacillin-Tazobactam", strength: "4.5 g", route: "IV", slot: "Morning", scheduledTime: "08:00 AM", qtyRequired: 1, status: "Given", urgency: "Urgent", instructions: "As per nursing schedule", givenBy: "Nurse Anjali", givenAt: "27 Aug 2026, 08:05 AM" },

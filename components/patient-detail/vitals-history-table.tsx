@@ -1,27 +1,46 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Activity, Calendar, Droplets, HeartPulse, Thermometer, TrendingUp, Weight } from "lucide-react";
+import {
+  Activity,
+  Calendar,
+  Droplets,
+  Heart,
+  HeartPulse,
+  Thermometer,
+  TrendingUp,
+  Weight,
+  Wind,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { VitalRecord } from "@/lib/doctor/opd/opd-mock-data";
 
+/**
+ * Generic vitals history row. Accepts either OPD-style fields (date/bp/pulse/
+ * temp/spo2/weight) or IPD/ICU/Emergency fields (dateTime/bp/pulse/temp/spo2/
+ * respRate/pain/recordedBy). The component auto-detects which shape is
+ * present and renders the matching column set.
+ */
 export type VitalsHistoryRow = {
-  date: string;
+  date?: string;
+  dateTime?: string;
   bp: string;
-  pulse: string;
-  temp: string;
-  spo2: string;
-  weight: string;
+  pulse: string | number;
+  temp: string | number;
+  spo2: string | number;
+  weight?: string;
+  respRate?: string | number;
+  pain?: string | number;
+  recordedBy?: string;
 };
 
-type VitalUnitKey = "bp" | "pulse" | "temp" | "spo2" | "weight";
-
-type VitalsHistoryTableProps = {
-  rows: VitalRecord[];
+export type VitalsHistoryTableProps = {
+  rows: VitalsHistoryRow[];
   title?: string;
   emptyText?: string;
   className?: string;
+  /** Show ICU-specific columns (RR, Pain) */
+  showIcuColumns?: boolean;
 };
 
 type ColDef = {
@@ -30,6 +49,7 @@ type ColDef = {
   icon: ReactNode;
   color: string;
   align?: string;
+  unit?: string;
 };
 
 const COL_STYLES = {
@@ -38,25 +58,28 @@ const COL_STYLES = {
   orange: "text-orange-600",
   blue: "text-blue-600",
   purple: "text-purple-600",
+  cyan: "text-cyan-600",
+  rose: "text-rose-600",
   slate: "text-slate-700",
 } as const;
 
-const COLUMNS: ColDef[] = [
-  { key: "date", label: "Date", icon: <Calendar className="h-3 w-3" />, color: COL_STYLES.slate, align: "text-left" },
-  { key: "bp", label: "BP", icon: <Activity className="h-3 w-3" />, color: COL_STYLES.red, align: "text-left" },
-  { key: "pulse", label: "Pulse", icon: <HeartPulse className="h-3 w-3" />, color: COL_STYLES.pink, align: "text-left" },
-  { key: "temp", label: "Temp", icon: <Thermometer className="h-3 w-3" />, color: COL_STYLES.orange, align: "text-left" },
-  { key: "spo2", label: "SpO₂", icon: <Droplets className="h-3 w-3" />, color: COL_STYLES.blue, align: "text-left" },
-  { key: "weight", label: "Weight", icon: <Weight className="h-3 w-3" />, color: COL_STYLES.purple, align: "text-left" },
+const BASE_COLUMNS: ColDef[] = [
+  { key: "date", label: "Date / Time", icon: <Calendar className="h-3 w-3" />, color: COL_STYLES.slate, align: "text-left" },
+  { key: "bp", label: "BP", icon: <Activity className="h-3 w-3" />, color: COL_STYLES.red, align: "text-left", unit: "mmHg" },
+  { key: "pulse", label: "Pulse", icon: <HeartPulse className="h-3 w-3" />, color: COL_STYLES.pink, align: "text-left", unit: "/min" },
+  { key: "temp", label: "Temp", icon: <Thermometer className="h-3 w-3" />, color: COL_STYLES.orange, align: "text-left", unit: "°F" },
+  { key: "spo2", label: "SpO₂", icon: <Droplets className="h-3 w-3" />, color: COL_STYLES.blue, align: "text-left", unit: "%" },
 ];
 
-const UNIT: Record<VitalUnitKey, string> = {
-  bp: "mmHg",
-  pulse: "/min",
-  temp: "°F",
-  spo2: "%",
-  weight: "kg",
-};
+const ICU_COLUMNS: ColDef[] = [
+  { key: "respRate", label: "RR", icon: <Wind className="h-3 w-3" />, color: COL_STYLES.cyan, align: "text-left", unit: "/min" },
+  { key: "pain", label: "Pain", icon: <Heart className="h-3 w-3" />, color: COL_STYLES.rose, align: "text-left", unit: "/10" },
+  { key: "recordedBy", label: "Recorded By", icon: <Heart className="h-3 w-3" />, color: COL_STYLES.slate, align: "text-left" },
+];
+
+const OPD_COLUMNS: ColDef[] = [
+  { key: "weight", label: "Weight", icon: <Weight className="h-3 w-3" />, color: COL_STYLES.purple, align: "text-left", unit: "kg" },
+];
 
 /**
  * Unified "Vitals Trend History" card + enhanced table. Renders a tappable-free,
@@ -69,7 +92,13 @@ export function VitalsHistoryTable({
   title = "Vitals Trend History",
   emptyText = "No vitals history recorded for this patient",
   className,
+  showIcuColumns = false,
 }: VitalsHistoryTableProps) {
+  const columns: ColDef[] = [
+    ...BASE_COLUMNS,
+    ...(showIcuColumns ? ICU_COLUMNS : OPD_COLUMNS),
+  ];
+
   return (
     <Card className={cn("border-slate-200 transition-shadow hover:shadow-md p-0", className)}>
       <CardContent className="p-4 sm:p-5">
@@ -93,9 +122,9 @@ export function VitalsHistoryTable({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/80">
-                    {COLUMNS.map((col) => (
+                    {columns.map((col) => (
                       <th
-                        key={col.key}
+                        key={col.key as string}
                         className={cn(
                           "whitespace-nowrap px-3 py-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 sm:px-4 sm:py-3 sm:text-xs",
                           col.align,
@@ -112,31 +141,36 @@ export function VitalsHistoryTable({
                 <tbody>
                   {rows.map((row, idx) => (
                     <tr
-                      key={`${row.date}-${idx}`}
+                      key={`${row.date ?? row.dateTime ?? idx}`}
                       className={cn(
                         "border-b border-slate-100 transition-colors last:border-0 hover:bg-blue-50/40",
                         idx % 2 === 1 && "bg-slate-50/40",
                       )}
                     >
-                      {COLUMNS.map((col) => {
-                        const value = row[col.key];
+                      {columns.map((col) => {
+                        const raw = row[col.key as keyof VitalsHistoryRow];
                         const textClass = col.color;
+                        const isDate = col.key === "date" || col.key === "dateTime";
                         return (
                           <td
-                            key={col.key}
+                            key={col.key as string}
                             className={cn(
                               "whitespace-nowrap px-3 py-2.5 text-xs sm:px-4 sm:py-3 sm:text-sm",
                               col.align,
                             )}
                           >
-                            {col.key === "date" ? (
-                              <span className="font-semibold text-slate-700">{value}</span>
+                            {isDate ? (
+                              <span className="font-semibold text-slate-700">{raw as string}</span>
+                            ) : col.key === "recordedBy" ? (
+                              <span className="text-slate-600">{raw as string}</span>
                             ) : (
                               <span className={cn("font-semibold", textClass)}>
-                                {value}
-                                <span className="ml-1 text-[10px] font-medium text-slate-400 sm:text-[11px]">
-                                  {UNIT[col.key as VitalUnitKey]}
-                                </span>
+                                {raw as string}
+                                {col.unit && (
+                                  <span className="ml-1 text-[10px] font-medium text-slate-400 sm:text-[11px]">
+                                    {col.unit}
+                                  </span>
+                                )}
                               </span>
                             )}
                           </td>

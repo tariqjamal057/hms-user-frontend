@@ -1,10 +1,19 @@
 "use client";
 
-import { Activity, Droplets, Heart, Activity as PulseIcon, Ruler, Thermometer, Weight } from "lucide-react";
+import {
+  Activity,
+  Droplets,
+  Heart,
+  HeartPulse,
+  Thermometer,
+  Ruler,
+  Weight,
+  Wind,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-export type VitalColor = "red" | "pink" | "orange" | "blue" | "purple" | "teal";
+export type VitalColor = "red" | "pink" | "orange" | "blue" | "purple" | "teal" | "cyan" | "rose";
 
 export type VitalData = {
   bp?: string;
@@ -13,6 +22,10 @@ export type VitalData = {
   spo2?: string;
   weight?: string;
   height?: string;
+  /** Respiratory rate (optional) */
+  respRate?: string;
+  /** Pain score 0-10 (optional) */
+  pain?: string;
 };
 
 export type VitalTip = {
@@ -30,6 +43,8 @@ const COLOR_STYLES: Record<VitalColor, { tint: string }> = {
   blue: { tint: "bg-blue-50 text-blue-500" },
   purple: { tint: "bg-purple-50 text-purple-500" },
   teal: { tint: "bg-teal-50 text-teal-500" },
+  cyan: { tint: "bg-cyan-50 text-cyan-500" },
+  rose: { tint: "bg-rose-50 text-rose-500" },
 };
 
 /**
@@ -64,6 +79,8 @@ type CurrentVitalsProps = {
   gridClassName?: string;
   className?: string;
   showWeightHeight?: boolean;
+  /** Show ICU-specific RR and Pain tiles (default: false) */
+  showIcuTiles?: boolean;
 };
 
 /**
@@ -76,12 +93,19 @@ export function CurrentVitals({
   gridClassName,
   className,
   showWeightHeight = true,
+  showIcuTiles = false,
 }: CurrentVitalsProps) {
   const vitalList: VitalTip[] = [
     { icon: <Activity className="h-4 w-4" />, label: "Blood Pressure", value: vitals.bp, unit: "mmHg", color: "red" },
-    { icon: <PulseIcon className="h-4 w-4" />, label: "Pulse Rate", value: vitals.pulse, unit: "/min", color: "pink" },
+    { icon: <HeartPulse className="h-4 w-4" />, label: "Pulse Rate", value: vitals.pulse, unit: "/min", color: "pink" },
     { icon: <Thermometer className="h-4 w-4" />, label: "Temperature", value: vitals.temp, unit: "°F", color: "orange" },
     { icon: <Droplets className="h-4 w-4" />, label: "SpO₂", value: vitals.spo2, unit: "%", color: "blue" },
+    ...(showIcuTiles && vitals.respRate
+      ? [{ icon: <Wind className="h-4 w-4" />, label: "Resp. Rate", value: vitals.respRate, unit: "/min", color: "cyan" as VitalColor }]
+      : []),
+    ...(showIcuTiles && vitals.pain
+      ? [{ icon: <Heart className="h-4 w-4" />, label: "Pain Score", value: vitals.pain, unit: "/10", color: "rose" as VitalColor }]
+      : []),
     ...(showWeightHeight && vitals.weight
       ? [{ icon: <Weight className="h-4 w-4" />, label: "Weight", value: vitals.weight, unit: "kg", color: "purple" as VitalColor }]
       : []),

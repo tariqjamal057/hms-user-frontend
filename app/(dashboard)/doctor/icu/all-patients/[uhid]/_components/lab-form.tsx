@@ -1,236 +1,279 @@
 // app/(dashboard)/doctor/icu/patients/[uhid]/_components/lab-form.tsx
 "use client";
-import { useState } from "react";
-import { Plus, Trash2, X, Microscope, ScanLine, CheckCircle2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import type { LabDraft, LabTestItem } from "@/types/doctor/icu/doctor-icu-types";
+import { useRef, useState } from "react";
+import {
+  Check,
+  FlaskConical,
+  Microscope,
+  ScanLine,
+  TestTube,
+  X,
+} from "lucide-react";
+import { ConsultationDrawer } from "@/components/consultation/drawer";
+import { SelectedItemCard } from "@/components/consultation/selected-item-card";
+import { FormButton, FormTextarea } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import {
+  SearchSelect,
+  type SearchSelectOption,
+} from "@/components/forms/search-select";
+import type { LabDraft } from "@/types/doctor/icu/doctor-icu-types";
 import { LAB_TEST_CATALOG } from "@/lib/doctor/icu/doctor-icu-data";
+import { cn } from "@/lib/utils";
 
-interface SmallFieldProps {
-  label: string;
-  children: React.ReactNode;
-}
+type Department = "Pathology" | "Radiology";
+type CategoryFilter = "All" | Department;
 
-function SmallField({ label, children }: SmallFieldProps) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs font-semibold text-slate-600">{label}</Label>
-      {children}
-    </div>
-  );
-}
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (payload: LabDraft[]) => void;
+};
 
-export function LabForm({ onSubmit, onClose }: { onSubmit: (payload: LabDraft[]) => void; onClose: () => void }) {
-  const [rows, setRows] = useState<LabDraft[]>([]);
-  const [form, setForm] = useState({
-    category: "All" as "All" | "Pathology" | "Radiology",
-    testName: "",
-    clinicalNotes: "",
-    priority: "Routine" as "Routine" | "Urgent" | "Stat",
-  });
+const PRIORITY_OPTIONS: { value: LabDraft["priority"]; label: string }[] = [
+  { value: "Routine", label: "Routine" },
+  { value: "Urgent", label: "Urgent" },
+  { value: "Stat", label: "Stat" },
+];
+
+const PRIORITY_BADGE: Record<LabDraft["priority"], string> = {
+  Routine: "border-slate-200 bg-slate-100 text-slate-600",
+  Urgent: "border-amber-200 bg-amber-50 text-amber-700",
+  Stat: "border-orange-200 bg-orange-50 text-orange-700",
+};
+
+const DEPT_ACCENT: Record<Department, string> = {
+  Pathology: "border-blue-500 from-blue-50/60",
+  Radiology: "border-violet-500 from-violet-50/60",
+};
+
+export function LabForm({ open, onOpenChange, onSubmit }: Props) {
+  const idRef = useRef(0);
+  const [category, setCategory] = useState<CategoryFilter>("All");
+  const [priority, setPriority] = useState<LabDraft["priority"]>("Routine");
+  const [clinicalNotes, setClinicalNotes] = useState("");
   const [query, setQuery] = useState("");
-  const [selectedTest, setSelectedTest] = useState<LabTestItem | null>(null);
+  const [rows, setRows] = useState<LabDraft[]>([]);
+
+  function handleOpenChange(next: boolean) {
+    if (next && !open) {
+      setCategory("All");
+      setPriority("Routine");
+      setClinicalNotes("");
+      setQuery("");
+      setRows([]);
+      idRef.current = 0;
+    }
+    onOpenChange(next);
+  }
 
   const filteredTests = LAB_TEST_CATALOG.filter(
     (t) =>
-      (form.category === "All" || t.category === form.category) &&
+      (category === "All" || t.category === category) &&
       `${t.name} ${t.code}`.toLowerCase().includes(query.toLowerCase()),
   );
 
-  function add() {
-    const name = selectedTest ? selectedTest.name : form.testName;
-    const category = selectedTest ? selectedTest.category : form.category === "All" ? "Pathology" : form.category;
-    if (!name.trim()) return;
-    setRows((v) => [
-      ...v,
+  const testOptions: SearchSelectOption[] = filteredTests.map((t) => ({
+    value: t.id,
+    label: t.name,
+    sublabel: `${t.code} · ${t.category}`,
+    icon:
+      t.category === "Pathology" ? (
+        <TestTube className="h-4 w-4 text-blue-500" />
+      ) : (
+        <ScanLine className="h-4 w-4 text-violet-500" />
+      ),
+  }));
+
+  function pick(opt: SearchSelectOption) {
+    const t = LAB_TEST_CATALOG.find((x) => x.id === opt.value);
+    if (!t) return;
+    if (rows.some((r) => r.testName === t.name)) return;
+    setRows((prev) => [
+      ...prev,
       {
-        category: category as "Pathology" | "Radiology",
-        testName: name,
+        category: t.category,
+        testName: t.name,
         orderedBy: "Doctor",
-        priority: form.priority,
-        clinicalNotes: form.clinicalNotes,
+        priority,
+        clinicalNotes,
       },
     ]);
-    setForm((v) => ({ ...v, testName: "", clinicalNotes: "" }));
-    setSelectedTest(null);
     setQuery("");
   }
 
-  function handleTestSelect(test: LabTestItem) {
-    setSelectedTest(test);
-    setForm((v) => ({ ...v, testName: test.name, category: test.category as "Pathology" | "Radiology" }));
+  function updatePriority(id: string, p: LabDraft["priority"]) {
+    setRows((prev) =>
+      prev.map((r, i) => (i.toString() === id ? { ...r, priority: p } : r)),
+    );
+  }
+
+  function removeItem(id: string) {
+    setRows((prev) => prev.filter((_, i) => i.toString() !== id));
+  }
+
+  function submit() {
+    onSubmit(rows);
+    onOpenChange(false);
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-800">Order Lab Tests</h3>
-        <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600">
-          <X className="h-5 w-5" />
-        </button>
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={handleOpenChange}
+      icon={<FlaskConical className="h-5 w-5" />}
+      title="Order Lab Tests"
+      description="Choose a department and priority, then search — selecting a test adds it instantly."
+      footer={
+        <div className="flex items-center gap-3">
+          <FormButton
+            variant="outline"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="mr-1 h-4 w-4" />
+            Cancel
+          </FormButton>
+          <FormButton
+            className="flex-1"
+            onClick={submit}
+            disabled={rows.length === 0}
+          >
+            <Check className="mr-1 h-4 w-4" />
+            Send Orders{rows.length > 0 ? ` (${rows.length})` : ""}
+          </FormButton>
+        </div>
+      }
+    >
+      {/* Department + priority + notes */}
+      <div className="grid grid-cols-2 gap-3">
+        <SingleSelect
+          label="Department"
+          value={category}
+          onChange={(v) => setCategory(v as CategoryFilter)}
+          options={[
+            { value: "All", label: "All Departments" },
+            { value: "Pathology", label: "Pathology" },
+            { value: "Radiology", label: "Radiology" },
+          ]}
+        />
+        <SingleSelect
+          label="Priority"
+          value={priority}
+          onChange={(v) => setPriority(v as LabDraft["priority"])}
+          options={PRIORITY_OPTIONS}
+        />
+      </div>
+      <div className="mt-3">
+        <FormTextarea
+          label="Clinical Notes"
+          value={clinicalNotes}
+          onChange={setClinicalNotes}
+          placeholder="Clinical indication or instructions"
+          rows={2}
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <SmallField label="Category">
-          <Select
-            value={form.category}
-            onValueChange={(v) => {
-              setForm((x) => ({ ...x, category: v as typeof x.category }));
-              setSelectedTest(null);
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All">All Tests</SelectItem>
-              <SelectItem value="Pathology">Pathology</SelectItem>
-              <SelectItem value="Radiology">Radiology</SelectItem>
-            </SelectContent>
-          </Select>
-        </SmallField>
-        <SmallField label="Priority">
-          <Select
-            value={form.priority}
-            onValueChange={(v) =>
-              setForm((x) => ({ ...x, priority: v as typeof x.priority }))
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Routine">Routine</SelectItem>
-              <SelectItem value="Urgent">Urgent</SelectItem>
-              <SelectItem value="Stat">Stat</SelectItem>
-            </SelectContent>
-          </Select>
-        </SmallField>
+      {/* Department visual toggle */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {(["Pathology", "Radiology"] as Department[]).map((dept) => {
+          const active =
+            (dept === "Pathology" && category === "Pathology") ||
+            (dept === "Radiology" && category === "Radiology");
+          return (
+            <button
+              key={dept}
+              type="button"
+              onClick={() => setCategory(dept)}
+              className={cn(
+                "flex items-center gap-2 rounded-xl border-2 p-3 text-left text-sm font-bold transition",
+                active
+                  ? dept === "Pathology"
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-violet-500 bg-violet-50 text-violet-700"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300",
+              )}
+            >
+              {dept === "Pathology" ? (
+                <Microscope className="h-4 w-4" />
+              ) : (
+                <ScanLine className="h-4 w-4" />
+              )}
+              {dept}
+            </button>
+          );
+        })}
       </div>
 
-      <div>
-        <SmallField label="Select Test">
-          <div className="relative">
-            <Input
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setSelectedTest(null);
-              }}
-              placeholder={form.category === "All" ? "Search all tests..." : `Search ${form.category.toLowerCase()} tests...`}
-              className="pr-10"
-            />
-            {form.category === "Pathology" || (form.category === "All" && !query) ? (
-              <Microscope className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-600" />
-            ) : (
-              <ScanLine className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-600" />
-            )}
-          </div>
-        </SmallField>
+      <div className="mt-4">
+        <SearchSelect
+          options={testOptions}
+          onSelect={pick}
+          query={query}
+          onQueryChange={setQuery}
+          placeholder={
+            category === "All"
+              ? "Search all tests..."
+              : `Search ${category.toLowerCase()} tests...`
+          }
+          noResultsText="No test found in this department."
+        />
+      </div>
 
-        {query && (
-          <ScrollArea className="mt-2 h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white">
-            {filteredTests.map((test) => (
-              <button
-                type="button"
-                key={test.id}
-                onClick={() => handleTestSelect(test)}
-                className={`flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 ${selectedTest?.id === test.id ? "bg-cyan-100" : "hover:bg-cyan-50"}`}
-              >
-                {test.category === "Pathology" ? (
-                  <Microscope className="h-5 w-5 text-cyan-600" />
-                ) : (
-                  <ScanLine className="h-5 w-5 text-blue-600" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-800">{test.name}</p>
-                  <p className="text-xs text-slate-400">{test.code} · {test.description}</p>
+      {rows.length > 0 ? (
+        <div className="mt-4 space-y-2.5">
+          {rows.map((r, i) => (
+            <SelectedItemCard
+              key={i}
+              id={i.toString()}
+              title={r.testName}
+              onRemove={removeItem}
+              accentColor={DEPT_ACCENT[r.category]}
+              badges={[
+                {
+                  label: r.category,
+                  className:
+                    r.category === "Pathology"
+                      ? "border-blue-200 bg-blue-50 text-blue-700"
+                      : "border-violet-200 bg-violet-50 text-violet-700",
+                },
+                {
+                  label: r.priority,
+                  className: PRIORITY_BADGE[r.priority],
+                },
+              ]}
+              footer={
+                <div className="w-full space-y-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    Priority
+                  </span>
+                  <SingleSelect
+                    label=""
+                    value={r.priority}
+                    onChange={(v) =>
+                      updatePriority(i.toString(), v as LabDraft["priority"])
+                    }
+                    options={PRIORITY_OPTIONS}
+                  />
+                  {r.clinicalNotes && (
+                    <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      <span className="font-semibold">Notes:</span>{" "}
+                      {r.clinicalNotes}
+                    </p>
+                  )}
                 </div>
-                {selectedTest?.id === test.id ? (
-                  <CheckCircle2 className="h-4 w-4 text-cyan-600" />
-                ) : (
-                  <Plus className="h-4 w-4 text-cyan-600" />
-                )}
-              </button>
-            ))}
-          </ScrollArea>
-        )}
-      </div>
-
-      {selectedTest && (
-        <div className="flex items-center gap-2 rounded-lg border border-cyan-200 bg-cyan-50 p-3 text-sm">
-          <CheckCircle2 className="h-4 w-4 text-cyan-600" />
-          <span className="font-semibold text-cyan-900">{selectedTest.name}</span>
-          <span className="text-slate-500">({selectedTest.category})</span>
+              }
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+          <FlaskConical className="mx-auto h-5 w-5 text-slate-300" />
+          <p className="mt-1.5 text-sm text-slate-400">
+            Search above and select a test to add it.
+          </p>
         </div>
       )}
-
-      <SmallField label="Clinical Notes">
-        <Textarea
-          value={form.clinicalNotes}
-          onChange={(e) =>
-            setForm((v) => ({ ...v, clinicalNotes: e.target.value }))
-          }
-          placeholder="Clinical indication or instructions"
-        />
-      </SmallField>
-
-      <Button
-        type="button"
-        variant="outline"
-        onClick={add}
-        disabled={!selectedTest && !form.testName.trim()}
-        className="gap-2"
-      >
-        <Plus className="h-4 w-4" />
-        Add to Order Basket
-      </Button>
-
-      <div className="space-y-2">
-        {rows.map((r, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-sm"
-          >
-            <div className="flex items-center gap-2">
-              {r.category === "Pathology" ? (
-                <Microscope className="h-4 w-4 text-cyan-600" />
-              ) : (
-                <ScanLine className="h-4 w-4 text-blue-600" />
-              )}
-              <span>
-                <b>{r.testName}</b> · {r.category} · {r.priority}
-                {r.clinicalNotes && (
-                  <small className="block text-slate-500">Notes: {r.clinicalNotes}</small>
-                )}
-              </span>
-            </div>
-            <button
-              onClick={() => setRows((v) => v.filter((_, j) => j !== i))}
-              className="text-red-500 hover:text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-        {rows.length === 0 && (
-          <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
-            Select tests from the catalog or enter manually to create the order basket.
-          </div>
-        )}
-      </div>
-
-      <div className="flex gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-        <Button type="button" onClick={() => onSubmit(rows)} disabled={rows.length === 0} className="flex-1 bg-blue-600 hover:bg-blue-700">
-          Send Orders to Lab
-        </Button>
-      </div>
-    </div>
+    </ConsultationDrawer>
   );
 }

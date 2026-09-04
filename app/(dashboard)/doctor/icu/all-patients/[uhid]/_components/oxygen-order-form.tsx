@@ -1,163 +1,363 @@
 // app/(dashboard)/doctor/icu/patients/[uhid]/_components/oxygen-order-form.tsx
 "use client";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Wind } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { OxygenDevice, OxygenDeviceSettings, OxygenIndication, MonitoringFrequency, OxygenOrder } from "@/types/nurse/icu/oxygen-therapy-types";
-import { DEVICE_OPTIONS, FREQUENCY_OPTIONS, INDICATION_OPTIONS } from "@/lib/nurse/icu/oxygen-therapy-data";
+import { useEffect, useState } from "react";
+import {
+  Check,
+  ChevronRight,
+  History,
+  RefreshCw,
+  Settings2,
+  Target,
+  Timer,
+  Wind,
+  X,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  ConsultationDrawer,
+  DrawerSection,
+} from "@/components/consultation/drawer";
+import {
+  FormButton,
+  FormTextarea,
+  SuffixedInput,
+} from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { RadioGroup } from "@/components/forms/radio-group";
+import type {
+  OxygenDevice,
+  OxygenDeviceSettings,
+  OxygenIndication,
+  MonitoringFrequency,
+  OxygenOrder,
+} from "@/types/nurse/icu/oxygen-therapy-types";
+import {
+  DEVICE_OPTIONS,
+  FREQUENCY_OPTIONS,
+  INDICATION_OPTIONS,
+} from "@/lib/nurse/icu/oxygen-therapy-data";
 import { OxygenDeviceFields } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/oxygen-device-fields";
 
-
-export function OxygenOrderForm({
-  uhid, icuBed, patientName, orderedBy, orderedByRole, onSubmit, onClose
-}: {
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   uhid: string;
   icuBed: string;
   patientName: string;
   orderedBy: string;
   orderedByRole: "Doctor" | "RMO";
+  existingOrder?: OxygenOrder;
   onSubmit: (order: OxygenOrder) => void;
-  onClose: () => void;
-}) {
-  const [indication, setIndication] = useState<OxygenIndication>("Hypoxemia");
-  const [indicationOther, setIndicationOther] = useState("");
-  const [device, setDevice] = useState<OxygenDevice>("Nasal Cannula");
-  const [deviceSettings, setDeviceSettings] = useState<Partial<OxygenDeviceSettings>>({ flowLpm: 2 });
-  const [targetMin, setTargetMin] = useState("94");
-  const [targetMax, setTargetMax] = useState("98");
-  const [frequency, setFrequency] = useState<MonitoringFrequency>("Hourly");
-  const [frequencyOther, setFrequencyOther] = useState("");
-  const [durationType, setDurationType] = useState<"Until discontinued" | "Specific duration">("Until discontinued");
-  const [durationValue, setDurationValue] = useState("");
-  const [instructions, setInstructions] = useState("");
+};
+
+export function OxygenOrderForm({
+  open,
+  onOpenChange,
+  uhid,
+  icuBed,
+  patientName,
+  orderedBy,
+  orderedByRole,
+  existingOrder,
+  onSubmit,
+}: Props) {
+  const isModify = !!existingOrder;
+  const [indication, setIndication] = useState<OxygenIndication>(
+    existingOrder?.indication ?? "Hypoxemia",
+  );
+  const [indicationOther, setIndicationOther] = useState(
+    existingOrder?.indicationOther ?? "",
+  );
+  const [device, setDevice] = useState<OxygenDevice>(
+    existingOrder?.settings.device ?? "Nasal Cannula",
+  );
+  const [deviceSettings, setDeviceSettings] = useState<
+    Partial<OxygenDeviceSettings>
+  >(existingOrder?.settings ?? { flowLpm: 2 });
+  const [targetMin, setTargetMin] = useState(
+    String(existingOrder?.targetSpo2Min ?? "94"),
+  );
+  const [targetMax, setTargetMax] = useState(
+    String(existingOrder?.targetSpo2Max ?? "98"),
+  );
+  const [frequency, setFrequency] = useState<MonitoringFrequency>(
+    existingOrder?.monitoringFrequency ?? "Hourly",
+  );
+  const [frequencyOther, setFrequencyOther] = useState(
+    existingOrder?.monitoringFrequencyOther ?? "",
+  );
+  const [durationType, setDurationType] = useState<
+    "Until discontinued" | "Specific duration"
+  >(existingOrder?.durationType ?? "Until discontinued");
+  const [durationValue, setDurationValue] = useState(
+    existingOrder?.durationValue ?? "",
+  );
+  const [instructions, setInstructions] = useState(
+    existingOrder?.specialInstructions ?? "",
+  );
+
+  // Re-hydrate form when drawer is re-opened for a different order
+  useEffect(() => {
+    if (!open) return;
+    setIndication(existingOrder?.indication ?? "Hypoxemia");
+    setIndicationOther(existingOrder?.indicationOther ?? "");
+    setDevice(existingOrder?.settings.device ?? "Nasal Cannula");
+    setDeviceSettings(existingOrder?.settings ?? { flowLpm: 2 });
+    setTargetMin(String(existingOrder?.targetSpo2Min ?? "94"));
+    setTargetMax(String(existingOrder?.targetSpo2Max ?? "98"));
+    setFrequency(existingOrder?.monitoringFrequency ?? "Hourly");
+    setFrequencyOther(existingOrder?.monitoringFrequencyOther ?? "");
+    setDurationType(existingOrder?.durationType ?? "Until discontinued");
+    setDurationValue(existingOrder?.durationValue ?? "");
+    setInstructions(existingOrder?.specialInstructions ?? "");
+  }, [open, existingOrder]);
 
   function handleSubmit() {
-    if (!targetMin || !targetMax) {
-      toast.error("Target SpO₂ range is required.");
-      return;
-    }
-    const stamp = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-
+    if (!targetMin || !targetMax) return;
+    const stamp = new Date().toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     const order: OxygenOrder = {
       id: `OXO-${Date.now()}`,
       uhid,
       icuBed,
       indication,
-      indicationOther: indication === "Other" ? indicationOther : undefined,
+      indicationOther:
+        indication === "Other" ? indicationOther : undefined,
       settings: { device, ...deviceSettings } as OxygenDeviceSettings,
       targetSpo2Min: Number(targetMin),
       targetSpo2Max: Number(targetMax),
       monitoringFrequency: frequency,
-      monitoringFrequencyOther: frequency === "Other" ? frequencyOther : undefined,
+      monitoringFrequencyOther:
+        frequency === "Other" ? frequencyOther : undefined,
       startDateTime: stamp,
       durationType,
-      durationValue: durationType === "Specific duration" ? durationValue : undefined,
+      durationValue:
+        durationType === "Specific duration" ? durationValue : undefined,
       specialInstructions: instructions || undefined,
-      status: "Active",
+      status: isModify ? "Modified" : "Active",
       orderedBy,
       orderedByRole,
       orderedAt: stamp,
+      supersedes: isModify ? existingOrder?.id : undefined,
     };
-
     onSubmit(order);
-    onClose()
-    toast.success(`Oxygen Therapy order placed for ${patientName}.`);
+    onOpenChange(false);
   }
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-2xl border border-cyan-200 bg-cyan-50/50 p-4">
-        <p className="flex items-center gap-2 text-sm font-bold text-cyan-900"><Wind className="h-4 w-4" />New Medical Order — Oxygen Therapy</p>
-        <p className="mt-1 text-xs text-cyan-700">{patientName} · {icuBed}</p>
-      </div>
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={isModify ? <RefreshCw className="h-5 w-5" /> : <Wind className="h-5 w-5" />}
+      title={isModify ? "Modify Oxygen Order" : "New Oxygen Therapy Order"}
+      description={
+        isModify
+          ? `Modifying existing order for ${patientName} · ${icuBed}`
+          : `New oxygen therapy order for ${patientName} · ${icuBed}`
+      }
+      meta={
+        isModify ? (
+          <Badge
+            variant="outline"
+            className="border-amber-200 bg-amber-50 text-amber-700"
+          >
+            <RefreshCw className="mr-1 h-3 w-3" />
+            Modifying #{existingOrder?.id}
+          </Badge>
+        ) : undefined
+      }
+      bodyClassName="space-y-4"
+      footer={
+        <div className="flex items-center gap-3">
+          <FormButton
+            variant="outline"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="mr-1 h-4 w-4" />
+            Cancel
+          </FormButton>
+          <FormButton className="flex-1" onClick={handleSubmit}>
+            <Check className="mr-1 h-4 w-4" />
+            {isModify ? "Save Changes" : "Place Order"}
+          </FormButton>
+        </div>
+      }
+    >
+      {/* Modification trail (only in modify mode) */}
+      {isModify && existingOrder && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-xs text-amber-800">
+          <History className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <div>
+            <p className="font-semibold">This will supersede the existing order.</p>
+            <p className="mt-0.5 text-amber-700">
+              Originally placed on {existingOrder.orderedAt} by{" "}
+              {existingOrder.orderedBy} ({existingOrder.orderedByRole}). The
+              prior order will be preserved in the audit trail.
+            </p>
+          </div>
+        </div>
+      )}
 
-      {/* Indication */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Reason / Indication</Label>
-        <RadioGroup value={indication} onValueChange={(v) => setIndication(v as OxygenIndication)} className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {INDICATION_OPTIONS.map((opt) => (
-            <label key={opt} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm ${indication === opt ? "border-cyan-400 bg-cyan-50" : "border-slate-200"}`}>
-              <RadioGroupItem value={opt} />{opt}
-            </label>
-          ))}
-        </RadioGroup>
+      {/* Indication — unified DrawerSection + RadioGroup */}
+      <DrawerSection
+        title="Reason / Indication"
+        caption="Why is oxygen therapy being ordered?"
+        icon={<Target className="h-4 w-4" />}
+      >
+        <RadioGroup
+          name="ox-indication"
+          options={INDICATION_OPTIONS.map((i) => ({ value: i, label: i }))}
+          value={indication}
+          onChange={(v) => setIndication(v as OxygenIndication)}
+        />
         {indication === "Other" && (
-          <Input className="mt-3" value={indicationOther} onChange={(e) => setIndicationOther(e.target.value)} placeholder="Specify indication" />
+          <SuffixedInput
+            label="Specify Indication"
+            value={indicationOther}
+            onChange={setIndicationOther}
+            placeholder="e.g. Post-op recovery"
+          />
         )}
-      </div>
+      </DrawerSection>
 
-      {/* Delivery Device */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Delivery Device</Label>
-        <Select value={device} onValueChange={(v) => { setDevice(v as OxygenDevice); setDeviceSettings({}); }}>
-          <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
-          <SelectContent>{DEVICE_OPTIONS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-        </Select>
-
-        <div className="mt-4">
-          <Label className="text-xs font-semibold text-slate-600">Oxygen Setting</Label>
-          <div className="mt-2">
-            <OxygenDeviceFields device={device} settings={deviceSettings} onChange={(patch) => setDeviceSettings((prev) => ({ ...prev, ...patch }))} />
-          </div>
+      {/* Delivery Device — DrawerSection */}
+      <DrawerSection
+        title="Delivery Device & Setting"
+        caption="Choose the oxygen delivery interface and its parameters"
+        icon={<Settings2 className="h-4 w-4" />}
+      >
+        <SingleSelect
+          label="Delivery Device"
+          value={device}
+          onChange={(v) => {
+            setDevice(v as OxygenDevice);
+            setDeviceSettings({});
+          }}
+          options={DEVICE_OPTIONS.map((d) => ({ value: d, label: d }))}
+        />
+        <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Oxygen Setting
+          </p>
+          <OxygenDeviceFields
+            device={device}
+            settings={deviceSettings}
+            onChange={(patch) =>
+              setDeviceSettings((prev) => ({ ...prev, ...patch }))
+            }
+          />
         </div>
-      </div>
+      </DrawerSection>
 
-      {/* Target SpO2 */}
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
-        <Label className="text-xs font-semibold text-emerald-800">Target SpO₂ (per hospital protocol & patient condition)</Label>
-        <div className="mt-2 grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs text-slate-500">Minimum (%)</Label>
-            <Input type="number" className="mt-1" value={targetMin} onChange={(e) => setTargetMin(e.target.value)} />
-          </div>
-          <div>
-            <Label className="text-xs text-slate-500">Maximum (%)</Label>
-            <Input type="number" className="mt-1" value={targetMax} onChange={(e) => setTargetMax(e.target.value)} />
-          </div>
+      {/* Target SpO₂ — DrawerSection w/ emerald tinted header */}
+      <DrawerSection
+        title="Target SpO₂"
+        caption="Per hospital protocol & patient condition"
+        icon={<Target className="h-4 w-4 text-emerald-600" />}
+        action={
+          <Badge
+            variant="outline"
+            className="border-emerald-200 bg-emerald-50 text-emerald-700"
+          >
+            {targetMin && targetMax ? `${targetMin} – ${targetMax} %` : "—"}
+          </Badge>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <SuffixedInput
+            label="Minimum"
+            suffix="%"
+            value={targetMin}
+            onChange={setTargetMin}
+            placeholder="94"
+          />
+          <SuffixedInput
+            label="Maximum"
+            suffix="%"
+            value={targetMax}
+            onChange={setTargetMax}
+            placeholder="98"
+          />
         </div>
-        <p className="mt-2 text-xs text-emerald-700">Note: Use a lower target range for patients at risk of hypercapnic respiratory failure, per protocol.</p>
-      </div>
+        <div className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50/40 p-2.5 text-xs text-emerald-700">
+          <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <p>
+            Use a lower target range for patients at risk of hypercapnic
+            respiratory failure, per protocol.
+          </p>
+        </div>
+      </DrawerSection>
 
-      {/* Frequency */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Frequency / Monitoring</Label>
-        <Select value={frequency} onValueChange={(v) => setFrequency(v as MonitoringFrequency)}>
-          <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
-          <SelectContent>{FREQUENCY_OPTIONS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
-        </Select>
+      {/* Frequency / Monitoring — DrawerSection */}
+      <DrawerSection
+        title="Monitoring Frequency"
+        caption="How often should the nurse record SpO₂ & vitals?"
+        icon={<Timer className="h-4 w-4" />}
+      >
+        <SingleSelect
+          label="Frequency"
+          value={frequency}
+          onChange={(v) => setFrequency(v as MonitoringFrequency)}
+          options={FREQUENCY_OPTIONS.map((f) => ({ value: f, label: f }))}
+        />
         {frequency === "Other" && (
-          <Input className="mt-3" value={frequencyOther} onChange={(e) => setFrequencyOther(e.target.value)} placeholder="Specify monitoring schedule" />
+          <SuffixedInput
+            label="Specify Monitoring Schedule"
+            value={frequencyOther}
+            onChange={setFrequencyOther}
+            placeholder="e.g. Every 30 minutes"
+          />
         )}
-      </div>
+      </DrawerSection>
 
-      {/* Duration */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <Label className="text-xs font-semibold text-slate-600">Duration</Label>
-        <RadioGroup value={durationType} onValueChange={(v) => setDurationType(v as typeof durationType)} className="mt-2 flex gap-4">
-          <label className="flex items-center gap-2 text-sm"><RadioGroupItem value="Until discontinued" />Until discontinued</label>
-          <label className="flex items-center gap-2 text-sm"><RadioGroupItem value="Specific duration" />Specific duration</label>
-        </RadioGroup>
+      {/* Duration — DrawerSection */}
+      <DrawerSection
+        title="Duration"
+        caption="How long should this order remain active?"
+        icon={<Timer className="h-4 w-4" />}
+      >
+        <RadioGroup
+          name="ox-duration"
+          options={[
+            { value: "Until discontinued", label: "Until discontinued" },
+            { value: "Specific duration", label: "Specific duration" },
+          ]}
+          value={durationType}
+          onChange={(v) =>
+            setDurationType(v as "Until discontinued" | "Specific duration")
+          }
+        />
         {durationType === "Specific duration" && (
-          <Input className="mt-3" value={durationValue} onChange={(e) => setDurationValue(e.target.value)} placeholder="e.g. 48 hours" />
+          <SuffixedInput
+            label="Specify Duration"
+            value={durationValue}
+            onChange={setDurationValue}
+            placeholder="e.g. 48 hours"
+          />
         )}
-      </div>
+      </DrawerSection>
 
-      {/* Special Instructions */}
-      <div>
-        <Label className="text-xs font-semibold text-slate-600">Special Instructions (Optional)</Label>
-        <Textarea className="mt-2" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={2} placeholder="Any additional instructions for nursing staff" />
-      </div>
-
-      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button className="gap-2 bg-cyan-600 hover:bg-cyan-700" onClick={handleSubmit}><Wind className="h-4 w-4" />Place Order</Button>
-      </div>
-    </div>
+      {/* Special Instructions — DrawerSection */}
+      <DrawerSection
+        title="Special Instructions"
+        caption="Optional notes for the nursing team"
+        icon={<Settings2 className="h-4 w-4" />}
+      >
+        <FormTextarea
+          label="Instructions (Optional)"
+          value={instructions}
+          onChange={setInstructions}
+          rows={3}
+          maxLength={500}
+          placeholder="Any additional instructions for nursing staff"
+        />
+      </DrawerSection>
+    </ConsultationDrawer>
   );
 }

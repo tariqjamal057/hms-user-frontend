@@ -1,208 +1,227 @@
 // app/(dashboard)/doctor/icu/patients/[uhid]/_components/medicine-form.tsx
 "use client";
-import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRef, useState } from "react";
+import { Check, Pill, X } from "lucide-react";
+import { ConsultationDrawer } from "@/components/consultation/drawer";
+import { SelectedItemCard } from "@/components/consultation/selected-item-card";
+import { FormButton, SuffixedInput } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import {
+  SearchSelect,
+  type SearchSelectOption,
+} from "@/components/forms/search-select";
 import type { MedicineDraft } from "@/types/doctor/icu/doctor-icu-types";
-import { MEDICINE_CATALOG, ROUTE_OPTIONS, FREQUENCY_OPTIONS } from "@/lib/doctor/icu/doctor-icu-data";
+import {
+  FREQUENCY_OPTIONS,
+  MEDICINE_CATALOG,
+  ROUTE_OPTIONS,
+} from "@/lib/doctor/icu/doctor-icu-data";
 
-interface SmallFieldProps {
-  label: string;
-  children: React.ReactNode;
-}
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (payload: MedicineDraft[]) => void;
+};
 
-function SmallField({ label, children }: SmallFieldProps) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs font-semibold text-slate-600">{label}</Label>
-      {children}
-    </div>
-  );
-}
+const URGENCY_OPTIONS: { value: MedicineDraft["urgency"]; label: string }[] = [
+  { value: "Routine", label: "Routine" },
+  { value: "Urgent", label: "Urgent" },
+  { value: "Stat", label: "Stat" },
+  { value: "Emergency", label: "Emergency" },
+];
 
-export function MedicineForm({ onSubmit, onClose }: { onSubmit: (payload: MedicineDraft[]) => void; onClose: () => void }) {
+const URGENCY_BADGE: Record<MedicineDraft["urgency"], string> = {
+  Routine: "border-slate-200 bg-slate-100 text-slate-600",
+  Urgent: "border-amber-200 bg-amber-50 text-amber-700",
+  Stat: "border-orange-200 bg-orange-50 text-orange-700",
+  Emergency: "border-red-200 bg-red-50 text-red-700",
+};
+
+export function MedicineForm({ open, onOpenChange, onSubmit }: Props) {
+  const idRef = useRef(0);
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<MedicineDraft[]>([]);
-  
-  const results = MEDICINE_CATALOG.filter((m) =>
-    `${m.name} ${m.code}`.toLowerCase().includes(query.toLowerCase()),
-  );
 
-  function add(m: (typeof MEDICINE_CATALOG)[number]) {
-    if (!rows.some((r) => r.medicineCode === m.code)) {
-      setRows((v) => [
-        ...v,
-        {
-          medicineName: m.name,
-          medicineCode: m.code,
-          strength: m.strength,
-          route: m.route,
-          dose: m.defaultDose ?? m.strength,
-          frequency: m.defaultFrequency ?? "OD",
-          duration: m.defaultDuration ?? "5 days",
-          instructions: m.defaultInstructions ?? "As directed",
-          slot: "Immediate",
-          scheduledTime: "Now",
-          urgency: "Routine",
-        },
-      ]);
+  function handleOpenChange(next: boolean) {
+    if (next && !open) {
+      setQuery("");
+      setRows([]);
+      idRef.current = 0;
     }
+    onOpenChange(next);
+  }
+
+  const catalogueOptions: SearchSelectOption[] = MEDICINE_CATALOG.map((m) => ({
+    value: m.code,
+    label: m.name,
+    sublabel: `${m.code} · ${m.route}`,
+  }));
+
+  function pick(opt: SearchSelectOption) {
+    const m = MEDICINE_CATALOG.find((x) => x.code === opt.value);
+    if (!m) return;
+    if (rows.some((r) => r.medicineCode === m.code)) return;
+    setRows((prev) => [
+      ...prev,
+      {
+        medicineName: m.name,
+        medicineCode: m.code,
+        strength: m.strength,
+        route: m.route,
+        dose: m.defaultDose ?? m.strength,
+        frequency: m.defaultFrequency ?? "OD",
+        duration: m.defaultDuration ?? "5 days",
+        instructions: m.defaultInstructions ?? "As directed",
+        slot: "Immediate",
+        scheduledTime: "Now",
+        urgency: "Routine",
+      },
+    ]);
+    setQuery("");
+  }
+
+  function updateField(
+    code: string,
+    field: keyof MedicineDraft,
+    value: string,
+  ) {
+    setRows((prev) =>
+      prev.map((x) => (x.medicineCode === code ? { ...x, [field]: value } : x)),
+    );
+  }
+
+  function removeItem(code: string) {
+    setRows((prev) => prev.filter((r) => r.medicineCode !== code));
+  }
+
+  function submit() {
+    onSubmit(rows);
+    onOpenChange(false);
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-slate-800">Add Medicines</h3>
-        <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600">
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      <p className="text-sm text-slate-500">
-        Search the approved formulary and add multiple medicines to one order.
-      </p>
-
-      <div className="relative">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search medicine by name or code..."
-        />
-      </div>
-
-      {query && (
-        <ScrollArea className="h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white">
-          {results.map((m) => (
-            <button
-              type="button"
-              key={m.code}
-              onClick={() => {
-                add(m);
-                setQuery("");
-              }}
-              className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-blue-50"
-            >
-              <span>
-                <span className="block text-sm font-semibold text-slate-800">{m.name}</span>
-                <span className="text-xs text-slate-400">{m.code} · {m.route}</span>
-              </span>
-              <Plus className="h-4 w-4 text-blue-600" />
-            </button>
-          ))}
-        </ScrollArea>
-      )}
-
-      <div className="space-y-3">
-        {rows.map((row, index) => (
-          <div key={row.medicineCode} className="rounded-xl border border-slate-200 bg-white p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-bold text-slate-800">{row.medicineName}</p>
-                <p className="text-xs text-slate-400">{row.strength}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRows((v) => v.filter((_, i) => i !== index))}
-                className="text-red-500 hover:text-red-600"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <SmallField label="Dose">
-                <Input
-                  value={row.dose}
-                  onChange={(e) => setRows((v) => v.map((x, i) => i === index ? { ...x, dose: e.target.value } : x))}
-                />
-              </SmallField>
-
-              <SmallField label="Route">
-                <Select
-                  value={row.route}
-                  onValueChange={(v) => setRows((prev) => prev.map((x, i) => i === index ? { ...x, route: v } : x))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROUTE_OPTIONS.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </SmallField>
-
-              <SmallField label="Frequency">
-                <Select
-                  value={row.frequency}
-                  onValueChange={(v) => setRows((prev) => prev.map((x, i) => i === index ? { ...x, frequency: v } : x))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FREQUENCY_OPTIONS.map((f) => (
-                      <SelectItem key={f} value={f}>
-                        {f}{" "}
-                        {f === "OD" ? "(Once a day)" : f === "BD" ? "(Twice a day)" : f === "TDS" ? "(Three times a day)" : f === "QID" ? "(Four times a day)" : f === "HS" ? "(At bedtime)" : "(As needed)"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </SmallField>
-
-              <SmallField label="Duration">
-                <Input
-                  value={row.duration}
-                  onChange={(e) => setRows((v) => v.map((x, i) => i === index ? { ...x, duration: e.target.value } : x))}
-                />
-              </SmallField>
-
-              <SmallField label="Urgency">
-                <Select
-                  value={row.urgency}
-                  onValueChange={(v) => setRows((prev) => prev.map((x, i) => i === index ? { ...x, urgency: v as "Routine" | "Urgent" | "Stat" | "Emergency" } : x))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Routine">Routine</SelectItem>
-                    <SelectItem value="Urgent">Urgent</SelectItem>
-                    <SelectItem value="Stat">Stat</SelectItem>
-                    <SelectItem value="Emergency">Emergency</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SmallField>
-
-              <SmallField label="Instructions">
-                <Input
-                  value={row.instructions}
-                  onChange={(e) => setRows((v) => v.map((x, i) => i === index ? { ...x, instructions: e.target.value } : x))}
-                />
-              </SmallField>
-            </div>
-          </div>
-        ))}
-
-        {rows.length === 0 && (
-          <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
-            Search and add medicines to create the order basket.
-          </div>
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={handleOpenChange}
+      icon={<Pill className="h-5 w-5" />}
+      title="Add Medicines"
+      description="Search the approved formulary — selecting a medicine adds it instantly."
+      footer={
+        <div className="flex items-center gap-3">
+          <FormButton
+            variant="outline"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="mr-1 h-4 w-4" />
+            Cancel
+          </FormButton>
+          <FormButton
+            className="flex-1"
+            onClick={submit}
+            disabled={rows.length === 0}
+          >
+            <Check className="mr-1 h-4 w-4" />
+            Save Order{rows.length > 0 ? ` (${rows.length})` : ""}
+          </FormButton>
+        </div>
+      }
+    >
+      <SearchSelect
+        options={catalogueOptions.filter((o) =>
+          `${o.label} ${o.sublabel}`.toLowerCase().includes(query.toLowerCase()),
         )}
-      </div>
+        onSelect={pick}
+        query={query}
+        onQueryChange={setQuery}
+        placeholder="Search medicine by name or code..."
+        noResultsText="No medicine found in the formulary."
+      />
 
-      <div className="flex gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-        <Button type="button" onClick={() => onSubmit(rows)} disabled={rows.length === 0} className="flex-1 bg-blue-600 hover:bg-blue-700">
-          Save Medicine Order
-        </Button>
-      </div>
-    </div>
+      {rows.length > 0 ? (
+        <div className="mt-4 space-y-2.5">
+          {rows.map((row) => (
+            <SelectedItemCard
+              key={row.medicineCode}
+              id={row.medicineCode}
+              title={row.medicineName}
+              onRemove={removeItem}
+              accentColor="border-emerald-500"
+              badges={[
+                {
+                  label: row.medicineCode,
+                  className: "border-blue-200 bg-blue-50 text-blue-700",
+                },
+                {
+                  label: row.urgency,
+                  className: URGENCY_BADGE[row.urgency],
+                },
+              ]}
+              footer={
+                <div className="w-full space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <SuffixedInput
+                      label="Dose"
+                      value={row.dose}
+                      onChange={(v) => updateField(row.medicineCode, "dose", v)}
+                      placeholder="e.g. 500 mg"
+                    />
+                    <SingleSelect
+                      label="Route"
+                      value={row.route}
+                      onChange={(v) => updateField(row.medicineCode, "route", v)}
+                      options={ROUTE_OPTIONS.map((r) => ({ value: r, label: r }))}
+                    />
+                    <SingleSelect
+                      label="Frequency"
+                      value={row.frequency}
+                      onChange={(v) =>
+                        updateField(row.medicineCode, "frequency", v)
+                      }
+                      options={FREQUENCY_OPTIONS.map((f) => ({ value: f, label: f }))}
+                    />
+                    <SuffixedInput
+                      label="Duration"
+                      value={row.duration}
+                      onChange={(v) =>
+                        updateField(row.medicineCode, "duration", v)
+                      }
+                      placeholder="e.g. 5 days"
+                    />
+                    <SingleSelect
+                      label="Urgency"
+                      value={row.urgency}
+                      onChange={(v) =>
+                        updateField(
+                          row.medicineCode,
+                          "urgency",
+                          v as MedicineDraft["urgency"],
+                        )
+                      }
+                      options={URGENCY_OPTIONS}
+                    />
+                    <SuffixedInput
+                      label="Instructions"
+                      value={row.instructions}
+                      onChange={(v) =>
+                        updateField(row.medicineCode, "instructions", v)
+                      }
+                      placeholder="e.g. After food"
+                    />
+                  </div>
+                </div>
+              }
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+          <Pill className="mx-auto h-5 w-5 text-slate-300" />
+          <p className="mt-1.5 text-sm text-slate-400">
+            Search above and select a medicine to add it.
+          </p>
+        </div>
+      )}
+    </ConsultationDrawer>
   );
 }
