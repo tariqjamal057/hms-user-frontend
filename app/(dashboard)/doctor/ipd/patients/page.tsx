@@ -2,10 +2,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Users, HeartPulse, Activity, AlertCircle, Eye } from "lucide-react";
+import { Users, HeartPulse, Activity, AlertCircle, Eye, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionMenu, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import {
@@ -90,6 +89,10 @@ export default function MyIPDPatientsPage() {
     router.push(`/doctor/ipd/clinical-overview/${uhid}`);
   }
 
+  function handleViewDetail(uhid: string) {
+    router.push(`/doctor/ipd/patient-detail?uhid=${uhid}`);
+  }
+
   const infoCards: KpiCardProps[] = [
     { label: "Total Patients", value: String(stats.total), icon: Users, accent: "blue", footer: "All admitted patients", trend: buildTrend(stats.total, 6) },
     { label: "Stable", value: String(stats.stable), icon: HeartPulse, accent: "emerald", footer: "Stable condition", trend: buildTrend(stats.stable, 3) },
@@ -149,10 +152,19 @@ export default function MyIPDPatientsPage() {
       headerClassName: "text-right",
       className: "text-right",
       cell: (p) => (
-        <OpsActionButton
-          label="Clinical Overview"
-          icon={Eye}
-          onClick={() => handleClinicalOverview(p.uhid)}
+        <OpsActionMenu
+          items={[
+            {
+              label: "View Consultation",
+              icon: ClipboardList,
+              onClick: () => handleClinicalOverview(p.uhid),
+            },
+            {
+              label: "View Detail",
+              icon: Eye,
+              onClick: () => handleViewDetail(p.uhid),
+            },
+          ]}
         />
       ),
     },

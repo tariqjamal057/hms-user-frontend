@@ -60,10 +60,13 @@ import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-d
 import { AddMedicineDialog } from "../medicine-orders/_components/add-medicine-dialog";
 import type { MedicineOrderItem } from "@/types/doctor/ipd/medicine-order-types";
 
-export default function DischargeDecisionPage() {
+export default function DischargeDecisionPage({
+  uhid: propUhid,
+  embedded = false,
+}: { uhid?: string; embedded?: boolean } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const uhid = searchParams.get("uhid") ?? WARD_ROUND_PATIENTS[0].uhid;
+  const uhid = propUhid ?? searchParams.get("uhid") ?? WARD_ROUND_PATIENTS[0].uhid;
 
   const patient = useMemo(() => getPatientByUhid(uhid), [uhid]);
   const vitals = useMemo(() => getVitalsForPatient(uhid)[0], [uhid]);
@@ -249,55 +252,57 @@ export default function DischargeDecisionPage() {
   return (
     <div className="min-h-screen ">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
-                {patient.patientName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase()}
-              </span>
-              <div>
-                <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                  {patient.patientName}{" "}
-                  <PatientStatusBadge status={patient.status} />
-                </p>
-                <p className="text-xs text-slate-400">
-                  {patient.age} Y / {patient.gender} · UHID: {patient.uhid} ·
-                  IPD: {patient.ipdId} · Bed:{" "}
-                  {patient.wardRoomBed.split("/").pop()?.trim()}
-                </p>
+        {!embedded && (
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
+                  {patient.patientName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()}
+                </span>
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    {patient.patientName}{" "}
+                    <PatientStatusBadge status={patient.status} />
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {patient.age} Y / {patient.gender} · UHID: {patient.uhid} ·
+                    IPD: {patient.ipdId} · Bed:{" "}
+                    {patient.wardRoomBed.split("/").pop()?.trim()}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:flex lg:items-center lg:gap-8">
-              <InfoBlock
-                label="Ward / Room / Bed"
-                value={patient.wardRoomBed}
-              />
-              <InfoBlock label="Department" value={patient.department} />
-              <InfoBlock
-                label="Attending Doctor"
-                value={patient.admittingDoctor}
-              />
-              <InfoBlock
-                label="Admission Date"
-                value={patient.admissionDateTime}
-              />
-            </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:flex lg:items-center lg:gap-8">
+                <InfoBlock
+                  label="Ward / Room / Bed"
+                  value={patient.wardRoomBed}
+                />
+                <InfoBlock label="Department" value={patient.department} />
+                <InfoBlock
+                  label="Attending Doctor"
+                  value={patient.admittingDoctor}
+                />
+                <InfoBlock
+                  label="Admission Date"
+                  value={patient.admissionDateTime}
+                />
+              </div>
 
-            <Button
-              variant="outline"
-              className="w-full gap-2 lg:w-auto"
-              onClick={() => setChangePatientOpen(true)}
-            >
-              Change Patient
-            </Button>
-          </CardContent>
-        </Card>
+              <Button
+                variant="outline"
+                className="w-full gap-2 lg:w-auto"
+                onClick={() => setChangePatientOpen(true)}
+              >
+                Change Patient
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_300px] lg:items-start">
           <div className="min-w-0 space-y-5">
@@ -611,13 +616,15 @@ export default function DischargeDecisionPage() {
               </CardContent>
             </Card>
 
-            <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-              <p className="flex items-center gap-2">
-                <Info className="h-4 w-4 shrink-0" /> Once confirmed, the
-                patient will be marked as discharged and bed will be made
-                available for new admission.
-              </p>
-            </div>
+            {!embedded && (
+              <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                <p className="flex items-center gap-2">
+                  <Info className="h-4 w-4 shrink-0" /> Once confirmed, the
+                  patient will be marked as discharged and bed will be made
+                  available for new admission.
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
               <Button
@@ -629,13 +636,15 @@ export default function DischargeDecisionPage() {
               </Button>
 
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleBack}
-                >
-                  <ArrowLeft className="h-4 w-4" /> Cancel
-                </Button>
+                {!embedded && (
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={handleBack}
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Cancel
+                  </Button>
+                )}
                 <Button
                   className="gap-2 bg-blue-600 hover:bg-blue-700"
                   onClick={handleConfirmDischarge}
@@ -745,13 +754,15 @@ export default function DischargeDecisionPage() {
         </div>
       </div>
 
-      <ChangePatientDialog
-        patients={WARD_ROUND_PATIENTS}
-        currentUhid={patient.uhid}
-        open={changePatientOpen}
-        onOpenChange={setChangePatientOpen}
-        onSelectPatient={handleSelectPatient}
-      />
+      {!embedded && (
+        <ChangePatientDialog
+          patients={WARD_ROUND_PATIENTS}
+          currentUhid={patient.uhid}
+          open={changePatientOpen}
+          onOpenChange={setChangePatientOpen}
+          onSelectPatient={handleSelectPatient}
+        />
+      )}
 
       <AddMedicineDialog
         open={addMedicineOpen}

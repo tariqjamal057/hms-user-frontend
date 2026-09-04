@@ -51,10 +51,13 @@ import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-d
 
 type AuthorFilter = "All" | ProgressNoteAuthorRole;
 
-export default function ProgressNotesPage() {
+export default function ProgressNotesPage({
+  uhid: propUhid,
+  embedded = false,
+}: { uhid?: string; embedded?: boolean } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const uhid = searchParams.get("uhid") ?? WARD_ROUND_PATIENTS[0].uhid;
+  const uhid = propUhid ?? searchParams.get("uhid") ?? WARD_ROUND_PATIENTS[0].uhid;
   const patient = useMemo(() => getPatientByUhid(uhid), [uhid]);
 
   const [notes, setNotes] = useState<ProgressNote[]>(() =>
@@ -111,29 +114,37 @@ export default function ProgressNotesPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => router.back()}
-                className="shrink-0 border-slate-200"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+            {!embedded ? (
+              <div className="flex min-w-0 items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => router.back()}
+                  className="shrink-0 border-slate-200"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="min-w-0">
+                  <p className="truncate text-xs text-slate-400">
+                    {patient.patientName} ·{" "}
+                    {patient.wardRoomBed.split("/").pop()?.trim()}
+                  </p>
+                  <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+                    Progress Notes
+                  </h1>
+                  <p className="hidden text-xs text-slate-500 sm:block">
+                    Structured notes, nursing handover, and signed clinical
+                    documentation.
+                  </p>
+                </div>
+              </div>
+            ) : (
               <div className="min-w-0">
-                <p className="truncate text-xs text-slate-400">
-                  {patient.patientName} ·{" "}
-                  {patient.wardRoomBed.split("/").pop()?.trim()}
-                </p>
-                <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
+                <p className="truncate text-xs font-semibold text-slate-400">
                   Progress Notes
-                </h1>
-                <p className="hidden text-xs text-slate-500 sm:block">
-                  Structured notes, nursing handover, and signed clinical
-                  documentation.
                 </p>
               </div>
-            </div>
+            )}
             <Button
               onClick={() => setNoteDrawerOpen(true)}
               className="shrink-0 bg-blue-600 text-white hover:bg-blue-700"
@@ -147,53 +158,55 @@ export default function ProgressNotesPage() {
       </header>
 
       <main className="mx-auto max-w-[1400px] space-y-5 py-5">
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
-                {patient.patientName
-                  .split(" ")
-                  .map((name) => name[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase()}
+        {!embedded && (
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
+                  {patient.patientName
+                    .split(" ")
+                    .map((name) => name[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-800">
+                    {patient.patientName}
+                    <PatientStatusBadge status={patient.status} />
+                  </p>
+                  <p className="truncate text-xs text-slate-400">
+                    {patient.age} Y / {patient.gender} · UHID: {patient.uhid} ·
+                    IPD: {patient.ipdId} · Bed:{" "}
+                    {patient.wardRoomBed.split("/").pop()?.trim()}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-800">
-                  {patient.patientName}
-                  <PatientStatusBadge status={patient.status} />
-                </p>
-                <p className="truncate text-xs text-slate-400">
-                  {patient.age} Y / {patient.gender} · UHID: {patient.uhid} ·
-                  IPD: {patient.ipdId} · Bed:{" "}
-                  {patient.wardRoomBed.split("/").pop()?.trim()}
-                </p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:flex lg:items-center lg:gap-7">
+                <InfoBlock
+                  label="Ward / Room / Bed"
+                  value={patient.wardRoomBed}
+                />
+                <InfoBlock label="Department" value={patient.department} />
+                <InfoBlock
+                  label="Attending Doctor"
+                  value={patient.admittingDoctor}
+                />
+                <InfoBlock
+                  label="Admission Date"
+                  value={patient.admissionDateTime}
+                />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:flex lg:items-center lg:gap-7">
-              <InfoBlock
-                label="Ward / Room / Bed"
-                value={patient.wardRoomBed}
-              />
-              <InfoBlock label="Department" value={patient.department} />
-              <InfoBlock
-                label="Attending Doctor"
-                value={patient.admittingDoctor}
-              />
-              <InfoBlock
-                label="Admission Date"
-                value={patient.admissionDateTime}
-              />
-            </div>
-            <Button
-              variant="outline"
-              className="w-full border-slate-200 lg:w-auto"
-              onClick={() => setChangePatientOpen(true)}
-            >
-              Change Patient
-            </Button>
-          </CardContent>
-        </Card>
+              <Button
+                variant="outline"
+                className="w-full border-slate-200 lg:w-auto"
+                onClick={() => setChangePatientOpen(true)}
+              >
+                Change Patient
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
           <Card className="min-w-0 border-slate-200 shadow-sm">
@@ -259,15 +272,17 @@ export default function ProgressNotesPage() {
                 </div>
               )}
 
-              <div className="flex justify-end border-t border-slate-100 pt-5">
-                <Button
-                  onClick={handleNextMedicineOrders}
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
-                >
-                  Next: Review Medicine Orders
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
+              {!embedded && (
+                <div className="flex justify-end border-t border-slate-100 pt-5">
+                  <Button
+                    onClick={handleNextMedicineOrders}
+                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                  >
+                    Next: Review Medicine Orders
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -287,13 +302,15 @@ export default function ProgressNotesPage() {
         onClose={() => setNoteDrawerOpen(false)}
         onSave={handleSaveNote}
       />
-      <ChangePatientDialog
-        patients={WARD_ROUND_PATIENTS}
-        currentUhid={patient.uhid}
-        open={changePatientOpen}
-        onOpenChange={setChangePatientOpen}
-        onSelectPatient={handleSelectPatient}
-      />
+      {!embedded && (
+        <ChangePatientDialog
+          patients={WARD_ROUND_PATIENTS}
+          currentUhid={patient.uhid}
+          open={changePatientOpen}
+          onOpenChange={setChangePatientOpen}
+          onSelectPatient={handleSelectPatient}
+        />
+      )}
     </div>
   );
 }

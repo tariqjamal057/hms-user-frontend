@@ -1,13 +1,13 @@
 // app/(dashboard)/doctor/emergency/all-patients/page.tsx
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ShieldAlert, Siren, Stethoscope, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { EmergencyFilters } from "@/types/emergency/emergency-types";
 import type { RmoEmergencyPatient } from "@/types/emergency/rmo-emergency-types";
 import { EMERGENCY_PATIENTS, EMERGENCY_STATUS_OPTIONS, INCIDENT_TYPE_OPTIONS } from "@/lib/emergency/emergency-data";
 import { EmergencyStatusBadge } from "@/app/(dashboard)/admission/emergency/all-patients/_components/emergency-badges";
-import { RmoPatientDetailsDrawer } from "@/app/(dashboard)/rmo/emergency/all-patients/_components/rmo-patient-details-drawer";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
@@ -19,10 +19,14 @@ const initialFilters: EmergencyFilters = { search: "", status: "All", incidentTy
 const previousDay = { total: 13, critical: 2, underObservation: 4, unassigned: 3, police: 1 };
 
 export default function DoctorEmergencyAllPatientsPage() {
+  const router = useRouter();
   const [patients, setPatients] = useState<RmoEmergencyPatient[]>(EMERGENCY_PATIENTS.map((p) => ({ ...p, criticalNotifications: [] })));
   const [filters, setFilters] = useState<EmergencyFilters>(initialFilters);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [drawerPatient, setDrawerPatient] = useState<RmoEmergencyPatient | null>(null);
+
+  function openDetail(p: RmoEmergencyPatient) {
+    router.push(`/doctor/emergency/all-patients/${p.uhid}`);
+  }
 
   const filtered = useMemo(
     () =>
@@ -47,11 +51,6 @@ export default function DoctorEmergencyAllPatientsPage() {
     }),
     [patients],
   );
-
-  function updatePatient(updated: RmoEmergencyPatient) {
-    setPatients((rows) => rows.map((p) => (p.emergencyNumber === updated.emergencyNumber ? updated : p)));
-    setDrawerPatient(updated);
-  }
 
   const isActive = filters.search !== "" || filters.status !== "All" || filters.incidentType !== "All";
 
@@ -108,7 +107,7 @@ export default function DoctorEmergencyAllPatientsPage() {
         <OpsActionButton
           label="View Details"
           icon={Stethoscope}
-          onClick={() => setDrawerPatient(p)}
+          onClick={() => openDetail(p)}
         />
       ),
     },
@@ -130,7 +129,7 @@ export default function DoctorEmergencyAllPatientsPage() {
         action={{
           label: "View Details",
           icon: Stethoscope,
-          onClick: () => setDrawerPatient(p),
+          onClick: () => openDetail(p),
         }}
       />
     );
@@ -202,8 +201,6 @@ export default function DoctorEmergencyAllPatientsPage() {
             pageSize={6}
           />
         )}
-
-        <RmoPatientDetailsDrawer patient={drawerPatient} onClose={() => setDrawerPatient(null)} onUpdate={updatePatient} />
       </main>
     </div>
   );

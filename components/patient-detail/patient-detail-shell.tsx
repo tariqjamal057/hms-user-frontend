@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, ArrowLeft, ChevronDown, Search, UserRound, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import type { NurseIpdPatient } from "@/types/nurse/ipd/nurse-ipd-types";
 
 export type PatientTab = {
   value: string;
@@ -14,38 +13,79 @@ export type PatientTab = {
   content: React.ReactNode;
 };
 
-export type PatientDetailShellProps = {
-  patient: NurseIpdPatient;
-  patientList: NurseIpdPatient[];
-  patientsPath: string;
+// Normalized patient model — adapt concrete module types (OPD/IPD/Emergency/ICU)
+// into this shape before rendering.
+export type PatientDetailData = {
+  uhid: string;
+  name: string;
+  age: number;
+  gender: string;
+  bloodGroup: string;
+  allergies: string[];
+  // Optional tinted acuity pill (e.g. "Critical", "Under Observation", "Stable")
+  acuity?: string;
+  // Module-specific id (IPD ID / ICU ID / Appointment No / Emergency No)
+  moduleId: string;
   moduleIdLabel: string;
+  // Location segments joined with " / " (e.g. ["Ward A", "101", "2"] or ["Bed 3", "ICU"])
+  locationParts?: string[];
+  // Optional trailing text appended after the location
+  metaLine?: string;
+  // Fallback info grid when the page does not pass `infoFields`
+  fallbackInfoFields?: { label: string; value: string; highlight?: boolean }[];
+  // Optional contact number shown in the profile header
+  contact?: string;
+  // Optional quick vitals strip rendered below the info grid
+  quickVitals?: QuickVital[];
+};
+
+export type PatientListItem = {
+  uhid: string;
+  name: string;
+  subtitle: string;
+};
+
+export type QuickVital = {
+  label: string;
+  value: string;
+  unit?: string;
+};
+
+export type PatientDetailShellProps = {
+  patient: PatientDetailData;
+  patientList: PatientListItem[];
+  patientsPath: string;
   status?: string;
   statusOptions?: { label: string; value: string; color: string; dot: string }[];
   onStatusChange?: (status: string) => void;
   tabs: PatientTab[];
   defaultTab?: string;
+  showStatusSelector?: boolean;
   showPatientSwitcher?: boolean;
   onSwitchPatient?: (uhid: string) => void;
   infoFields?: { label: string; value: string; highlight?: boolean }[];
   onBack?: () => void;
   subtitle?: string;
+  // Extra custom buttons to render in the profile header's top-right actions row
+  headerActions?: React.ReactNode;
 };
 
 export function PatientDetailShell({
   patient,
   patientList,
   patientsPath,
-  moduleIdLabel,
   status,
   statusOptions,
   onStatusChange,
   tabs,
   defaultTab,
-  showPatientSwitcher = true,
+  showStatusSelector = false,
+  showPatientSwitcher = false,
   onSwitchPatient,
   infoFields,
   onBack,
   subtitle,
+  headerActions,
 }: PatientDetailShellProps) {
   const router = useRouter();
   const [tab, setTab] = useState(defaultTab ?? tabs[0]?.value ?? "");
@@ -55,27 +95,24 @@ export function PatientDetailShell({
   const [direction, setDirection] = useState(1);
   const prevTabRef = useRef(tab);
 
-  const fallbackInfo = useMemo(
-    (): { label: string; value: string; highlight?: boolean }[] => [
-      { label: "Department", value: patient.department },
-      { label: "Attending Doctor", value: patient.admittingDoctor },
-      { label: "Admitted On", value: patient.admissionDateTime },
-      { label: "Assigned Nurse", value: `${patient.assignedNurse} · ${patient.currentShift}` },
-    ],
-    [patient],
+  const baseInfo = infoFields ?? patient.fallbackInfoFields ?? [];
+  const shownInfo = useMemo<Array<{ label: string; value: string; highlight?: boolean }>>(
+    () => (patient.contact ? [...baseInfo, { label: "Contact", value: patient.contact }] : baseInfo),
+    [baseInfo, patient.contact],
   );
-
-  const shownInfo = infoFields ?? fallbackInfo;
   const currentStatusMeta = statusOptions?.find((s) => s.value === status);
+
+  const location = (patient.locationParts ?? []).join(" / ");
+  const subtitleLine = [location, patient.metaLine, subtitle].filter(Boolean).join(" · ");
 
   const filteredPatients = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return patientList;
     return patientList.filter(
       (p) =>
-        p.patientName.toLowerCase().includes(q) ||
+        p.name.toLowerCase().includes(q) ||
         p.uhid.toLowerCase().includes(q) ||
-        p.ipdId.toLowerCase().includes(q),
+        p.subtitle.toLowerCase().includes(q),
     );
   }, [patientList, search]);
 
@@ -106,9 +143,9 @@ export function PatientDetailShell({
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[1600px] px-3 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px]">
         {/* ── Patient Profile Header (separate card) ── */}
-        <div className="rounded-t-2xl border border-b-0 border-slate-200 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
+        <div className="rounded-t-2xl border border-b-0 border-slate-200 bg-gradient-to-br from-blue-50/80 via-white to-cyan-50/70 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
           <div className="px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-col gap-3">
               {/* Top row: back + identity + actions (actions right-aligned on desktop) */}
@@ -123,26 +160,25 @@ export function PatientDetailShell({
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-base font-bold text-white shadow-md sm:h-14 sm:w-14 sm:text-lg">
-                    {patient.patientName.charAt(0)}
+                    {patient.name.charAt(0)}
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h1 className="text-lg font-bold text-slate-800 sm:text-xl">
-                        {patient.patientName}
+                        {patient.name}
                       </h1>
                       {status && currentStatusMeta && (
                         <StatusPill label={status} color={currentStatusMeta.color} dot={currentStatusMeta.dot} />
                       )}
-                      <AcuityBadge acuity={patient.acuity} />
+                      {patient.acuity && <AcuityBadge acuity={patient.acuity} />}
                     </div>
                     <p className="mt-1 text-sm text-slate-600">
                       {patient.age} years · {patient.gender} · Blood Group{" "}
                       <span className="font-semibold">{patient.bloodGroup}</span>
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      UHID: {patient.uhid} · {moduleIdLabel}: {patient.ipdId} ·{" "}
-                      {patient.ward} / {patient.room} / {patient.bed}
-                      {subtitle ? ` · ${subtitle}` : ""}
+                      UHID: {patient.uhid} · {patient.moduleIdLabel}: {patient.moduleId}
+                      {subtitleLine ? ` · ${subtitleLine}` : ""}
                     </p>
                     {patient.allergies.length > 0 && (
                       <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
@@ -155,7 +191,8 @@ export function PatientDetailShell({
 
                 {/* Actions — top right on desktop */}
                 <div className="flex shrink-0 flex-wrap items-center gap-2 lg:items-start">
-                  {statusOptions && onStatusChange && (
+                  {headerActions}
+                  {showStatusSelector && statusOptions && onStatusChange && (
                     <StatusSelector
                       status={status}
                       statusOptions={statusOptions}
@@ -175,7 +212,7 @@ export function PatientDetailShell({
                       search={search}
                       setSearch={setSearch}
                       filteredPatients={filteredPatients}
-                      patientList={patientList}
+                      patientCount={patientList.length}
                       currentUhid={patient.uhid}
                       onSelect={handleSelectPatient}
                     />
@@ -184,24 +221,52 @@ export function PatientDetailShell({
               </div>
 
               {/* Info grid (responsive) */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-                {shownInfo.map((f, i) => (
-                  <div key={i} className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                      {f.label}
-                    </p>
-                    <p
-                      className={`mt-1 truncate text-sm ${
-                        f.highlight
-                          ? "font-bold text-blue-600"
-                          : "font-semibold text-slate-800"
-                      }`}
-                    >
-                      {f.value}
-                    </p>
+              {shownInfo.length > 0 && (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-slate-100 pt-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+                  {shownInfo.map((f, i) => (
+                    <div key={i} className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                        {f.label}
+                      </p>
+                      <p
+                        className={`mt-1 truncate text-sm ${
+                          f.highlight
+                            ? "font-bold text-blue-600"
+                            : "font-semibold text-slate-800"
+                        }`}
+                      >
+                        {f.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Quick vitals strip */}
+              {patient.quickVitals && patient.quickVitals.length > 0 && (
+                <div className="border-t border-slate-100 pt-4">
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-6">
+                    {patient.quickVitals.map((v, i) => (
+                      <div
+                        key={i}
+                        className="min-w-0 rounded-xl border border-slate-100 bg-white/70 px-2 py-3 text-center shadow-sm"
+                      >
+                        <p className="text-base font-bold text-slate-800 sm:text-lg">
+                          {v.value}
+                          {v.unit && (
+                            <span className="ml-0.5 text-xs font-medium text-slate-500">
+                              {v.unit}
+                            </span>
+                          )}
+                        </p>
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                          {v.label}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -218,8 +283,8 @@ export function PatientDetailShell({
                 <TabsTrigger
                   key={t.value}
                   value={t.value}
-                  className={`relative cursor-pointer whitespace-nowrap rounded-none! border-none bg-transparent px-5 py-4 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-blue-700 aria-selected:bg-transparent after:hidden! data-[state=active]:bg-transparent! data-[state=active]:font-semibold data-[state=active]:text-white data-[state=active]:shadow-none ${
-                    active ? "" : "hover:bg-blue-50"
+                  className={`relative cursor-pointer whitespace-nowrap rounded-none! border-none px-5 py-4 text-sm font-medium text-slate-500 transition-colors duration-200 hover:text-blue-700 aria-selected:bg-transparent after:hidden! data-[state=active]:bg-transparent! data-[state=active]:font-semibold data-[state=active]:text-white data-[state=active]:shadow-none ${
+                    active ? "" : "bg-slate-50 hover:bg-blue-50"
                   } ${idx > 0 ? "border-l border-slate-100" : ""}`}
                 >
                   {active && (
@@ -336,7 +401,7 @@ function PatientSwitcher({
   search,
   setSearch,
   filteredPatients,
-  patientList,
+  patientCount,
   currentUhid,
   onSelect,
 }: {
@@ -344,8 +409,8 @@ function PatientSwitcher({
   onToggle: () => void;
   search: string;
   setSearch: (v: string) => void;
-  filteredPatients: NurseIpdPatient[];
-  patientList: NurseIpdPatient[];
+  filteredPatients: PatientListItem[];
+  patientCount: number;
   currentUhid: string;
   onSelect: (uhid: string) => void;
 }) {
@@ -417,18 +482,16 @@ function PatientSwitcher({
                       }`}
                     >
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 text-xs font-bold text-white">
-                        {p.patientName.charAt(0)}
+                        {p.name.charAt(0)}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="truncate text-sm font-semibold text-slate-800">
-                            {p.patientName}
+                            {p.name}
                           </p>
                           {active && <Badge className="bg-blue-100 text-blue-700">Current</Badge>}
                         </div>
-                        <p className="truncate text-xs text-slate-500">
-                          {p.uhid} · {p.ward} / {p.bed}
-                        </p>
+                        <p className="truncate text-xs text-slate-500">{p.subtitle}</p>
                       </div>
                     </button>
                   );
@@ -436,7 +499,7 @@ function PatientSwitcher({
               )}
             </div>
             <div className="border-t border-slate-100 bg-slate-50 px-3 py-2 text-center text-xs font-medium text-slate-500">
-              {patientList.length} patients in list
+              {patientCount} patients in list
             </div>
           </motion.div>
         )}

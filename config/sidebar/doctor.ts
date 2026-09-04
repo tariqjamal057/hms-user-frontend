@@ -29,13 +29,6 @@ const doctorSidebar: SidebarItem[] = [
     children: [
       { label: "Patient List", href: "/doctor/ipd/patients" },
       { label: "Ward Rounds", href: "/doctor/ipd/ward-rounds" },
-      { label: "Review Vitals", href: "/doctor/ipd/review-vitals" },
-      { label: "Diagnosis Update", href: "/doctor/ipd/diagnosis-update" },
-      { label: "Progress Note", href: "/doctor/ipd/progress-note" },
-      { label: "Medicine Orders", href: "/doctor/ipd/medicine-orders" },
-      { label: "Lab Orders", href: "/doctor/ipd/investigation-orders" },
-      { label: "Treatment Plan", href: "/doctor/ipd/treatment-plan" },
-      { label: "Discharge Decision", href: "/doctor/ipd/discharge-decision" },
     ],
   },
   {

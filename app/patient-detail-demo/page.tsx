@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Stethoscope, UserRound, ShieldCheck, ClipboardList, Activity, ChefHat, BadgeCheck } from "lucide-react";
-import { PatientDetailShell, type PatientTab } from "@/components/patient-detail/patient-detail-shell";
+import { PatientDetailShell, type PatientTab, type PatientDetailData, type PatientListItem } from "@/components/patient-detail/patient-detail-shell";
 import {
   getNursePatientByUhid,
   getNursePatients,
 } from "@/lib/nurse/icu/nurse-icu-data";
 import { getNursePatientByUhid as getIpdPatient } from "@/lib/nurse/ipd/nurse-ipd-data";
 import { getNursePatients as getIpdPatients } from "@/lib/nurse/ipd/nurse-ipd-data";
+import type { NurseIpdPatient } from "@/types/nurse/ipd/nurse-ipd-types";
 
 type RoleKey = "doctor" | "nurse" | "rmo" | "nurseadmin";
 type ModuleKey = "opd" | "ipd" | "emergency" | "icu";
@@ -197,22 +198,42 @@ export default function PatientDetailDemoPage() {
   const [module, setModule] = useState<ModuleKey>("icu");
   const [uhid, setUhid] = useState("UHID12345685");
 
-  const patientList = useMemo(() => {
+  const moduleMeta = MODULE_META[module];
+
+  const rawPatientList = useMemo(() => {
     return module === "ipd" ? getIpdPatients() : getNursePatients();
   }, [module]);
 
-  const patient = useMemo(() => {
+  const rawPatient = useMemo(() => {
     if (module === "ipd") return getIpdPatient(uhid);
     return getNursePatientByUhid(uhid);
   }, [module, uhid]);
 
+  const patientList: PatientListItem[] = useMemo(
+    () =>
+      rawPatientList.map((p) => ({
+        uhid: p.uhid,
+        name: p.patientName,
+        subtitle: `${p.uhid} · ${p.ward} / ${p.bed}`,
+      })),
+    [rawPatientList],
+  );
+
+  const patient: PatientDetailData | undefined = useMemo(
+    () => (rawPatient ? toDetailData(rawPatient, moduleMeta.idLabel) : undefined),
+    [rawPatient, moduleMeta.idLabel],
+  );
+
   const [status, setStatus] = useState("Under Observation");
 
   const tabs = TAB_CONFIGS[role][module];
-  const moduleMeta = MODULE_META[module];
 
   function handleBack() {
     router.push(moduleMeta.path);
+  }
+
+  if (!patient) {
+    return <div className="p-10 text-center text-sm text-slate-400">Patient not found</div>;
   }
 
   return (
@@ -291,7 +312,6 @@ export default function PatientDetailDemoPage() {
           patient={patient}
           patientList={patientList}
           patientsPath={moduleMeta.path}
-          moduleIdLabel={moduleMeta.idLabel}
           status={status}
           statusOptions={STATUS_OPTIONS}
           onStatusChange={setStatus}
@@ -303,6 +323,27 @@ export default function PatientDetailDemoPage() {
       </div>
     </div>
   );
+}
+
+function toDetailData(p: NurseIpdPatient, moduleIdLabel: string): PatientDetailData {
+  return {
+    uhid: p.uhid,
+    name: p.patientName,
+    age: p.age,
+    gender: p.gender,
+    bloodGroup: p.bloodGroup,
+    allergies: p.allergies,
+    acuity: p.acuity,
+    moduleId: p.ipdId,
+    moduleIdLabel,
+    locationParts: [p.ward, p.room, p.bed],
+    fallbackInfoFields: [
+      { label: "Department", value: p.department },
+      { label: "Attending Doctor", value: p.admittingDoctor },
+      { label: "Admitted On", value: p.admissionDateTime },
+      { label: "Assigned Nurse", value: `${p.assignedNurse} · ${p.currentShift}` },
+    ],
+  };
 }
 
 function Placeholder({ text }: { text: string }) {

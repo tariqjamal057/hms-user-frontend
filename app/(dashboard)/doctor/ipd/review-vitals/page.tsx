@@ -53,10 +53,13 @@ import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-d
 import { VitalsFormData } from "@/types/doctor/ipd/record-vitals-types";
 import { RecordVitalsDialog } from "./_components/record-vitals-dialog";
 
-export default function ReviewVitalsPage() {
+export default function ReviewVitalsPage({
+  uhid: propUhid,
+  embedded = false,
+}: { uhid?: string; embedded?: boolean } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const uhid = searchParams.get("uhid") ?? WARD_ROUND_PATIENTS[0].uhid;
+  const uhid = propUhid ?? searchParams.get("uhid") ?? WARD_ROUND_PATIENTS[0].uhid;
 
   const [changePatientOpen, setChangePatientOpen] = useState(false);
   const [viewBy, setViewBy] = useState("chart");
@@ -127,55 +130,57 @@ export default function ReviewVitalsPage() {
     <div className="min-h-screen ">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         {/* Patient header bar */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
-                {patient.patientName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase()}
-              </span>
-              <div>
-                <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                  {patient.patientName}{" "}
-                  <PatientStatusBadge status={patient.status} />
-                </p>
-                <p className="text-xs text-slate-400">
-                  {patient.age} Y / {patient.gender} · UHID: {patient.uhid} ·
-                  IPD: {patient.ipdId} · Bed:{" "}
-                  {patient.wardRoomBed.split("/").pop()?.trim()}
-                </p>
+        {!embedded && (
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
+                  {patient.patientName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()}
+                </span>
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    {patient.patientName}{" "}
+                    <PatientStatusBadge status={patient.status} />
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {patient.age} Y / {patient.gender} · UHID: {patient.uhid} ·
+                    IPD: {patient.ipdId} · Bed:{" "}
+                    {patient.wardRoomBed.split("/").pop()?.trim()}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:flex lg:items-center lg:gap-8">
-              <InfoBlock
-                label="Ward / Room / Bed"
-                value={patient.wardRoomBed}
-              />
-              <InfoBlock label="Department" value={patient.department} />
-              <InfoBlock
-                label="Admitting Doctor"
-                value={patient.admittingDoctor}
-              />
-              <InfoBlock
-                label="Admission Date"
-                value={patient.admissionDateTime}
-              />
-            </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:flex lg:items-center lg:gap-8">
+                <InfoBlock
+                  label="Ward / Room / Bed"
+                  value={patient.wardRoomBed}
+                />
+                <InfoBlock label="Department" value={patient.department} />
+                <InfoBlock
+                  label="Admitting Doctor"
+                  value={patient.admittingDoctor}
+                />
+                <InfoBlock
+                  label="Admission Date"
+                  value={patient.admissionDateTime}
+                />
+              </div>
 
-            <Button
-              variant="outline"
-              className="w-full gap-2 lg:w-auto"
-              onClick={() => setChangePatientOpen(true)}
-            >
-              Change Patient
-            </Button>
-          </CardContent>
-        </Card>
+              <Button
+                variant="outline"
+                className="w-full gap-2 lg:w-auto"
+                onClick={() => setChangePatientOpen(true)}
+              >
+                Change Patient
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Main layout */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_300px] lg:items-start">
@@ -316,27 +321,29 @@ export default function ReviewVitalsPage() {
             </Card>
 
             {/* Footer note + navigation */}
-            <div className="flex flex-col gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="flex items-center gap-2 text-sm text-blue-700">
-                <Info className="h-4 w-4 shrink-0" /> Vitals are auto-recorded
-                from monitor and verified by nursing staff.
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleBack}
-                >
-                  <ArrowLeft className="h-4 w-4" /> Back
-                </Button>
-                <Button
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
-                  onClick={handleDiagnosisUpdate}
-                >
-                  Next: Diagnosis Update <ArrowRight className="h-4 w-4" />
-                </Button>
+            {!embedded && (
+              <div className="flex flex-col gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="flex items-center gap-2 text-sm text-blue-700">
+                  <Info className="h-4 w-4 shrink-0" /> Vitals are auto-recorded
+                  from monitor and verified by nursing staff.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={handleBack}
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Back
+                  </Button>
+                  <Button
+                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    onClick={handleDiagnosisUpdate}
+                  >
+                    Next: Diagnosis Update <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -374,13 +381,15 @@ export default function ReviewVitalsPage() {
         </div>
       </div>
 
-      <ChangePatientDialog
-        patients={WARD_ROUND_PATIENTS}
-        currentUhid={patient.uhid}
-        open={changePatientOpen}
-        onOpenChange={setChangePatientOpen}
-        onSelectPatient={handleSelectPatient}
-      />
+      {!embedded && (
+        <ChangePatientDialog
+          patients={WARD_ROUND_PATIENTS}
+          currentUhid={patient.uhid}
+          open={changePatientOpen}
+          onOpenChange={setChangePatientOpen}
+          onSelectPatient={handleSelectPatient}
+        />
+      )}
 
       <RecordVitalsDialog
         patient={patient}

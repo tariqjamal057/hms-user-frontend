@@ -3,16 +3,14 @@
 import { useState } from "react";
 import {
   Users, Clock, CheckCircle, Calendar,
-  Eye, Play, MoreVertical,
+  Eye, Play,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionMenu, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
-import { PatientDetailsDialog } from "./_components/patient-details-dialog";
 import { getAllAppointments, type PatientFullProfile } from "@/lib/doctor/opd/opd-mock-data";
+import { useRouter } from "next/navigation";
 
 type ViewMode = "list" | "grid";
 type StatusFilter = "all" | "waiting" | "checked-in" | "completed" | "scheduled";
@@ -28,14 +26,13 @@ const STATUS_BADGES: Record<string, string> = {
 const previousDay = { total: 19, waiting: 5, checkedIn: 4, completed: 8, scheduled: 3 };
 
 export default function DoctorOPDAppointmentsPage() {
+  const router = useRouter();
   const [appointments] = useState<PatientFullProfile[]>(getAllAppointments());
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [patientTypeFilter, setPatientTypeFilter] = useState<PatientTypeFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [viewingPatient, setViewingPatient] = useState<PatientFullProfile | null>(null);
 
   const filteredAppointments = appointments.filter((apt) => {
     const matchesSearch =
@@ -58,8 +55,7 @@ export default function DoctorOPDAppointmentsPage() {
   const isActive = searchQuery !== "" || statusFilter !== "all" || patientTypeFilter !== "all";
 
   function handleViewDetails(apt: PatientFullProfile) {
-    setViewingPatient(apt);
-    setIsDetailsOpen(true);
+    router.push(`/doctor/opd/appointments/${apt.uhid}`);
   }
 
   function handleStartConsultation(apt: PatientFullProfile) {
@@ -259,13 +255,6 @@ export default function DoctorOPDAppointmentsPage() {
             pageSize={6}
           />
         )}
-
-        <PatientDetailsDialog
-          open={isDetailsOpen}
-          onOpenChange={setIsDetailsOpen}
-          patient={viewingPatient}
-          onStartConsultation={() => viewingPatient && handleStartConsultation(viewingPatient)}
-        />
       </main>
     </div>
   );
