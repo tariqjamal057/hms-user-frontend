@@ -169,7 +169,7 @@ export default function DoctorEmergencyPatientDetailPage() {
         ? "Confirmed"
         : d.type === "chronic"
           ? "Confirmed"
-          : "Provisional") as "Confirmed" | "Provisional" | "Ruled Out",
+          : "Provisional") as "Confirmed" | "Provisional" | "Differential",
       notes: "",
       addedBy: "Doctor",
       addedAt: stamp,

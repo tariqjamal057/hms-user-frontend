@@ -30,7 +30,7 @@ export type DataTableProps<T> = {
   emptyText?: string;
   className?: string;
   card?: boolean;
-  title?: string;
+  title?: ReactNode;
   titleIcon?: ReactNode;
   countLabel?: string;
 };
