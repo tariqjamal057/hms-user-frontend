@@ -19,7 +19,7 @@ import type {
   PatientListItem,
 } from "@/components/patient-detail/patient-detail-shell";
 import { PatientTimelineCard } from "./_components/patient-timeline-card";
-import { VitalsSidebarCard } from "./_components/vitals-sidebar-card";
+import { CurrentVitals } from "@/components/patient-detail/current-vitals";
 import { AllergyAlertDialog } from "./_components/allergy-alert-dialog";
 import { DiagnosisDrawer, type DiagnosisDraft } from "@/components/consultation/diagnosis-drawer";
 import { MedicineDrawer, type MedicineDraft } from "@/components/consultation/medicine-drawer";
@@ -440,7 +440,7 @@ export default function DoctorConsultationPage() {
               patient={patient}
               onViewFullHistory={() => router.push(`/doctor/opd/appointments/${uhid}`)}
             />
-            <VitalsSidebarCard vitals={vitals} />
+            <CurrentVitals vitals={vitals} gridClassName="lg:grid-cols-2" />
           </div>
         </div>
 

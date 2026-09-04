@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PrescriptionTemplate } from "@/components/prescription/prescription-template";
+import { CurrentVitals } from "@/components/patient-detail/current-vitals";
 import type { PatientFullProfile } from "@/lib/doctor/opd/opd-mock-data";
 import {
-  Activity, Pill, TestTube, Calendar, AlertTriangle, FileText, TrendingUp, Printer, Download,
+  Pill, TestTube, Calendar, AlertTriangle, FileText, TrendingUp, Printer, Download,
 } from "lucide-react";
 
 // ─── Overview (owns prescription print ref) ───
@@ -46,20 +47,11 @@ export function OpdOverview({ patient }: { patient: PatientFullProfile }) {
 
       <div className="space-y-4 sm:space-y-6">
         {patient.vitals && (
-          <Card>
-            <CardContent className="p-4 sm:p-5">
-              <div className="mb-3 flex items-center gap-2 sm:mb-4">
-                <Activity className="h-4 w-4 text-blue-500 sm:h-5 sm:w-5" />
-                <h3 className="text-sm font-bold text-slate-800 sm:text-base">Current Vitals</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-                <VitalItem label="Blood Pressure" value={patient.vitals.bp} unit="mmHg" />
-                <VitalItem label="Pulse Rate" value={patient.vitals.pulse} unit="/min" />
-                <VitalItem label="Temperature" value={patient.vitals.temp} unit="F" />
-                <VitalItem label="SpO₂" value={patient.vitals.spo2} unit="%" />
-              </div>
-            </CardContent>
-          </Card>
+          <CurrentVitals
+            vitals={patient.vitals}
+            gridClassName="grid-cols-4"
+            showWeightHeight={false}
+          />
         )}
 
         {patient.allergies && patient.allergies.length > 0 ? (
@@ -361,16 +353,5 @@ export function OpdLabsTab({ patient }: { patient: PatientFullProfile }) {
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function VitalItem({ label, value, unit }: { label: string; value: string; unit: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center sm:p-4">
-      <p className="mb-2 text-[10px] text-slate-500 sm:text-xs">{label}</p>
-      <p className="text-base font-bold text-slate-800 sm:text-xl">
-        {value} <span className="text-[10px] font-normal text-slate-400 sm:text-xs">{unit}</span>
-      </p>
-    </div>
   );
 }

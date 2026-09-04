@@ -2,13 +2,14 @@
 
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CurrentVitals } from "@/components/patient-detail/current-vitals";
 import {
-  Activity, Pill, TestTube,
+  Pill, TestTube,
   Calendar, User, Stethoscope, Clock, AlertTriangle, FileText,
   TrendingUp, Printer, Download,
 } from "lucide-react";
@@ -121,20 +122,11 @@ export function PatientDetailsDialog({ open, onOpenChange, patient, onStartConsu
             {/* Overview */}
             <TabsContent value="overview" className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
               {patient.vitals && (
-                <Card>
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                      <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
-                      <h3 className="font-bold text-slate-800 text-sm sm:text-base">Current Vitals</h3>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                      <VitalItem label="Blood Pressure" value={patient.vitals.bp} unit="mmHg" />
-                      <VitalItem label="Pulse Rate" value={patient.vitals.pulse} unit="/min" />
-                      <VitalItem label="Temperature" value={patient.vitals.temp} unit="F" />
-                      <VitalItem label="SpO₂" value={patient.vitals.spo2} unit="%" />
-                    </div>
-                  </CardContent>
-                </Card>
+                <CurrentVitals
+                  vitals={patient.vitals}
+                  gridClassName="grid-cols-4"
+                  showWeightHeight={false}
+                />
               )}
 
               {patient.allergies && patient.allergies.length > 0 ? (
@@ -434,17 +426,6 @@ function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string
         <span className="text-[10px] sm:text-xs font-medium">{label}</span>
       </div>
       <p className="text-xs sm:text-sm font-semibold text-slate-800 truncate">{value}</p>
-    </div>
-  );
-}
-
-function VitalItem({ label, value, unit }: { label: string; value: string; unit: string }) {
-  return (
-    <div className="p-3 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
-      <p className="text-[10px] sm:text-xs text-slate-500 mb-2">{label}</p>
-      <p className="text-base sm:text-xl font-bold text-slate-800">
-        {value} <span className="text-[10px] sm:text-xs font-normal text-slate-400">{unit}</span>
-      </p>
     </div>
   );
 }
