@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, ArrowLeft, ChevronDown, Search, UserRound, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { QuickVitalsStrip } from "./quick-vitals-strip";
 
 export type PatientTab = {
   value: string;
@@ -49,6 +50,8 @@ export type QuickVital = {
   label: string;
   value: string;
   unit?: string;
+  /** Tailwind bg/border/text classes override for this card, e.g. "bg-blue-50 border-blue-200 text-blue-700" */
+  color?: string;
 };
 
 export type PatientDetailShellProps = {
@@ -255,28 +258,10 @@ export function PatientDetailShell({
 
               {/* Quick vitals strip */}
               {patient.quickVitals && patient.quickVitals.length > 0 && (
-                <div className="border-t border-slate-100 pt-4">
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-6">
-                    {patient.quickVitals.map((v, i) => (
-                      <div
-                        key={i}
-                        className="min-w-0 rounded-xl border border-slate-100 bg-white/70 px-2 py-3 text-center shadow-sm"
-                      >
-                        <p className="text-base font-bold text-slate-800 sm:text-lg">
-                          {v.value}
-                          {v.unit && (
-                            <span className="ml-0.5 text-xs font-medium text-slate-500">
-                              {v.unit}
-                            </span>
-                          )}
-                        </p>
-                        <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                          {v.label}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <QuickVitalsStrip
+                  vitals={patient.quickVitals}
+                  className="border-t border-slate-100 pt-4"
+                />
               )}
             </div>
           </div>

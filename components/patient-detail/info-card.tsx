@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +12,21 @@ export type InfoCardItem = {
   key: string;
   title: string;
   subtitle?: string;
+  /** Optional leading icon rendered in the row header when provided. */
+  icon?: ReactNode;
   badges?: { label: string; tone?: InfoCardTone }[];
+  /** Optional multi-row detail lines rendered one-per-row instead of a single `subtitle`. */
+  rows?: {
+    label?: string;
+    value: string;
+    tone?: InfoCardTone;
+    /** Own line with larger emphasized font (e.g. lab Result). */
+    emphasize?: boolean;
+    /** Own line at normal size (e.g. lab Category). */
+    block?: boolean;
+    /** Own line, full-width normal text (e.g. log description). */
+    full?: boolean;
+  }[];
 };
 
 const TONE_STYLES: Record<
@@ -130,7 +144,14 @@ export function InfoCard({
                   <span className={cn("w-1 shrink-0 rounded-full", style.accent)} aria-hidden="true" />
                   <div className="min-w-0 flex-1 p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="min-w-0 flex-1 text-sm font-semibold text-slate-800">{item.title}</p>
+                      <p className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-slate-800">
+                        {item.icon && (
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                            {item.icon}
+                          </span>
+                        )}
+                        <span className="min-w-0 truncate">{item.title}</span>
+                      </p>
                       {item.badges && item.badges.length > 0 && (
                         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                           {item.badges.map((badge, i) => (
@@ -147,8 +168,63 @@ export function InfoCard({
                         </div>
                       )}
                     </div>
-                    {item.subtitle && (
-                      <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{item.subtitle}</p>
+                    {item.rows ? (
+                      <div className="mt-1.5 space-y-1">
+                        {item.rows
+                          .filter((r) => r.emphasize || r.block || r.full)
+                          .map((row, ei) => (
+                            <p
+                              key={ei}
+                              className={
+                                row.emphasize
+                                  ? "text-sm font-bold text-slate-800 sm:text-base"
+                                  : row.block
+                                    ? "text-[11px] font-bold uppercase tracking-wider text-slate-500"
+                                    : "text-sm leading-relaxed text-slate-600"
+                              }
+                            >
+                              {row.label && (
+                                <span className="mr-1 font-semibold text-slate-400">{row.label}: </span>
+                              )}
+                              <span className={row.tone === "red" ? "font-bold text-red-600" : row.emphasize ? "text-slate-800" : ""}>
+                                {row.value}
+                              </span>
+                            </p>
+                          ))}
+                        {item.rows.some((r) => !r.emphasize && !r.block && !r.full) && (
+                          <div className="flex flex-col gap-1 pt-0.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
+                            {item.rows
+                              .filter((r) => !r.emphasize && !r.block && !r.full)
+                              .map((row, ri) => (
+                                <Fragment key={ri}>
+                                  {ri > 0 && (
+                                    <span className="hidden leading-none text-slate-300 sm:inline">•</span>
+                                  )}
+                                  <p className="text-xs leading-relaxed text-slate-500">
+                                    {row.label && (
+                                      <span className="font-semibold text-slate-600">{row.label}: </span>
+                                    )}
+                                    <span
+                                      className={
+                                        row.tone === "red"
+                                          ? "font-semibold text-red-600"
+                                          : row.tone === "emerald"
+                                            ? "font-semibold text-emerald-600"
+                                            : "text-slate-500"
+                                      }
+                                    >
+                                      {row.value}
+                                    </span>
+                                  </p>
+                                </Fragment>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      item.subtitle && (
+                        <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{item.subtitle}</p>
+                      )
                     )}
                   </div>
                 </div>
