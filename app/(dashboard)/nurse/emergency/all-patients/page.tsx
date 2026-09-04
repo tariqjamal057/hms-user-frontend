@@ -1,13 +1,13 @@
 // app/(dashboard)/nurse/emergency/all-patients/page.tsx
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, ShieldAlert, Siren, Syringe, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { RmoEmergencyPatient } from "@/types/emergency/rmo-emergency-types";
 import { EMERGENCY_PATIENTS, EMERGENCY_STATUS_OPTIONS, INCIDENT_TYPE_OPTIONS } from "@/lib/emergency/emergency-data";
 import { EmergencyStatusBadge } from "@/app/(dashboard)/admission/emergency/all-patients/_components/emergency-badges";
-import { NursePatientDetailsDrawer } from "./_components/nurse-patient-details-drawer";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
@@ -25,10 +25,10 @@ interface NurseEmergencyFilters {
 const initialFilters: NurseEmergencyFilters = { search: "", status: "All", incidentType: "All" };
 
 export default function NurseEmergencyAllPatientsPage() {
-  const [patients, setPatients] = useState<RmoEmergencyPatient[]>(EMERGENCY_PATIENTS.map((p) => ({ ...p, criticalNotifications: [] })));
+  const router = useRouter();
+  const [patients] = useState<RmoEmergencyPatient[]>(EMERGENCY_PATIENTS.map((p) => ({ ...p, criticalNotifications: [] })));
   const [filters, setFilters] = useState<NurseEmergencyFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [drawerPatient, setDrawerPatient] = useState<RmoEmergencyPatient | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -54,12 +54,7 @@ export default function NurseEmergencyAllPatientsPage() {
     [patients],
   );
 
-  function updatePatient(updated: RmoEmergencyPatient) {
-    setPatients((rows) => rows.map((p) => (p.emergencyNumber === updated.emergencyNumber ? updated : p)));
-    setDrawerPatient(updated);
-  }
-
-  const infoCards: KpiCardProps[] = [
+const infoCards: KpiCardProps[] = [
     { label: "Total Patients", value: String(stats.total), icon: Users, accent: "blue", footer: "Emergency census", trend: buildTrend(stats.total, previousDay.total) },
     { label: "Critical", value: String(stats.critical), icon: Siren, accent: "rose", footer: "Immediate attention", trend: buildTrend(stats.critical, previousDay.critical) },
     { label: "Pending Medicines", value: String(stats.pendingMeds), icon: Syringe, accent: "amber", footer: "To be administered", trend: buildTrend(stats.pendingMeds, previousDay.pendingMeds) },
@@ -114,7 +109,7 @@ export default function NurseEmergencyAllPatientsPage() {
         <OpsActionButton
           label="View Details"
           icon={Eye}
-          onClick={() => setDrawerPatient(p)}
+          onClick={() => router.push(`/nurse/emergency/all-patients/${p.emergencyNumber}`)}
         />
       ),
     },
@@ -133,7 +128,7 @@ export default function NurseEmergencyAllPatientsPage() {
           </div>
           <p className="mt-3 text-sm text-slate-600">Nurse: {p.assignedNurse}</p>
           <p className="text-sm text-slate-600">Pending meds: {p.doses.filter((d) => d.status === "Pending").length}</p>
-          <Button variant="outline" className="mt-4 w-full gap-2" onClick={() => setDrawerPatient(p)}>
+<Button variant="outline" className="mt-4 w-full gap-2" onClick={() => router.push(`/nurse/emergency/all-patients/${p.emergencyNumber}`)}>
             <Syringe className="h-4 w-4" />View Details
           </Button>
         </CardContent>
@@ -189,19 +184,17 @@ export default function NurseEmergencyAllPatientsPage() {
 
         {view === "list" ? (
           <div className="min-w-0 w-full">
-            <OpsTable
+<OpsTable
               data={filtered}
               rowKey={(p) => p.emergencyNumber}
               columns={columns}
               showColumnToggle
-              onRowClick={(p) => setDrawerPatient(p)}
+              onRowClick={(p) => router.push(`/nurse/emergency/all-patients/${p.emergencyNumber}`)}
             />
           </div>
         ) : (
           <OpsGrid data={filtered} rowKey={(p) => p.emergencyNumber} renderCard={renderCard} pageSize={6} />
         )}
-
-        <NursePatientDetailsDrawer patient={drawerPatient} onClose={() => setDrawerPatient(null)} onUpdate={updatePatient} />
       </main>
     </div>
   );

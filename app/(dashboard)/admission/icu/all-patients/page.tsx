@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { IcuPatient, IcuFilters } from "@/types/admission-desk/icu/icu-types";
 import { ICU_PATIENTS } from "@/lib/admission-desk/icu/icu-data";
 import {
@@ -19,7 +19,6 @@ import {
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
 import { IcuStatusBadge, AdmissionTypeBadge } from "./_components/icu-badges";
-import { IcuPatientDrawer } from "./_components/icu-patient-drawer";
 import { ICU_STATUS_OPTIONS, ADMISSION_TYPE_OPTIONS, ICU_FLOORS } from "@/lib/admission-desk/icu/icu-data";
 
 type ViewMode = "list" | "grid";
@@ -41,10 +40,10 @@ const initialFilters: IcuFilters = {
 };
 
 export default function IcuAllPatientsPage() {
+  const router = useRouter();
   const [patients] = useState<IcuPatient[]>(ICU_PATIENTS);
   const [filters, setFilters] = useState<IcuFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [selectedPatient, setSelectedPatient] = useState<IcuPatient | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -186,7 +185,7 @@ export default function IcuAllPatientsPage() {
       enableHiding: false,
       cell: (p) => (
         <div className="text-right">
-          <OpsActionButton label="View Details" icon={Eye} onClick={() => setSelectedPatient(p)} />
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => router.push(`/admission/icu/all-patients/${p.uhid}`)} />
         </div>
       ),
     },
@@ -211,10 +210,10 @@ export default function IcuAllPatientsPage() {
             <Badge variant="outline" className="border-slate-200 text-slate-600">Dr. {patient.assignedDoctor}</Badge>
           </>
         }
-        action={{
+action={{
           label: "View Details",
           icon: Eye,
-          onClick: () => setSelectedPatient(patient),
+          onClick: () => router.push(`/admission/icu/all-patients/${patient.uhid}`),
         }}
       />
     );
@@ -320,7 +319,7 @@ export default function IcuAllPatientsPage() {
             showColumnToggle
           />
         ) : (
-          <OpsGrid
+<OpsGrid
             data={filtered}
             rowKey={(p) => p.icuId}
             renderCard={renderCard}
@@ -328,11 +327,6 @@ export default function IcuAllPatientsPage() {
           />
         )}
       </main>
-
-      <IcuPatientDrawer
-        patient={selectedPatient}
-        onClose={() => setSelectedPatient(null)}
-      />
     </div>
   );
 }

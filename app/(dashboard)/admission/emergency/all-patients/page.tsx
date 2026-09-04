@@ -31,7 +31,6 @@ import {
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
 import { EmergencyStatusBadge } from "./_components/emergency-badges";
-import { EmergencyDetailDrawer } from "./_components/drawer/emergency-detail-drawer";
 import { EMERGENCY_STATUS_OPTIONS, INCIDENT_TYPE_OPTIONS } from "@/lib/emergency/emergency-data";
 
 type ViewMode = "list" | "grid";
@@ -52,13 +51,11 @@ const initialFilters: EmergencyFiltersState = {
 
 export default function EmergencyAllPatientsPage() {
   const router = useRouter();
-  const [patients, setPatients] = useState<EmergencyPatient[]>(
+  const [patients] = useState<EmergencyPatient[]>(
     EMERGENCY_PATIENTS,
   );
   const [filters, setFilters] = useState<EmergencyFiltersState>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [viewingPatient, setViewingPatient] =
-    useState<EmergencyPatient | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -98,15 +95,6 @@ export default function EmergencyAllPatientsPage() {
     value: EmergencyFiltersState[K],
   ) {
     setFilters((previous) => ({ ...previous, [key]: value }));
-  }
-
-  function handlePatientUpdate(updated: EmergencyPatient) {
-    setPatients((previous) =>
-      previous.map((p) =>
-        p.emergencyNumber === updated.emergencyNumber ? updated : p,
-      ),
-    );
-    setViewingPatient(updated);
   }
 
   const hasActiveFilters =
@@ -249,7 +237,7 @@ export default function EmergencyAllPatientsPage() {
       enableHiding: false,
       cell: (p) => (
         <div className="text-right">
-          <OpsActionButton label="View Details" icon={Eye} onClick={() => setViewingPatient(p)} className="border-red-200 text-red-700" />
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => router.push(`/admission/emergency/all-patients/${p.emergencyNumber}`)} className="border-red-200 text-red-700" />
         </div>
       ),
     },
@@ -284,7 +272,7 @@ export default function EmergencyAllPatientsPage() {
         action={{
           label: "View Details",
           icon: Eye,
-          onClick: () => setViewingPatient(patient),
+          onClick: () => router.push(`/admission/emergency/all-patients/${patient.emergencyNumber}`),
           variant: "outline",
         }}
       />
@@ -387,12 +375,6 @@ export default function EmergencyAllPatientsPage() {
           />
         )}
       </main>
-
-      <EmergencyDetailDrawer
-        patient={viewingPatient}
-        onClose={() => setViewingPatient(null)}
-        onPatientUpdate={handlePatientUpdate}
-      />
     </div>
   );
 }

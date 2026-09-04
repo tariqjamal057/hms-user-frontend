@@ -1,18 +1,17 @@
 // app/(dashboard)/nurse/icu/patients/[uhid]/page.tsx
 "use client";
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { PatientDetailShell, type PatientDetailData, type PatientListItem, type PatientTab } from "@/components/patient-detail/patient-detail-shell";
 import type {
   DischargeSummaryForm, EmarDose, FluidBalanceEntry, ProgressNote, ShiftHandoverEntry, TreatmentPlanItem, VitalRecord,
 } from "@/types/nurse/ipd/nurse-ipd-types";
-import type { VentilationRecord } from "@/types/nurse/icu/nurse-icu-types";
-import type { OxygenAdministration, OxygenObservation, OxygenOrder } from "@/types/nurse/icu/oxygen-therapy-types";
+import type { OxygenAdministration, OxygenObservation } from "@/types/nurse/icu/oxygen-therapy-types";
 import {
-  getEmarForPatient, getFluidBalanceForPatient, getNursePatientByUhid, getProgressNotesForPatient,
-  getShiftHandoversForPatient, getTreatmentPlanForPatient, getVitalsForPatient,
-  getVentilationForPatient,
+  getEmarForPatient, getFluidBalanceForPatient, getNursePatientByUhid, getNursePatients,
+  getProgressNotesForPatient, getShiftHandoversForPatient, getTreatmentPlanForPatient, getVitalsForPatient,
 } from "@/lib/nurse/icu/nurse-icu-data";
 import { getActiveOxygenOrder, getOxygenOrderHistory, getActiveAdministration, getOxygenObservations } from "@/lib/nurse/icu/oxygen-therapy-data";
 
@@ -24,7 +23,6 @@ import { TabFluidBalance } from "../../../ipd/patients/[uhid]/_components/tab-fl
 import { TabTreatmentPlan } from "../../../ipd/patients/[uhid]/_components/tab-treatment-plan";
 import { TabShiftHandover } from "../../../ipd/patients/[uhid]/_components/tab-shift-handover";
 
-import { PatientHeader } from "../../../ipd/patients/[uhid]/_components/patient-header";
 import { TabVentilation } from "./_components/tab-ventilation";
 import { TabOxygenTherapy } from "./_components/tab-oxygen-therapy";
 import { CURRENT_NURSE } from "@/lib/nurse/icu/nurse-icu-data";
@@ -33,28 +31,23 @@ import { VentilatorAdministration, VentilatorObservation } from "@/types/nurse/i
 import { TabDischarge } from "../../../ipd/patients/[uhid]/_components/tab-discharge";
 
 export default function NurseIcuPatientDetailPage() {
-    const router = useRouter();
   const params = useParams();
   const uhid = params.uhid as string;
   const patient = getNursePatientByUhid(uhid);
 
-  const [tab, setTab] = useState("overview");
+  const [, setTab] = useState("overview");
   const [vitals, setVitals] = useState<VitalRecord[]>(() => getVitalsForPatient(patient.uhid));
   const [doses, setDoses] = useState<EmarDose[]>(() => getEmarForPatient(patient.uhid));
   const [notes, setNotes] = useState<ProgressNote[]>(() => getProgressNotesForPatient(patient.uhid));
   const [fluidEntries, setFluidEntries] = useState<FluidBalanceEntry[]>(() => getFluidBalanceForPatient(patient.uhid));
   const [plans, setPlans] = useState<TreatmentPlanItem[]>(() => getTreatmentPlanForPatient(patient.uhid));
   const [handovers, setHandovers] = useState<ShiftHandoverEntry[]>(() => getShiftHandoversForPatient(patient.uhid));
-  const [ventilationRecords, setVentilationRecords] = useState<VentilationRecord[]>(() => getVentilationForPatient(patient.uhid));
 
-  // Oxygen Therapy state
   const activeOrder = getActiveOxygenOrder(patient.uhid);
   const orderHistory = getOxygenOrderHistory(patient.uhid);
   const [administration, setAdministration] = useState<OxygenAdministration | undefined>(() => getActiveAdministration(patient.uhid));
   const [observations, setObservations] = useState<OxygenObservation[]>(() => getOxygenObservations(patient.uhid));
 
-
-   // Ventilation state
   const activeVentOrder = getActiveVentilatorOrder(patient.uhid);
   const ventOrderHistory = getVentilatorOrderHistory(patient.uhid);
   const [ventAdministration, setVentAdministration] = useState<VentilatorAdministration | undefined>(() => getActiveVentilatorAdministration(patient.uhid));
@@ -97,7 +90,6 @@ export default function NurseIcuPatientDetailPage() {
     toast.success(`${patient.patientName} discharged successfully.`);
   }
 
-  // Oxygen handlers
   function handleStartOxygen(admin: OxygenAdministration) {
     setAdministration(admin);
     toast.success("Oxygen therapy started.");
@@ -106,61 +98,77 @@ export default function NurseIcuPatientDetailPage() {
     setObservations((prev) => [obs, ...prev]);
   }
 
+  const patientList: PatientListItem[] = useMemo(
+    () =>
+      getNursePatients().map((p) => ({
+        uhid: p.uhid,
+        name: p.patientName,
+        subtitle: `${p.ipdId} · ${p.ward} / ${p.bed}`,
+      })),
+    [],
+  );
+
+  const patientData: PatientDetailData = {
+    uhid: patient.uhid,
+    name: patient.patientName,
+    age: patient.age,
+    gender: patient.gender,
+    bloodGroup: patient.bloodGroup,
+    allergies: patient.allergies,
+    acuity: patient.acuity,
+    moduleId: patient.ipdId,
+    moduleIdLabel: "ICU ID",
+    locationParts: [patient.ward, patient.room, patient.bed],
+    fallbackInfoFields: [
+      { label: "Department", value: patient.department },
+      { label: "Attending Doctor", value: patient.admittingDoctor },
+      { label: "Admitted On", value: patient.admissionDateTime },
+      { label: "Assigned Nurse", value: `${patient.assignedNurse} · ${patient.currentShift}` },
+    ],
+  };
+
+  const tabs: PatientTab[] = [
+    { value: "overview", label: "Overview", content: <TabOverview patient={patient} onNext={() => setTab("vitals")} /> },
+    { value: "vitals", label: "Vitals Monitoring", content: <TabVitals vitals={vitals} onAddVital={addVital} /> },
+    { value: "ventilation", label: "Ventilation", content: (
+      <TabVentilation
+        patientName={patient.patientName}
+        nurseName={CURRENT_NURSE.name}
+        activeOrder={activeVentOrder}
+        orderHistory={ventOrderHistory}
+        administration={ventAdministration}
+        observations={ventObservations}
+        onConfirmSetup={handleConfirmVentSetup}
+        onSaveObservation={handleSaveVentObservation}
+      />
+    ) },
+    { value: "oxygen", label: "Oxygen Therapy", content: (
+      <TabOxygenTherapy
+        patientName={patient.patientName}
+        nurseName={CURRENT_NURSE.name}
+        activeOrder={activeOrder}
+        orderHistory={orderHistory}
+        administration={administration}
+        observations={observations}
+        onStartOxygen={handleStartOxygen}
+        onSaveObservation={handleSaveObservation}
+      />
+    ) },
+    { value: "emar", label: "Orders & eMAR", content: <TabEmar doses={doses} onUpdateDose={updateDose} /> },
+    { value: "notes", label: "Progress Notes", content: <TabProgressNotes notes={notes} onAddNote={addNote} /> },
+    { value: "fluid", label: "Fluid Balance", content: <TabFluidBalance entries={fluidEntries} onAddEntry={addFluidEntry} /> },
+    { value: "treatment", label: "Treatment Plan", content: <TabTreatmentPlan plans={plans} onToggleFollow={toggleFollow} /> },
+    { value: "handover", label: "Shift Handover", content: <TabShiftHandover handovers={handovers} onHandover={handleHandover} /> },
+    { value: "discharge", label: "Discharge", content: <TabDischarge patientName={patient.patientName} onDischarge={handleDischarge} /> },
+  ];
+
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto max-w-[1400px] space-y-5">
-        <PatientHeader patient={patient} name={"ICU ID"} handleClick={() => router.push("/nurse/icu/patients")} />
-
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full justify-start overflow-x-auto rounded-none border-b border-slate-200 bg-transparent p-0">
-            <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Overview</TabsTrigger>
-            <TabsTrigger value="vitals" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Vitals Monitoring</TabsTrigger>
-            <TabsTrigger value="ventilation" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Ventilation</TabsTrigger>
-            <TabsTrigger value="oxygen" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Oxygen Therapy</TabsTrigger>
-            <TabsTrigger value="emar" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Orders & eMAR</TabsTrigger>
-            <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Progress Notes</TabsTrigger>
-            <TabsTrigger value="fluid" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Fluid Balance</TabsTrigger>
-            <TabsTrigger value="treatment" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Treatment Plan</TabsTrigger>
-            <TabsTrigger value="handover" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Shift Handover</TabsTrigger>
-            <TabsTrigger value="discharge" className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600">Discharge</TabsTrigger>
-          </TabsList>
-
-          <div className="mt-5">
-            <TabsContent value="overview" className="mt-0"><TabOverview patient={patient} onNext={() => setTab("vitals")} /></TabsContent>
-            <TabsContent value="vitals" className="mt-0"><TabVitals vitals={vitals} onAddVital={addVital} /></TabsContent>
-            <TabsContent value="ventilation" className="mt-0">
-              <TabVentilation
-                patientName={patient.patientName}
-                nurseName={CURRENT_NURSE.name}
-                activeOrder={activeVentOrder}
-                orderHistory={ventOrderHistory}
-                administration={ventAdministration}
-                observations={ventObservations}
-                onConfirmSetup={handleConfirmVentSetup}
-                onSaveObservation={handleSaveVentObservation}
-              />
-            </TabsContent>
-            <TabsContent value="oxygen" className="mt-0">
-              <TabOxygenTherapy
-                patientName={patient.patientName}
-                nurseName={CURRENT_NURSE.name}
-                activeOrder={activeOrder}
-                orderHistory={orderHistory}
-                administration={administration}
-                observations={observations}
-                onStartOxygen={handleStartOxygen}
-                onSaveObservation={handleSaveObservation}
-              />
-            </TabsContent>
-            <TabsContent value="emar" className="mt-0"><TabEmar doses={doses} onUpdateDose={updateDose} /></TabsContent>
-            <TabsContent value="notes" className="mt-0"><TabProgressNotes notes={notes} onAddNote={addNote} /></TabsContent>
-            <TabsContent value="fluid" className="mt-0"><TabFluidBalance entries={fluidEntries} onAddEntry={addFluidEntry} /></TabsContent>
-            <TabsContent value="treatment" className="mt-0"><TabTreatmentPlan plans={plans} onToggleFollow={toggleFollow} /></TabsContent>
-            <TabsContent value="handover" className="mt-0"><TabShiftHandover handovers={handovers} onHandover={handleHandover} /></TabsContent>
-            <TabsContent value="discharge" className="mt-0"><TabDischarge patientName={patient.patientName} onDischarge={handleDischarge} /></TabsContent>
-          </div>
-        </Tabs>
-      </div>
-    </div>
+    <PatientDetailShell
+      patient={patientData}
+      patientList={patientList}
+      patientsPath="/nurse/icu/patients"
+      tabs={tabs}
+      defaultTab="overview"
+    />
   );
 }
