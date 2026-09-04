@@ -3,22 +3,30 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft, CheckCircle, Signature, Trash2, Plus,
+  History, Plus, ShieldAlert, Signature, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ConsultationHeader } from "./_components/consultation-header";
+import { ConsultationShell } from "@/components/consultation/consultation-shell";
+import { ConsultationProgressBar } from "@/components/consultation/consultation-stepper";
+import {
+  DateField,
+  FormButton,
+  FormTextarea,
+  SuffixedInput,
+} from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import type {
+  PatientDetailData,
+  PatientListItem,
+} from "@/components/patient-detail/patient-detail-shell";
 import { PatientTimelineCard } from "./_components/patient-timeline-card";
 import { VitalsSidebarCard } from "./_components/vitals-sidebar-card";
-import { MedicineSelectorDialog } from "./_components/medicine-selector-dialog";
-import { LabOrderSelectorDialog } from "./_components/lab-order-selector-dialog";
-import { DiagnosisSelectorDialog } from "./_components/diagnosis-selector-dialog";
 import { AllergyAlertDialog } from "./_components/allergy-alert-dialog";
-import { PatientDetailsDialog } from "../../appointments/_components/patient-details-dialog";
+import { DiagnosisDrawer, type DiagnosisDraft } from "@/components/consultation/diagnosis-drawer";
+import { MedicineDrawer, type MedicineDraft } from "@/components/consultation/medicine-drawer";
+import { LabDrawer, type LabDraft } from "@/components/consultation/lab-drawer";
 import { getPatientByUhid } from "@/lib/doctor/opd/opd-mock-data";
 
 type Step = 1 | 2 | 3 | 4;
@@ -42,6 +50,7 @@ interface Medicine {
 interface LabOrder {
   id: string;
   test: string;
+  department: "pathology" | "radiology";
   priority: "routine" | "priority";
 }
 
@@ -53,7 +62,6 @@ export default function DoctorConsultationPage() {
   const patient = getPatientByUhid(uhid);
 
   const [currentStep, setCurrentStep] = useState<Step>(1);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAllergyOpen, setIsAllergyOpen] = useState(false);
   const [isMedicineDialogOpen, setIsMedicineDialogOpen] = useState(false);
   const [isLabDialogOpen, setIsLabDialogOpen] = useState(false);
@@ -101,6 +109,63 @@ export default function DoctorConsultationPage() {
     { num: 4, label: "Orders & Close", desc: "Labs & follow-up" },
   ];
 
+  const allergies = patient.allergies ?? [];
+  const hasAllergies = allergies.length > 0;
+
+  const detail: PatientDetailData = {
+    uhid: patient.uhid,
+    name: patient.patientName,
+    age: patient.age,
+    gender: patient.gender,
+    bloodGroup: patient.bloodGroup,
+    allergies,
+    moduleId: patient.appointmentNo,
+    moduleIdLabel: "Appointment No",
+    fallbackInfoFields: [
+      { label: "Chief Complaint", value: patient.reason, highlight: true },
+      { label: "Patient Type", value: patient.patientType },
+      { label: "Visit Type", value: patient.visitType },
+      { label: "Doctor", value: patient.doctor },
+    ],
+    quickVitals: [
+      { label: "BP", value: patient.vitals?.bp || "—", unit: "mmHg" },
+      { label: "SpO₂", value: patient.vitals?.spo2 || "—", unit: "%" },
+      { label: "Temp", value: patient.vitals?.temp || "—", unit: "°F" },
+      { label: "Pulse", value: patient.vitals?.pulse || "—", unit: "/min" },
+    ],
+  };
+
+  const patientList: PatientListItem[] = [];
+
+  const headerActions = (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => router.push(`/doctor/opd/appointments/${uhid}`)}
+        className="border-slate-200"
+      >
+        <History className="h-4 w-4 mr-2" />
+        Patient History
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsAllergyOpen(true)}
+        className={
+          hasAllergies
+            ? "border-red-200 text-red-700 hover:bg-red-50"
+            : "border-slate-200"
+        }
+      >
+        <ShieldAlert className="h-4 w-4 mr-2" />
+        {hasAllergies
+          ? `${allergies.length} Allergy Alert${allergies.length > 1 ? "s" : ""}`
+          : "No Allergies"}
+      </Button>
+    </div>
+  );
+
   function handleAddMedicine(med: Medicine) {
     setMedicines((prev) => [...prev, med]);
   }
@@ -135,66 +200,15 @@ export default function DoctorConsultationPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Top Navigation */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-20">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={() => router.back()} className="border-slate-200">
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              <div>
-                <h1 className="text-lg font-bold text-slate-800">OPD Consultation</h1>
-                <p className="text-xs text-slate-500">UHID: {uhid}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-[1600px] py-6">
-        {/* Patient Banner */}
-        <ConsultationHeader
-          patient={patient}
-          onOpenHistory={() => setIsHistoryOpen(true)}
-          onOpenAllergyAlert={() => setIsAllergyOpen(true)}
-        />
-
-        {/* Workflow Stepper */}
-        <Card className="mt-6">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between overflow-x-auto">
-              {steps.map((step, idx) => (
-                <div key={step.num} className="flex items-center min-w-[145px]">
-                  <button
-                    onClick={() => setCurrentStep(step.num as Step)}
-                    className={`flex flex-col items-start transition-colors ${
-                      currentStep >= step.num ? "text-blue-600" : "text-slate-400"
-                    }`}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-colors ${
-                        currentStep > step.num
-                          ? "bg-green-500 border-green-500 text-white"
-                          : currentStep === step.num
-                          ? "border-blue-600 text-blue-600 bg-white"
-                          : "border-slate-300 text-slate-400 bg-white"
-                      }`}
-                    >
-                      {currentStep > step.num ? <CheckCircle className="w-5 h-5" /> : step.num}
-                    </div>
-                    <span className="mt-2 text-xs font-semibold">{step.label}</span>
-                    <span className="text-[10px] text-slate-400">{step.desc}</span>
-                  </button>
-                  {idx < steps.length - 1 && <div className="h-px flex-1 bg-slate-200 mx-2" />}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Main Content Area */}
+    <ConsultationShell
+      patient={detail}
+      patientList={patientList}
+      patientsPath="/doctor/opd/appointments"
+      steps={steps}
+      currentStep={currentStep}
+      onStepClick={(s) => setCurrentStep(s as Step)}
+      headerActions={headerActions}
+    >
         <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left: Workflow Panels */}
           <div className="xl:col-span-2 space-y-6">
@@ -207,29 +221,28 @@ export default function DoctorConsultationPage() {
                     <p className="text-sm text-slate-500 mt-1">Verify nursing observations before beginning the consultation.</p>
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                    <VitalField label="Blood Pressure" value={vitals.bp} onChange={(v) => setVitals({ ...vitals, bp: v })} unit="mmHg" />
-                    <VitalField label="Pulse Rate" value={vitals.pulse} onChange={(v) => setVitals({ ...vitals, pulse: v })} unit="/min" />
-                    <VitalField label="Temperature" value={vitals.temp} onChange={(v) => setVitals({ ...vitals, temp: v })} unit="F" />
-                    <VitalField label="SpO₂" value={vitals.spo2} onChange={(v) => setVitals({ ...vitals, spo2: v })} unit="%" />
-                    <VitalField label="Weight" value={vitals.weight} onChange={(v) => setVitals({ ...vitals, weight: v })} unit="kg" />
-                    <VitalField label="Height" value={vitals.height} onChange={(v) => setVitals({ ...vitals, height: v })} unit="cm" />
+                    <SuffixedInput label="Blood Pressure" value={vitals.bp} onChange={(v) => setVitals({ ...vitals, bp: v })} suffix="mmHg" />
+                    <SuffixedInput label="Pulse Rate" value={vitals.pulse} onChange={(v) => setVitals({ ...vitals, pulse: v })} suffix="/min" />
+                    <SuffixedInput label="Temperature" value={vitals.temp} onChange={(v) => setVitals({ ...vitals, temp: v })} suffix="F" />
+                    <SuffixedInput label="SpO₂" value={vitals.spo2} onChange={(v) => setVitals({ ...vitals, spo2: v })} suffix="%" />
+                    <SuffixedInput label="Weight" value={vitals.weight} onChange={(v) => setVitals({ ...vitals, weight: v })} suffix="kg" placeholder="e.g. 72" />
+                    <SuffixedInput label="Height" value={vitals.height} onChange={(v) => setVitals({ ...vitals, height: v })} suffix="cm" />
                   </div>
-                  <div className="mt-4">
-                    <label className="text-sm font-semibold text-slate-700">Nurse/Doctor Notes</label>
-                    <Textarea
-                      value={vitals.notes}
-                      onChange={(e) => setVitals({ ...vitals, notes: e.target.value })}
-                      className="mt-2 border-slate-200"
-                      rows={3}
-                      placeholder="Any pain score, concern, abnormal reading or observation..."
-                    />
-                  </div>
+                  <FormTextarea
+                    label="Nurse/Doctor Notes"
+                    value={vitals.notes}
+                    onChange={(v) => setVitals({ ...vitals, notes: v })}
+                    rows={3}
+                    className="mt-6 space-y-2"
+                    placeholder="Any pain score, concern, abnormal reading or observation..."
+                  />
                   <div className="mt-6 flex justify-end">
-                    <Button onClick={() => setCurrentStep(2)} className="bg-gradient-to-r from-blue-600 to-cyan-600">
+                    <FormButton onClick={() => setCurrentStep(2)}>
                       Continue to Consultation
-                    </Button>
+                    </FormButton>
                   </div>
                 </CardContent>
+                <ConsultationProgressBar currentStep={currentStep} totalSteps={steps.length} className="rounded-none" />
               </Card>
             )}
 
@@ -241,23 +254,21 @@ export default function DoctorConsultationPage() {
                     <h2 className="text-lg font-bold text-slate-800">Consultation Notes & Diagnosis</h2>
                     <p className="text-sm text-slate-500 mt-1">Document structured clinical reasoning.</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">Chief Complaint & History</label>
-                    <Textarea
-                      value={complaint}
-                      onChange={(e) => setComplaint(e.target.value)}
-                      className="mt-2 border-slate-200"
-                      rows={5}
-                      placeholder="Symptoms, duration, and relevant history..."
-                    />
-                  </div>
-                  <div className="mt-5">
+                  <FormTextarea
+                    label="Chief Complaint & History"
+                    value={complaint}
+                    onChange={setComplaint}
+                    rows={5}
+                    placeholder="Symptoms, duration, and relevant history..."
+                    className="space-y-2"
+                  />
+                  <div className="mt-6">
                     <div className="flex items-center justify-between mb-3">
                       <label className="text-sm font-semibold text-slate-700">Diagnosis</label>
-                      <Button variant="outline" size="sm" onClick={() => setIsDiagnosisDialogOpen(true)} className="border-slate-200">
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add Diagnosis
-                      </Button>
+                        <FormButton variant="outline" size="sm" onClick={() => setIsDiagnosisDialogOpen(true)}>
+                          <Plus className="w-4 h-4 mr-1" />
+                          Add Diagnosis
+                        </FormButton>
                     </div>
                     {diagnoses.length > 0 ? (
                       <div className="space-y-2">
@@ -280,29 +291,28 @@ export default function DoctorConsultationPage() {
                       </div>
                     ) : (
                       <div className="p-6 text-center border border-slate-200 rounded-xl bg-slate-50">
-                        <p className="text-sm text-slate-400">No diagnosis added yet. Click "Add Diagnosis" to begin.</p>
+                        <p className="text-sm text-slate-400">No diagnosis added yet. Click &quot;Add Diagnosis&quot; to begin.</p>
                       </div>
                     )}
                   </div>
-                  <div className="mt-5">
-                    <label className="text-sm font-semibold text-slate-700">Doctor Notes & Care Advice</label>
-                    <Textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="mt-2 border-slate-200"
-                      rows={4}
-                      placeholder="Assessment, advice, warning signs, and lifestyle instructions..."
-                    />
-                  </div>
+                  <FormTextarea
+                    label="Doctor Notes & Care Advice"
+                    value={notes}
+                    onChange={setNotes}
+                    rows={4}
+                    placeholder="Assessment, advice, warning signs, and lifestyle instructions..."
+                    className="mt-6 space-y-2"
+                  />
                   <div className="mt-6 flex justify-between">
-                    <Button variant="outline" onClick={() => setCurrentStep(1)} className="border-slate-200">
+                    <FormButton variant="outline" onClick={() => setCurrentStep(1)}>
                       Back to Vitals
-                    </Button>
-                    <Button onClick={() => setCurrentStep(3)} className="bg-gradient-to-r from-blue-600 to-cyan-600">
+                    </FormButton>
+                    <FormButton onClick={() => setCurrentStep(3)}>
                       Continue to Prescription
-                    </Button>
+                    </FormButton>
                   </div>
                 </CardContent>
+                <ConsultationProgressBar currentStep={currentStep} totalSteps={steps.length} className="rounded-none" />
               </Card>
             )}
 
@@ -315,10 +325,10 @@ export default function DoctorConsultationPage() {
                       <h2 className="text-lg font-bold text-slate-800">E-Prescription</h2>
                       <p className="text-sm text-slate-500 mt-1">Medication safety checks against allergies and interactions.</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setIsMedicineDialogOpen(true)} className="border-slate-200">
+                    <FormButton variant="outline" size="sm" onClick={() => setIsMedicineDialogOpen(true)}>
                       <Plus className="w-4 h-4 mr-1" />
                       Add Medicine
-                    </Button>
+                    </FormButton>
                   </div>
 
                   {medicines.length > 0 ? (
@@ -357,30 +367,28 @@ export default function DoctorConsultationPage() {
                     </div>
                   ) : (
                     <div className="p-8 text-center border border-slate-200 rounded-xl bg-slate-50">
-                      <p className="text-slate-500">No medicines added yet. Click "Add Medicine" to begin.</p>
+                      <p className="text-slate-500">No medicines added yet. Click &quot;Add Medicine&quot; to begin.</p>
                     </div>
                   )}
 
-                  <div className="mt-5">
-                    <label className="text-sm font-semibold text-slate-700">Non-Pharmacological Advice</label>
-                    <Textarea
-                      value={advice}
-                      onChange={(e) => setAdvice(e.target.value)}
-                      className="mt-2 border-slate-200"
-                      rows={3}
-                      placeholder="Hydration, rest, diet, lifestyle advice..."
-                    />
-                  </div>
-
+                  <FormTextarea
+                    label="Non-Pharmacological Advice"
+                    value={advice}
+                    onChange={setAdvice}
+                    rows={3}
+                    placeholder="Hydration, rest, diet, lifestyle advice..."
+                    className="mt-6 space-y-2"
+                  />
                   <div className="mt-6 flex justify-between">
-                    <Button variant="outline" onClick={() => setCurrentStep(2)} className="border-slate-200">
+                    <FormButton variant="outline" onClick={() => setCurrentStep(2)}>
                       Back to Consultation
-                    </Button>
-                    <Button onClick={() => setCurrentStep(4)} className="bg-gradient-to-r from-blue-600 to-cyan-600">
+                    </FormButton>
+                    <FormButton onClick={() => setCurrentStep(4)}>
                       Continue to Orders
-                    </Button>
+                    </FormButton>
                   </div>
                 </CardContent>
+                <ConsultationProgressBar currentStep={currentStep} totalSteps={steps.length} className="rounded-none" />
               </Card>
             )}
 
@@ -393,10 +401,10 @@ export default function DoctorConsultationPage() {
                       <h2 className="text-lg font-bold text-slate-800">Investigations & Clinical Plan</h2>
                       <p className="text-sm text-slate-500 mt-1">Place orders, define follow-up, and finalize.</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setIsLabDialogOpen(true)} className="border-slate-200">
+                    <FormButton variant="outline" size="sm" onClick={() => setIsLabDialogOpen(true)}>
                       <Plus className="w-4 h-4 mr-1" />
                       Add Lab Order
-                    </Button>
+                    </FormButton>
                   </div>
 
                   {labOrders.length > 0 ? (
@@ -405,7 +413,13 @@ export default function DoctorConsultationPage() {
                         <div key={order.id} className="p-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
                           <div>
                             <p className="text-sm font-semibold text-slate-800">{order.test}</p>
-                            <p className="text-xs text-slate-500 capitalize">{order.priority}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className={`capitalize text-[11px] font-semibold ${order.department === "pathology" ? "text-blue-600" : "text-violet-600"}`}>
+                                {order.department === "pathology" ? "🧪" : "📷"} {order.department}
+                              </span>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-[11px] text-slate-500 capitalize">{order.priority}</span>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="secondary" className="bg-blue-100 text-blue-700">Ordered</Badge>
@@ -425,87 +439,77 @@ export default function DoctorConsultationPage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4 mb-5">
-                    <div>
-                      <label className="text-sm font-semibold text-slate-700">Follow-up Date</label>
-                      <Input
-                        type="date"
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="relative min-w-0">
+                      <DateField
+                        label="Follow-up Date"
                         value={followUpDate}
-                        onChange={(e) => setFollowUpDate(e.target.value)}
-                        className="mt-2 border-slate-200"
+                        onChange={setFollowUpDate}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-semibold text-slate-700">Disposition</label>
-                      <Select value={disposition} onValueChange={setDisposition}>
-                        <SelectTrigger className="mt-2 border-slate-200">
-                          <SelectValue placeholder="Select disposition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="review-opd">Review in OPD</SelectItem>
-                          <SelectItem value="admit">Admit to Ward</SelectItem>
-                          <SelectItem value="emergency">Refer to Emergency</SelectItem>
-                          <SelectItem value="tele">Tele Follow-up</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SingleSelect
+                        label="Disposition"
+                        value={disposition}
+                        onChange={setDisposition}
+                        placeholder="Select disposition"
+                        options={[
+                          { value: "review-opd", label: "Review in OPD" },
+                          { value: "admit", label: "Admit to Ward" },
+                          { value: "emergency", label: "Refer to Emergency" },
+                          { value: "tele", label: "Tele Follow-up" },
+                        ]}
+                      />
                     </div>
                   </div>
 
                   <div className="mt-6 flex justify-between">
-                    <Button variant="outline" onClick={() => setCurrentStep(3)} className="border-slate-200">
+                    <FormButton variant="outline" onClick={() => setCurrentStep(3)}>
                       Back to Prescription
-                    </Button>
-                    <Button onClick={handleCompleteConsultation} className="bg-gradient-to-r from-blue-600 to-cyan-600">
+                    </FormButton>
+                    <FormButton onClick={handleCompleteConsultation}>
                       <Signature className="w-4 h-4 mr-2" />
                       Sign & Complete
-                    </Button>
+                    </FormButton>
                   </div>
                 </CardContent>
+                <ConsultationProgressBar currentStep={currentStep} totalSteps={steps.length} className="rounded-none" />
               </Card>
             )}
           </div>
 
           {/* Right: Sidebar - Timeline + Vitals */}
           <div className="space-y-6">
-            <PatientTimelineCard patient={patient} onViewFullHistory={() => setIsHistoryOpen(true)} />
+            <PatientTimelineCard
+              patient={patient}
+              onViewFullHistory={() => router.push(`/doctor/opd/appointments/${uhid}`)}
+            />
             <VitalsSidebarCard vitals={vitals} />
           </div>
         </div>
-      </main>
 
-      {/* Dialogs */}
-      <MedicineSelectorDialog open={isMedicineDialogOpen} onOpenChange={setIsMedicineDialogOpen} onAdd={handleAddMedicine} />
-      <LabOrderSelectorDialog open={isLabDialogOpen} onOpenChange={setIsLabDialogOpen} onAdd={handleAddLabOrder} />
-      <DiagnosisSelectorDialog open={isDiagnosisDialogOpen} onOpenChange={setIsDiagnosisDialogOpen} onAdd={handleAddDiagnosis} />
+      {/* Side drawers */}
+      <MedicineDrawer
+        open={isMedicineDialogOpen}
+        onOpenChange={setIsMedicineDialogOpen}
+        onSubmit={(items: MedicineDraft[]) => items.forEach(handleAddMedicine)}
+      />
+      <LabDrawer
+        open={isLabDialogOpen}
+        onOpenChange={setIsLabDialogOpen}
+        onSubmit={(items: LabDraft[]) => items.forEach(handleAddLabOrder)}
+      />
+      <DiagnosisDrawer
+        open={isDiagnosisDialogOpen}
+        onOpenChange={setIsDiagnosisDialogOpen}
+        onSubmit={(items: DiagnosisDraft[]) => items.forEach(handleAddDiagnosis)}
+      />
       <AllergyAlertDialog
         open={isAllergyOpen}
         onOpenChange={setIsAllergyOpen}
         allergies={patient.allergies || []}
         patientName={patient.patientName}
       />
-      <PatientDetailsDialog
-        open={isHistoryOpen}
-        onOpenChange={setIsHistoryOpen}
-        patient={patient}
-        onStartConsultation={() => setIsHistoryOpen(false)}
-      />
-    </div>
-  );
-}
-
-function VitalField({ label, value, onChange, unit }: { label: string; value: string; onChange: (v: string) => void; unit: string }) {
-  return (
-    <div>
-      <label className="text-sm font-semibold text-slate-700">{label}</label>
-      <div className="mt-1 flex items-center border border-slate-200 rounded-lg overflow-hidden">
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="border-0 focus-visible:ring-0"
-          placeholder={`e.g. ${label === "Blood Pressure" ? "120/80" : "72"}`}
-        />
-        <span className="px-3 text-xs text-slate-500 border-l border-slate-200 bg-slate-50">{unit}</span>
-      </div>
-    </div>
+    </ConsultationShell>
   );
 }

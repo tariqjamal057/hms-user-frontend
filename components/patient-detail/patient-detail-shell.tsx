@@ -70,6 +70,10 @@ export type PatientDetailShellProps = {
   subtitle?: string;
   // Extra custom buttons to render in the profile header's top-right actions row
   headerActions?: React.ReactNode;
+  // Override the outer page container class (defaults to "min-h-screen").
+  // Use e.g. "min-h-0" when rendering only the header (no tabs) so the wrapper
+  // does not stretch to a full viewport and leave empty space below the card.
+  containerClassName?: string;
 };
 
 export function PatientDetailShell({
@@ -89,8 +93,10 @@ export function PatientDetailShell({
   onBack,
   subtitle,
   headerActions,
+  containerClassName,
 }: PatientDetailShellProps) {
   const router = useRouter();
+  const wrapped = containerClassName ?? "min-h-screen";
   const [tab, setTab] = useState(defaultTab ?? tabs[0]?.value ?? "");
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -145,7 +151,7 @@ export function PatientDetailShell({
   }
 
   return (
-    <div className="min-h-screen">
+    <div className={wrapped}>
       <div className="mx-auto max-w-[1600px]">
         {/* ── Patient Profile Header (separate card) ── */}
         <div className="rounded-t-2xl border border-b-0 border-slate-200 bg-gradient-to-br from-blue-50/80 via-white to-cyan-50/70 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
