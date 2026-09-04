@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { History, Plus, ShieldAlert, Signature } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConsultationShell } from "@/components/consultation/consultation-shell";
 import { SelectedItemsList } from "@/components/consultation/selected-items-list";
+import { PillButton } from "@/components/forms/pill-button";
 import {
   DateField,
   FormButton,
@@ -106,9 +106,9 @@ export default function DoctorConsultationPage() {
           <CardContent className="p-8 text-center">
             <p className="text-lg font-semibold text-slate-700">Patient Not Found</p>
             <p className="text-sm text-slate-500 mt-2">No patient record found for UHID: {uhid}</p>
-            <Button onClick={() => router.push("/doctor/opd/appointments")} className="mt-4 bg-gradient-to-r from-blue-600 to-cyan-600">
+            <PillButton onClick={() => router.push("/doctor/opd/appointments")} className="mt-4">
               Back to Appointments
-            </Button>
+            </PillButton>
           </CardContent>
         </Card>
       </div>
@@ -152,30 +152,24 @@ export default function DoctorConsultationPage() {
 
   const headerActions = (
     <div className="flex flex-wrap gap-2">
-      <Button
+      <PillButton
         variant="outline"
         size="sm"
+        icon={History}
         onClick={() => router.push(`/doctor/opd/appointments/${uhid}`)}
-        className="border-slate-200"
       >
-        <History className="h-4 w-4 mr-2" />
         Patient History
-      </Button>
-      <Button
-        variant="outline"
+      </PillButton>
+      <PillButton
+        variant={hasAllergies ? "danger" : "outline"}
         size="sm"
+        icon={ShieldAlert}
         onClick={() => setIsAllergyOpen(true)}
-        className={
-          hasAllergies
-            ? "border-red-200 text-red-700 hover:bg-red-50"
-            : "border-slate-200"
-        }
       >
-        <ShieldAlert className="h-4 w-4 mr-2" />
         {hasAllergies
           ? `${allergies.length} Allergy Alert${allergies.length > 1 ? "s" : ""}`
           : "No Allergies"}
-      </Button>
+      </PillButton>
     </div>
   );
 

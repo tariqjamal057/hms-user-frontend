@@ -1,10 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BookMarked, Check, Plus, Stethoscope, Trash2 } from "lucide-react";
-import { ConsultationDrawer, DrawerSection } from "@/components/consultation/drawer";
+import { BookMarked, Check, Stethoscope } from "lucide-react";
+import { ConsultationDrawer } from "@/components/consultation/drawer";
+import { SelectedItemCard } from "@/components/consultation/selected-item-card";
 import { FormButton } from "@/components/forms/form-controls";
 import { SearchSelect, type SearchSelectOption } from "@/components/forms/search-select";
+import { RadioGroup } from "@/components/forms/radio-group";
+import { cn } from "@/lib/utils";
 
 export type DiagnosisDraft = {
   id: string;
@@ -30,35 +33,30 @@ export const DIAGNOSIS_CATALOGUE = [
   { name: "Urinary tract infection, unspecified", icd10: "N39.0" },
 ];
 
-const TYPE_OPTIONS: { value: DiagnosisDraft["type"]; label: string }[] = [
-  { value: "provisional", label: "Provisional" },
-  { value: "active", label: "Active" },
-  { value: "chronic", label: "Chronic" },
-];
-
 const TYPE_BADGE: Record<DiagnosisDraft["type"], string> = {
   provisional: "bg-amber-50 text-amber-700 border-amber-200",
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
   chronic: "bg-red-50 text-red-700 border-red-200",
 };
 
-// Unified "Add Diagnosis" flow: search the ICD-10 catalogue, stack multiple
-// picks into a pending basket, and submit them all at once to close the drawer.
+const TYPE_OPTIONS: { value: DiagnosisDraft["type"]; label: string }[] = [
+  { value: "provisional", label: "Provisional" },
+  { value: "active", label: "Active" },
+  { value: "chronic", label: "Chronic" },
+];
+
+// Unified "Add Diagnosis" flow: search the ICD-10 catalogue — each selection
+// auto-adds a new diagnosis card. Refine/remove cards with delete icon, then
+// submit all at once to close the drawer.
 export function DiagnosisDrawer({ open, onOpenChange, onSubmit }: DiagnosisDrawerProps) {
   const idRef = useRef(0);
   const [query, setQuery] = useState("");
-  const [customName, setCustomName] = useState("");
-  const [icd10, setIcd10] = useState("");
-  const [type, setType] = useState<DiagnosisDraft["type"]>("provisional");
-  const [pending, setPending] = useState<DiagnosisDraft[]>([]);
+  const [items, setItems] = useState<DiagnosisDraft[]>([]);
 
   function handleOpenChange(next: boolean) {
     if (next && !open) {
       setQuery("");
-      setCustomName("");
-      setIcd10("");
-      setType("provisional");
-      setPending([]);
+      setItems([]);
       idRef.current = 0;
     }
     onOpenChange(next);
@@ -69,28 +67,28 @@ export function DiagnosisDrawer({ open, onOpenChange, onSubmit }: DiagnosisDrawe
   );
 
   function pickCatalogue(opt: SearchSelectOption) {
-    setCustomName(opt.label);
-    setIcd10(opt.sublabel ?? "");
-    setType("provisional");
+    setItems((prev) => [
+      ...prev,
+      {
+        id: `diag-${++idRef.current}`,
+        name: opt.label,
+        icd10: opt.sublabel ?? "",
+        type: "provisional",
+      },
+    ]);
     setQuery("");
   }
 
-  function addCurrent() {
-    if (!customName.trim()) return;
-    const draft: DiagnosisDraft = {
-      id: `diag-${++idRef.current}`,
-      name: customName.trim(),
-      icd10: icd10.trim() || "TBD",
-      type,
-    };
-    setPending((prev) => [...prev, draft]);
-    setCustomName("");
-    setIcd10("");
-    setType("provisional");
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  function updateType(id: string, type: DiagnosisDraft["type"]) {
+    setItems((prev) => prev.map((d) => (d.id === id ? { ...d, type } : d)));
   }
 
   function submit() {
-    onSubmit(pending);
+    onSubmit(items);
     onOpenChange(false);
   }
 
@@ -100,15 +98,15 @@ export function DiagnosisDrawer({ open, onOpenChange, onSubmit }: DiagnosisDrawe
       onOpenChange={handleOpenChange}
       icon={<Stethoscope className="h-5 w-5" />}
       title="Add Diagnosis"
-      description="Search the ICD-10 catalogue and add one or more diagnoses."
+      description="Search the ICD-10 catalogue — selecting a result adds it instantly."
       footer={
         <div className="flex items-center gap-3">
           <FormButton variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Cancel
           </FormButton>
-          <FormButton className="flex-1" onClick={submit} disabled={pending.length === 0}>
+          <FormButton className="flex-1" onClick={submit} disabled={items.length === 0}>
             <Check className="mr-1 h-4 w-4" />
-            Done{pending.length > 0 ? ` (${pending.length})` : ""}
+            Done{items.length > 0 ? ` (${items.length})` : ""}
           </FormButton>
         </div>
       }
@@ -122,92 +120,53 @@ export function DiagnosisDrawer({ open, onOpenChange, onSubmit }: DiagnosisDrawe
         query={query}
         onQueryChange={setQuery}
         placeholder="Search ICD-10 catalogue…"
-        selectedValue={customName}
         noResultsText="No diagnosis found in the catalogue."
       />
 
-      {/* Selected diagnosis details */}
-      <DrawerSection
-        title="Diagnosis details"
-        caption="Refine the selected diagnosis before adding."
-        icon={<Stethoscope className="h-4 w-4" />}
-        className="mt-4"
-      >
-        <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
-          <Stethoscope className="h-5 w-5 shrink-0 text-blue-500" />
-          <div className="min-w-0 flex-1">
-            <label className="block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Diagnosis</label>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="truncate text-sm font-semibold text-slate-800">
-                {customName || <span className="font-normal text-slate-400">Select from catalogue…</span>}
-              </span>
-              <span className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-bold ${icd10 ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-slate-100 text-slate-400"}`}>
-                {icd10 || "ICD-10"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Diagnosis type</label>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {TYPE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setType(opt.value)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                  type === opt.value
-                    ? "border-blue-500 bg-blue-600 text-white shadow-sm"
-                    : "border-slate-200 bg-white text-slate-600 ring-1 ring-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-            <FormButton
-              size="sm"
-              onClick={addCurrent}
-              disabled={!customName.trim()}
-              className="ml-auto"
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              Add
-            </FormButton>
-          </div>
-        </div>
-      </DrawerSection>
-
-      {/* Pending basket */}
-      {pending.length > 0 && (
-        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-            <BookMarked className="h-3.5 w-3.5" />
-            Added
-            <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">
-              {pending.length}
-            </span>
-          </p>
-          <div className="mt-2.5 space-y-2">
-            {pending.map((d) => (
-              <div key={d.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-800">{d.name}</p>
-                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${TYPE_BADGE[d.type]}`}>
-                    {d.icd10} · {d.type}
+      {/* Auto-added diagnosis cards with editable type + delete icon */}
+      {items.length > 0 ? (
+        <div className="mt-4 space-y-2.5">
+          {items.map((item) => (
+            <SelectedItemCard
+              key={item.id}
+              id={item.id}
+              title={item.name}
+              onRemove={removeItem}
+              badges={[
+                {
+                  label: item.icd10,
+                  className: "border-blue-200 bg-blue-50 text-blue-700",
+                },
+                {
+                  label: item.type,
+                  className: cn(
+                    "capitalize",
+                    TYPE_BADGE[item.type],
+                  ),
+                },
+              ]}
+              footer={
+                <>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    Diagnosis type
                   </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPending((prev) => prev.filter((x) => x.id !== d.id))}
-                  className="p-1.5 rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                  aria-label={`Remove ${d.name}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
+                  <RadioGroup
+                    name={`diagnosis-type-${item.id}`}
+                    options={TYPE_OPTIONS}
+                    value={item.type}
+                    onChange={(t) => updateType(item.id, t)}
+                  />
+                </>
+              }
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+          <BookMarked className="mx-auto h-5 w-5 text-slate-300" />
+          <p className="mt-1.5 text-sm text-slate-400">
+            Search above and select a diagnosis to add it.
+          </p>
         </div>
       )}
     </ConsultationDrawer>

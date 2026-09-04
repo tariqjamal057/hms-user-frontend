@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check, Info, Pill, Plus, Trash2 } from "lucide-react";
+import { Check, Pill } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { ConsultationDrawer, DrawerSection } from "@/components/consultation/drawer";
+import { ConsultationDrawer } from "@/components/consultation/drawer";
+import { SelectedItemCard } from "@/components/consultation/selected-item-card";
 import { FormButton } from "@/components/forms/form-controls";
 import { SingleSelect } from "@/components/forms/select";
 import { SearchSelect, type SearchSelectOption } from "@/components/forms/search-select";
@@ -40,29 +41,20 @@ const FREQ_OPTIONS = [
 ];
 
 const INPUT_CLS =
-  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm shadow-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs shadow-sm transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
-// Unified "Add Medicine" flow: interactive catalogue search, auto-filled dosing
-// fields, and a multi-add pending basket submitted in one go.
+// Unified "Add Medicine" flow: search the formulary — each selection auto-adds a
+// new medicine card. Fine-tune dosing inline on each card, then submit all at
+// once to close the drawer.
 export function MedicineDrawer({ open, onOpenChange, onSubmit }: MedicineDrawerProps) {
   const idRef = useRef(0);
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dosage, setDosage] = useState("");
-  const [frequency, setFrequency] = useState("");
-  const [duration, setDuration] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [pending, setPending] = useState<MedicineDraft[]>([]);
+  const [items, setItems] = useState<MedicineDraft[]>([]);
 
   function handleOpenChange(next: boolean) {
     if (next && !open) {
       setQuery("");
-      setSelectedId(null);
-      setDosage("");
-      setFrequency("");
-      setDuration("");
-      setInstructions("");
-      setPending([]);
+      setItems([]);
       idRef.current = 0;
     }
     onOpenChange(next);
@@ -72,34 +64,33 @@ export function MedicineDrawer({ open, onOpenChange, onSubmit }: MedicineDrawerP
     (m) => ({ value: m.id, label: m.name, sublabel: m.category }),
   );
 
-  function select(id: string) {
-    const med = MEDICINE_CATALOGUE.find((m) => m.id === id);
+  function pickCatalogue(opt: SearchSelectOption) {
+    const med = MEDICINE_CATALOGUE.find((m) => m.id === opt.value);
     if (!med) return;
-    setSelectedId(id);
-    setDosage(med.defaultDose);
-    setFrequency(med.defaultFreq);
-    setDuration(med.defaultDuration);
-    setInstructions(med.defaultInstructions);
+    setItems((prev) => [
+      ...prev,
+      {
+        id: `med-${++idRef.current}`,
+        name: med.name,
+        dosage: med.defaultDose,
+        frequency: med.defaultFreq,
+        duration: med.defaultDuration,
+        instructions: med.defaultInstructions,
+      },
+    ]);
     setQuery("");
   }
 
-  function addCurrent() {
-    const med = MEDICINE_CATALOGUE.find((m) => m.id === selectedId);
-    if (!selectedId || !dosage || !frequency) return;
+  function updateField(id: string, field: keyof MedicineDraft, value: string) {
+    setItems((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: value } : m)));
+  }
 
-    const draft: MedicineDraft = {
-      id: `med-${++idRef.current}`,
-      name: med?.name || selectedId,
-      dosage,
-      frequency,
-      duration,
-      instructions,
-    };
-    setPending((prev) => [...prev, draft]);
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((m) => m.id !== id));
   }
 
   function submit() {
-    onSubmit(pending);
+    onSubmit(items);
     onOpenChange(false);
   }
 
@@ -109,15 +100,15 @@ export function MedicineDrawer({ open, onOpenChange, onSubmit }: MedicineDrawerP
       onOpenChange={handleOpenChange}
       icon={<Pill className="h-5 w-5" />}
       title="Add Medicine"
-      description="Pick from the formulary and fine-tune dosing before adding."
+      description="Search the formulary — selecting a medicine adds it instantly."
       footer={
         <div className="flex items-center gap-3">
           <FormButton variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Cancel
           </FormButton>
-          <FormButton className="flex-1" onClick={submit} disabled={pending.length === 0}>
+          <FormButton className="flex-1" onClick={submit} disabled={items.length === 0}>
             <Check className="mr-1 h-4 w-4" />
-            Done{pending.length > 0 ? ` (${pending.length})` : ""}
+            Done{items.length > 0 ? ` (${items.length})` : ""}
           </FormButton>
         </div>
       }
@@ -127,108 +118,74 @@ export function MedicineDrawer({ open, onOpenChange, onSubmit }: MedicineDrawerP
         options={catalogueOptions.filter((o) =>
           `${o.label} ${o.sublabel}`.toLowerCase().includes(query.toLowerCase()),
         )}
-        onSelect={(opt) => select(opt.value)}
+        onSelect={pickCatalogue}
         query={query}
         onQueryChange={setQuery}
         placeholder="Search medicine catalogue…"
-        selectedValue={selectedId ?? undefined}
         noResultsText="No medicine found in the formulation."
       />
 
-      {/* Prescription details */}
-      {selectedId && (
-        <DrawerSection
-          title="Prescription details"
-          caption="Adjust dosing and route for the selected medicine."
-          icon={<Pill className="h-4 w-4" />}
-          className="mt-4"
-        >
-          <div className="flex items-center gap-2.5 rounded-lg border border-blue-200 bg-blue-50 p-3">
-            <Info className="h-4 w-4 shrink-0 text-blue-600" />
-            <p className="text-xs leading-5 text-blue-700">
-              <strong>Default:</strong> {dosage} · {frequency} · {duration} · {instructions}
-            </p>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Dosage &amp; Route</label>
-            <Input
-              value={dosage}
-              onChange={(e) => setDosage(e.target.value)}
-              placeholder="e.g. 500 mg PO"
-              className={`mt-1 ${INPUT_CLS}`}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Frequency</label>
-              <SingleSelect
-                value={frequency}
-                onChange={setFrequency}
-                placeholder="Select"
-                options={FREQ_OPTIONS}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Duration</label>
-              <Input
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                placeholder="e.g. 5 days"
-                className={`mt-1 ${INPUT_CLS}`}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Instructions</label>
-            <Input
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="e.g. After food"
-              className={`mt-1 ${INPUT_CLS}`}
-            />
-          </div>
-
-          <FormButton size="sm" className="w-full" onClick={addCurrent}>
-            <Plus className="mr-1 h-4 w-4" />
-            Add to Prescription
-          </FormButton>
-        </DrawerSection>
-      )}
-
-      {/* Pending basket */}
-      {pending.length > 0 && (
-        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-            <Pill className="h-3.5 w-3.5" />
-            Added
-            <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">
-              {pending.length}
-            </span>
-          </p>
-          <div className="mt-2.5 space-y-2">
-            {pending.map((m) => (
-              <div key={m.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-800">{m.name}</p>
-                  <p className="truncate text-[11px] text-slate-500">
-                    {m.dosage} · {m.frequency} · {m.duration}
-                  </p>
+      {/* Auto-added medicine cards with editable prescription */}
+      {items.length > 0 ? (
+        <div className="mt-4 space-y-2.5">
+          {items.map((med) => (
+            <SelectedItemCard
+              key={med.id}
+              id={med.id}
+              title={med.name}
+              onRemove={removeItem}
+              accentColor="border-emerald-500"
+              footer={
+                <div className="w-full space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Dosage &amp; Route</label>
+                      <Input
+                        value={med.dosage}
+                        onChange={(e) => updateField(med.id, "dosage", e.target.value)}
+                        className={`mt-0.5 ${INPUT_CLS}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Frequency</label>
+                      <div className="mt-0.5">
+                        <SingleSelect
+                          value={med.frequency}
+                          onChange={(v) => updateField(med.id, "frequency", v)}
+                          placeholder="Select"
+                          options={FREQ_OPTIONS}
+                          className="[&>button]:h-9 [&>button]:text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Duration</label>
+                      <Input
+                        value={med.duration}
+                        onChange={(e) => updateField(med.id, "duration", e.target.value)}
+                        className={`mt-0.5 ${INPUT_CLS}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Instructions</label>
+                      <Input
+                        value={med.instructions}
+                        onChange={(e) => updateField(med.id, "instructions", e.target.value)}
+                        className={`mt-0.5 ${INPUT_CLS}`}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPending((prev) => prev.filter((x) => x.id !== m.id))}
-                  className="p-1.5 rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                  aria-label={`Remove ${m.name}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
+              }
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+          <Pill className="mx-auto h-5 w-5 text-slate-300" />
+          <p className="mt-1.5 text-sm text-slate-400">
+            Search above and select a medicine to add it.
+          </p>
         </div>
       )}
     </ConsultationDrawer>

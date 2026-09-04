@@ -308,15 +308,16 @@ export function FormButton({
   className,
 }: FormButtonProps) {
   return (
-    <Button
+<Button
       onClick={onClick}
       size={size}
       variant="ghost"
       disabled={disabled}
       className={cn(
+        "transition-all duration-200 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 hover:scale-105",
         variant === "gradient"
-          ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white  hover:text-slate-50 shadow-sm hover:from-blue-700 hover:to-cyan-600"
-          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800",
+          ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:text-white shadow-sm transition-all duration-200 hover:shadow-md hover:shadow-blue-500/30 hover:from-blue-700 hover:to-cyan-600 active:scale-[0.98]"
+          : "border-slate-200 bg-white text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 hover:shadow-sm active:translate-y-0",
         className,
       )}
     >

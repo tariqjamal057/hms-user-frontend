@@ -1,16 +1,18 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check, FlaskConical, Plus, ScanLine, TestTube, Trash2 } from "lucide-react";
-import { ConsultationDrawer, DrawerSection } from "@/components/consultation/drawer";
+import { Check, FlaskConical, ScanLine, TestTube } from "lucide-react";
+import { ConsultationDrawer } from "@/components/consultation/drawer";
+import { SelectedItemCard } from "@/components/consultation/selected-item-card";
 import { FormButton } from "@/components/forms/form-controls";
-import { SingleSelect } from "@/components/forms/select";
 import { SearchSelect, type SearchSelectOption } from "@/components/forms/search-select";
+import { RadioGroup } from "@/components/forms/radio-group";
 import { cn } from "@/lib/utils";
 
 export type LabDraft = {
   id: string;
   test: string;
+  category?: string;
   department: "pathology" | "radiology";
   priority: "routine" | "priority";
 };
@@ -39,66 +41,81 @@ const RADIOLOGY_TESTS = [
   { name: "MRI Lumbar Spine", category: "MRI", sample: "Not Applicable", report: "24 Hours" },
 ];
 
+const PRIORITY_BADGE: Record<"routine" | "priority", string> = {
+  routine: "border-slate-200 bg-slate-100 text-slate-600",
+  priority: "border-orange-200 bg-orange-50 text-orange-700",
+};
+
 type Department = "pathology" | "radiology";
 
-// Unified "Add Lab Order" flow with a Pathology / Radiology department toggle —
-// only the tests for the selected department are shown.
+const DEPT_ACCENT: Record<Department, string> = {
+  pathology: "border-blue-500 from-blue-50/60",
+  radiology: "border-violet-500 from-violet-50/60",
+};
+
+// Unified "Add Lab Order" flow with a Pathology / Radiology department toggle.
+// Selecting a test auto-adds an order card; fine-tune priority per card, then
+// submit all at once to close the drawer.
 export function LabDrawer({ open, onOpenChange, onSubmit }: LabDrawerProps) {
   const idRef = useRef(0);
   const [department, setDepartment] = useState<Department>("pathology");
   const [query, setQuery] = useState("");
-  const [selectedName, setSelectedName] = useState("");
-  const [priority, setPriority] = useState<"routine" | "priority">("routine");
-  const [pending, setPending] = useState<LabDraft[]>([]);
+  const [items, setItems] = useState<LabDraft[]>([]);
 
   function handleOpenChange(next: boolean) {
     if (next && !open) {
       setDepartment("pathology");
       setQuery("");
-      setSelectedName("");
-      setPriority("routine");
-      setPending([]);
+      setItems([]);
       idRef.current = 0;
     }
     onOpenChange(next);
   }
 
   const pool = department === "pathology" ? PATHOLOGY_TESTS : RADIOLOGY_TESTS;
-  const selected = pool.find((t) => t.name === selectedName);
 
-  const testOptions: SearchSelectOption[] = pool.map(
-    (t) => ({
-      value: t.name,
-      label: t.name,
-      sublabel: t.category,
-      icon:
-        department === "pathology" ? (
-          <TestTube className="h-4 w-4 text-blue-500" />
-        ) : (
-          <ScanLine className="h-4 w-4 text-violet-500" />
-        ),
-    }),
-  );
+  const testOptions: SearchSelectOption[] = pool.map((t) => ({
+    value: t.name,
+    label: t.name,
+    sublabel: t.category,
+    icon:
+      department === "pathology" ? (
+        <TestTube className="h-4 w-4 text-blue-500" />
+      ) : (
+        <ScanLine className="h-4 w-4 text-violet-500" />
+      ),
+  }));
 
   function toggleDepartment(dept: Department) {
     setDepartment(dept);
     setQuery("");
-    setSelectedName("");
   }
 
-  function addCurrent() {
-    if (!selected) return;
-    const draft: LabDraft = {
-      id: `lab-${++idRef.current}`,
-      test: selected.name,
-      department,
-      priority,
-    };
-    setPending((prev) => [...prev, draft]);
+  function pickCatalogue(opt: SearchSelectOption) {
+    const test = pool.find((t) => t.name === opt.value);
+    setItems((prev) => [
+      ...prev,
+      {
+        id: `lab-${++idRef.current}`,
+        test: opt.value,
+        category: test?.category,
+        department,
+        priority: "routine",
+      },
+    ]);
+    setQuery("");
+  }
+
+  function updatePriority(id: string, priority: LabDraft["priority"]) {
+    setItems((prev) => prev.map((o) => (o.id === id ? { ...o, priority } : o)));
+  }
+
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((o) => o.id !== id));
   }
 
   function submit() {
-    onSubmit(pending);
+    onSubmit(items);
     onOpenChange(false);
   }
 
@@ -108,15 +125,15 @@ export function LabDrawer({ open, onOpenChange, onSubmit }: LabDrawerProps) {
       onOpenChange={handleOpenChange}
       icon={<FlaskConical className="h-5 w-5" />}
       title="Add Investigation"
-      description="Choose a department, then search and add one or more tests."
+      description="Choose a department, then search — selecting a test adds it instantly."
       footer={
         <div className="flex items-center gap-3">
           <FormButton variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Cancel
           </FormButton>
-          <FormButton className="flex-1" onClick={submit} disabled={pending.length === 0}>
+          <FormButton className="flex-1" onClick={submit} disabled={items.length === 0}>
             <Check className="mr-1 h-4 w-4" />
-            Done{pending.length > 0 ? ` (${pending.length})` : ""}
+            Done{items.length > 0 ? ` (${items.length})` : ""}
           </FormButton>
         </div>
       }
@@ -127,28 +144,70 @@ export function LabDrawer({ open, onOpenChange, onSubmit }: LabDrawerProps) {
           type="button"
           onClick={() => toggleDepartment("pathology")}
           className={cn(
-            "rounded-2xl border-2 p-4 text-left transition",
+            "group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-200",
             department === "pathology"
-              ? "border-blue-500 bg-blue-50"
-              : "border-slate-200 hover:border-violet-300",
+              ? "border-blue-500 bg-gradient-to-br from-blue-50 to-sky-50 shadow-md shadow-blue-500/10 ring-2 ring-blue-500/20"
+              : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-sm",
           )}
         >
-          <TestTube className={cn("h-5 w-5", department === "pathology" ? "text-blue-600" : "text-slate-400")} />
-          <strong className="mt-2 block text-sm font-semibold text-slate-800">Pathology</strong>
+          <span
+            className={cn(
+              "absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all duration-200",
+              department === "pathology"
+                ? "border-blue-600 bg-blue-600 text-white"
+                : "border-slate-300 bg-white text-transparent group-hover:border-blue-300",
+            )}
+          >
+            <Check className="h-3 w-3" strokeWidth={3} />
+          </span>
+          <span
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
+              department === "pathology"
+                ? "bg-gradient-to-br from-blue-600 to-sky-500 text-white shadow-sm"
+                : "bg-blue-50 text-blue-600 group-hover:bg-blue-100",
+            )}
+          >
+            <TestTube className="h-5 w-5" />
+          </span>
+          <strong className={cn("mt-2.5 block text-sm font-bold transition-colors", department === "pathology" ? "text-blue-800" : "text-slate-700")}>
+            Pathology
+          </strong>
           <small className="mt-0.5 block text-xs leading-4 text-slate-500">Blood, urine and laboratory tests</small>
         </button>
         <button
           type="button"
           onClick={() => toggleDepartment("radiology")}
           className={cn(
-            "rounded-2xl border-2 p-4 text-left transition",
+            "group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-200",
             department === "radiology"
-              ? "border-violet-500 bg-violet-50"
-              : "border-slate-200 hover:border-violet-300",
+              ? "border-violet-500 bg-gradient-to-br from-violet-50 to-fuchsia-50 shadow-md shadow-violet-500/10 ring-2 ring-violet-500/20"
+              : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-sm",
           )}
         >
-          <ScanLine className={cn("h-5 w-5", department === "radiology" ? "text-violet-600" : "text-slate-400")} />
-          <strong className="mt-2 block text-sm font-semibold text-slate-800">Radiology</strong>
+          <span
+            className={cn(
+              "absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all duration-200",
+              department === "radiology"
+                ? "border-violet-600 bg-violet-600 text-white"
+                : "border-slate-300 bg-white text-transparent group-hover:border-violet-300",
+            )}
+          >
+            <Check className="h-3 w-3" strokeWidth={3} />
+          </span>
+          <span
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
+              department === "radiology"
+                ? "bg-gradient-to-br from-violet-600 to-fuchsia-500 text-white shadow-sm"
+                : "bg-violet-50 text-violet-600 group-hover:bg-violet-100",
+            )}
+          >
+            <ScanLine className="h-5 w-5" />
+          </span>
+          <strong className={cn("mt-2.5 block text-sm font-bold transition-colors", department === "radiology" ? "text-violet-800" : "text-slate-700")}>
+            Radiology
+          </strong>
           <small className="mt-0.5 block text-xs leading-4 text-slate-500">X-ray, CT, MRI, USG and ECG</small>
         </button>
       </div>
@@ -159,103 +218,62 @@ export function LabDrawer({ open, onOpenChange, onSubmit }: LabDrawerProps) {
           options={testOptions.filter((o) =>
             `${o.label} ${o.sublabel}`.toLowerCase().includes(query.toLowerCase()),
           )}
-          onSelect={(opt) => {
-            setSelectedName(opt.value);
-            setQuery("");
-          }}
+          onSelect={pickCatalogue}
           query={query}
           onQueryChange={setQuery}
           placeholder="Search test or keyword…"
-          selectedValue={selectedName}
           noResultsText="No test found in this department."
         />
       </div>
 
-      {/* Selected test details */}
-      {selected && (
-        <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-          <div>
-            <span className="text-[10px] uppercase tracking-wide text-slate-400">Category</span>
-            <strong className="mt-1 block font-semibold text-slate-700">{selected.category}</strong>
-          </div>
-          <div>
-            <span className="text-[10px] uppercase tracking-wide text-slate-400">Sample / modality</span>
-            <strong className="mt-1 block font-semibold text-slate-700">{selected.sample}</strong>
-          </div>
-          <div>
-            <span className="text-[10px] uppercase tracking-wide text-slate-400">Expected report</span>
-            <strong className="mt-1 block font-semibold text-slate-700">{selected.report}</strong>
-          </div>
-          <div>
-            <span className="text-[10px] uppercase tracking-wide text-slate-400">Department</span>
-            <strong className="mt-1 block font-semibold capitalize text-slate-700">{department}</strong>
-          </div>
-        </div>
-      )}
-
-      {/* Priority + add */}
-      <DrawerSection
-        title="Order settings"
-        caption="Set priority and confirm the test order."
-        icon={<FlaskConical className="h-4 w-4" />}
-        className="mt-4"
-      >
-        <div className="flex items-end gap-3">
-          <div className="min-w-0 flex-1">
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Priority</label>
-            <SingleSelect
-              value={priority}
-              onChange={(v) => setPriority(v as "routine" | "priority")}
-              placeholder="Select priority"
-              options={[
-                { value: "routine", label: "Routine" },
-                { value: "priority", label: "Priority (Today)" },
-              ]}
-              className="mt-1"
-            />
-          </div>
-          <FormButton size="sm" onClick={addCurrent} disabled={!selected}>
-            <Plus className="mr-1 h-4 w-4" />
-            Add
-          </FormButton>
-        </div>
-      </DrawerSection>
-
-      {/* Pending basket */}
-      {pending.length > 0 && (
-        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-            <FlaskConical className="h-3.5 w-3.5" />
-            Added
-            <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">
-              {pending.length}
-            </span>
-          </p>
-          <div className="mt-2.5 space-y-2">
-            {pending.map((order) => (
-              <div key={order.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-800">{order.test}</p>
-                  <span className={cn(
-                    "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize",
+      {/* Auto-added lab order cards with editable priority */}
+      {items.length > 0 ? (
+        <div className="mt-4 space-y-2.5">
+          {items.map((order) => (
+            <SelectedItemCard
+              key={order.id}
+              id={order.id}
+              title={order.test}
+              onRemove={removeItem}
+              accentColor={DEPT_ACCENT[order.department]}
+              badges={[
+                {
+                  label: order.department,
+                  className: cn(
+                    "capitalize",
                     order.department === "pathology"
                       ? "border-blue-200 bg-blue-50 text-blue-700"
                       : "border-violet-200 bg-violet-50 text-violet-700",
-                  )}>
-                    {order.department} · {order.priority}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPending((prev) => prev.filter((x) => x.id !== order.id))}
-                  className="p-1.5 rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                  aria-label={`Remove ${order.test}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
+                  ),
+                },
+                {
+                  label: order.priority,
+                  className: `capitalize ${PRIORITY_BADGE[order.priority]}`,
+                },
+              ]}
+              footer={
+                <>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Priority</span>
+                  <RadioGroup
+                    name={`lab-priority-${order.id}`}
+                    options={[
+                      { value: "routine", label: "Routine" },
+                      { value: "priority", label: "Priority (Today)" },
+                    ]}
+                    value={order.priority}
+                    onChange={(v) => updatePriority(order.id, v)}
+                  />
+                </>
+              }
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+          <FlaskConical className="mx-auto h-5 w-5 text-slate-300" />
+          <p className="mt-1.5 text-sm text-slate-400">
+            Search above and select a test to add it.
+          </p>
         </div>
       )}
     </ConsultationDrawer>
