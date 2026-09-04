@@ -1,6 +1,7 @@
 
 import { AlertTriangle, Activity, HeartPulse, Thermometer, TrendingUp, Droplets } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { PillButton } from "@/components/forms/pill-button";
 import type { VitalAlert } from "@/types/doctor/ipd/vitals-types";
 
 type AlertMeta = {
@@ -93,14 +94,14 @@ export function AlertsWidget({ alerts, onViewTrend }: { alerts: VitalAlert[]; on
                 <p className="mt-1.5 pl-8 text-xs leading-relaxed text-slate-600">{a.message}</p>
 
                 <div className="mt-2 flex items-center justify-end">
-                  <button
-                    type="button"
+                  <PillButton
+                    variant="outline"
+                    size="sm"
+                    icon={TrendingUp}
                     onClick={() => onViewTrend(a.type)}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-blue-200 bg-white px-2 py-1 text-[11px] font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98]"
                   >
-                    <TrendingUp className="h-3.5 w-3.5" />
                     View Trend
-                  </button>
+                  </PillButton>
                 </div>
               </div>
             </div>

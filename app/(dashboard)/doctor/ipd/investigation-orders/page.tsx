@@ -21,19 +21,11 @@ import {
   Droplets,
   Gauge,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { SuffixedInput, FormTextarea } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { PillButton } from "@/components/forms/pill-button";
 
 import {
   WARD_ROUND_PATIENTS,
@@ -271,13 +263,13 @@ export default function InvestigationOrdersPage({
                 />
               </div>
 
-              <Button
+              <PillButton
                 variant="outline"
                 className="w-full gap-2 lg:w-auto"
                 onClick={() => setChangePatientOpen(true)}
               >
                 Change Patient
-              </Button>
+              </PillButton>
             </CardContent>
           </Card>
         )}
@@ -298,76 +290,50 @@ export default function InvestigationOrdersPage({
             <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="space-y-4 py-4">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px_180px_auto]">
-                  <div>
-                    <label className="text-xs text-slate-500">
-                      Search Investigation
-                    </label>
-                    <Input
-                      className="mt-1"
-                      placeholder="Search by test name or keyword"
-                      value={searchInvestigation}
-                      onChange={(e) => setSearchInvestigation(e.target.value)}
-                    />
-                  </div>
+                  <SuffixedInput
+                    label="Search Investigation"
+                    placeholder="Search by test name or keyword"
+                    value={searchInvestigation}
+                    onChange={setSearchInvestigation}
+                  />
 
-                  <div>
-                    <label className="text-xs text-slate-500">
-                      Investigation Category
-                    </label>
-                    <Select
-                      value={categoryFilter}
-                      onValueChange={setCategoryFilter}
-                    >
-                      <SelectTrigger className="mt-1 w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="All Categories">
-                          All Categories
-                        </SelectItem>
-                        <SelectItem value="Hematology">Hematology</SelectItem>
-                        <SelectItem value="Biochemistry">
-                          Biochemistry
-                        </SelectItem>
-                        <SelectItem value="Radiology">Radiology</SelectItem>
-                        <SelectItem value="Cardiology">Cardiology</SelectItem>
-                        <SelectItem value="Microbiology">
-                          Microbiology
-                        </SelectItem>
-                        <SelectItem value="Others">Others</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <SingleSelect
+                    label="Investigation Category"
+                    value={categoryFilter}
+                    onChange={setCategoryFilter}
+                    options={[
+                      { value: "All Categories", label: "All Categories" },
+                      { value: "Hematology", label: "Hematology" },
+                      { value: "Biochemistry", label: "Biochemistry" },
+                      { value: "Radiology", label: "Radiology" },
+                      { value: "Cardiology", label: "Cardiology" },
+                      { value: "Microbiology", label: "Microbiology" },
+                      { value: "Others", label: "Others" },
+                    ]}
+                  />
 
-                  <div>
-                    <label className="text-xs text-slate-500">Priority</label>
-                    <Select
-                      value={priorityFilter}
-                      onValueChange={setPriorityFilter}
-                    >
-                      <SelectTrigger className="mt-1 w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="All Priorities">
-                          All Priorities
-                        </SelectItem>
-                        <SelectItem value="Routine">Routine</SelectItem>
-                        <SelectItem value="Urgent">Urgent</SelectItem>
-                        <SelectItem value="High">High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <SingleSelect
+                    label="Priority"
+                    value={priorityFilter}
+                    onChange={setPriorityFilter}
+                    options={[
+                      { value: "All Priorities", label: "All Priorities" },
+                      { value: "Routine", label: "Routine" },
+                      { value: "Urgent", label: "Urgent" },
+                      { value: "High", label: "High" },
+                    ]}
+                  />
 
                   <div className="flex items-end">
-                    <Button
-                      className="w-full gap-2 bg-blue-600 hover:bg-blue-700 md:w-auto"
+                    <PillButton
+                      variant="gradient"
+                      className="w-full gap-2 md:w-auto"
                       onClick={handleAddToOrder}
                       disabled={!hasPendingOrder}
+                      icon={Plus}
                     >
-                      <Plus className="h-4 w-4" />
                       Send To Department
-                    </Button>
+                    </PillButton>
                   </div>
                 </div>
 
@@ -389,22 +355,24 @@ export default function InvestigationOrdersPage({
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <Button
+                  <PillButton
                     variant="outline"
                     className="gap-2"
                     onClick={handleOpenAddInvestigation}
+                    icon={Plus}
                   >
-                    <Plus className="h-4 w-4" /> Add Investigation
-                  </Button>
+                    Add Investigation
+                  </PillButton>
 
-                  <Button
-                    variant="outline"
-                    className="gap-2 border-red-200 text-red-600 hover:bg-red-50"
+                  <PillButton
+                    variant="danger"
+                    className="gap-2"
                     onClick={() => setClearAllOpen(true)}
                     disabled={items.length === 0}
+                    icon={Trash2}
                   >
-                    <Trash2 className="h-4 w-4" /> Clear All
-                  </Button>
+                    Clear All
+                  </PillButton>
                 </div>
               </CardContent>
             </Card>
@@ -412,35 +380,25 @@ export default function InvestigationOrdersPage({
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="py-4">
-                  <p className="mb-3 text-sm font-semibold text-slate-800">
-                    Clinical Indication / Reason
-                  </p>
-                  <Textarea
+                  <FormTextarea
+                    label="Clinical Indication / Reason"
                     rows={5}
                     maxLength={500}
                     value={indication}
-                    onChange={(e) => setIndication(e.target.value)}
+                    onChange={setIndication}
                   />
-                  <p className="text-right text-xs text-slate-400">
-                    {indication.length}/500
-                  </p>
                 </CardContent>
               </Card>
 
               <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="py-4">
-                  <p className="mb-3 text-sm font-semibold text-slate-800">
-                    Additional Instructions (Optional)
-                  </p>
-                  <Textarea
+                  <FormTextarea
+                    label="Additional Instructions (Optional)"
                     rows={5}
                     maxLength={500}
                     value={additionalInstructions}
-                    onChange={(e) => setAdditionalInstructions(e.target.value)}
+                    onChange={setAdditionalInstructions}
                   />
-                  <p className="text-right text-xs text-slate-400">
-                    {additionalInstructions.length}/500
-                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -457,15 +415,17 @@ export default function InvestigationOrdersPage({
 
             {!embedded && (
               <div className="flex justify-between gap-2">
-                <Button variant="outline" className="gap-2" onClick={handleBack}>
-                  <ArrowLeft className="h-4 w-4" /> Back
-                </Button>
-                <Button
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                <PillButton variant="outline" className="gap-2" onClick={handleBack} icon={ArrowLeft}>
+                  Back
+                </PillButton>
+                <PillButton
+                  variant="gradient"
+                  className="gap-2"
                   onClick={handleNextTreatmentPlan}
+                  icon={ArrowRight}
                 >
-                  Next: Treatment Plan <ArrowRight className="h-4 w-4" />
-                </Button>
+                  Next: Treatment Plan
+                </PillButton>
               </div>
             )}
           </div>

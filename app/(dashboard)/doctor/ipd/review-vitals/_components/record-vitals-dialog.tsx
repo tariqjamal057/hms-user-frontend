@@ -7,14 +7,10 @@ import { HeartPulse, Info, Save, FileEdit, ArrowRight } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { SuffixedInput, FormTextarea } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { PillButton } from "@/components/forms/pill-button";
 
 import { AbnormalAlertRow } from "./abnormal-alert-row";
 import { VitalsComparisonTable } from "./vitals-comparison-table";
@@ -131,32 +127,26 @@ export function RecordVitalsDialog({
               <FormSection title="Vital Signs">
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <div className="col-span-2 sm:col-span-1">
-                    <Label className="text-xs">Blood Pressure (mmHg) *</Label>
                     <div className="mt-1 flex items-center gap-1.5">
-                      <div className="flex-1">
-                        <p className="mb-1 text-[10px] text-slate-400">Systolic</p>
-                        <Input value={formData.systolic} onChange={(e) => updateField("systolic", e.target.value)} placeholder="120" />
-                      </div>
+                      <SuffixedInput label="Systolic (mmHg) *" value={formData.systolic} onChange={(v) => updateField("systolic", v)} placeholder="120" className="flex-1" />
                       <span className="mt-4 text-slate-300">/</span>
-                      <div className="flex-1">
-                        <p className="mb-1 text-[10px] text-slate-400">Diastolic</p>
-                        <Input value={formData.diastolic} onChange={(e) => updateField("diastolic", e.target.value)} placeholder="80" />
-                      </div>
+                      <SuffixedInput label="Diastolic (mmHg) *" value={formData.diastolic} onChange={(v) => updateField("diastolic", v)} placeholder="80" className="flex-1" />
                     </div>
                   </div>
                   <FieldInput label="Pulse Rate (bpm) *" value={formData.pulse} onChange={(v) => updateField("pulse", v)} placeholder="78" />
                   <FieldInput label="Respiratory Rate (/min) *" value={formData.respRate} onChange={(v) => updateField("respRate", v)} placeholder="18" />
                   <div>
-                    <Label className="text-xs">Temperature *</Label>
                     <div className="mt-1 flex gap-1.5">
-                      <Input className="flex-1" value={formData.temp} onChange={(e) => updateField("temp", e.target.value)} placeholder="98.4" />
-                      <Select value={formData.tempUnit} onValueChange={(v) => updateField("tempUnit", v as "°F" | "°C")}>
-                        <SelectTrigger className="w-16"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="°F">°F</SelectItem>
-                          <SelectItem value="°C">°C</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SuffixedInput label="Temperature *" value={formData.temp} onChange={(v) => updateField("temp", v)} placeholder="98.4" className="flex-1" />
+                      <SingleSelect
+                        value={formData.tempUnit}
+                        options={[
+                          { value: "°F", label: "°F" },
+                          { value: "°C", label: "°C" },
+                        ]}
+                        onChange={(v) => updateField("tempUnit", v as "°F" | "°C")}
+                        className="w-16"
+                      />
                     </div>
                   </div>
                 </div>
@@ -164,9 +154,9 @@ export function RecordVitalsDialog({
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <FieldInput label="SpO2 (%) *" value={formData.spo2} onChange={(v) => updateField("spo2", v)} placeholder="98" />
                   <div>
-                    <Label className="flex items-center gap-1 text-xs">
+                    <label className="flex items-center gap-1 text-sm font-medium text-slate-700">
                       Pain Score (NRS) * <Info className="h-3 w-3 text-slate-300" />
-                    </Label>
+                    </label>
                     <div className="mt-2.5 flex items-center gap-3">
                       <span className="text-xs text-slate-400">0</span>
                       <Slider
@@ -177,7 +167,9 @@ export function RecordVitalsDialog({
                         className="flex-1"
                       />
                       <span className="text-xs text-slate-400">10</span>
-                      <Input className="w-14 text-center" value={formData.painScore} readOnly />
+                      <div className="flex h-9 w-14 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-700">
+                        {formData.painScore}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -188,7 +180,7 @@ export function RecordVitalsDialog({
                   <FieldInput label="Height (cm)" value={formData.height} onChange={(v) => updateField("height", v)} placeholder="172" />
                   <FieldInput label="Weight (kg)" value={formData.weight} onChange={(v) => updateField("weight", v)} placeholder="72.5" />
                   <div>
-                    <Label className="text-xs">BMI (kg/m²)</Label>
+                    <p className="text-xs text-slate-400">BMI (kg/m²)</p>
                     <div className="mt-1 flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                       <span className="text-sm font-medium text-slate-700">{bmi}</span>
                       <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-600">Auto Calculated</span>
@@ -200,28 +192,30 @@ export function RecordVitalsDialog({
               <FormSection title="Additional Monitoring">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
-                    <Label className="text-xs">Level Of Consciousness</Label>
-                    <Select value={formData.levelOfConsciousness} onValueChange={(v) => updateField("levelOfConsciousness", v)}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Alert">Alert</SelectItem>
-                        <SelectItem value="Verbal">Verbal</SelectItem>
-                        <SelectItem value="Pain">Pain</SelectItem>
-                        <SelectItem value="Unresponsive">Unresponsive</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <SingleSelect
+                      label="Level Of Consciousness"
+                      value={formData.levelOfConsciousness}
+                      options={[
+                        { value: "Alert", label: "Alert" },
+                        { value: "Verbal", label: "Verbal" },
+                        { value: "Pain", label: "Pain" },
+                        { value: "Unresponsive", label: "Unresponsive" },
+                      ]}
+                      onChange={(v) => updateField("levelOfConsciousness", v)}
+                    />
                   </div>
                   <div>
-                    <Label className="text-xs">Oxygen Support</Label>
-                    <Select value={formData.oxygenSupport} onValueChange={(v) => updateField("oxygenSupport", v)}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Room Air">Room Air</SelectItem>
-                        <SelectItem value="Nasal Cannula">Nasal Cannula</SelectItem>
-                        <SelectItem value="Face Mask">Face Mask</SelectItem>
-                        <SelectItem value="Ventilator">Ventilator</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <SingleSelect
+                      label="Oxygen Support"
+                      value={formData.oxygenSupport}
+                      options={[
+                        { value: "Room Air", label: "Room Air" },
+                        { value: "Nasal Cannula", label: "Nasal Cannula" },
+                        { value: "Face Mask", label: "Face Mask" },
+                        { value: "Ventilator", label: "Ventilator" },
+                      ]}
+                      onChange={(v) => updateField("oxygenSupport", v)}
+                    />
                   </div>
                   <FieldInput label="Oxygen Flow Rate (L/min)" value={formData.oxygenFlowRate} onChange={(v) => updateField("oxygenFlowRate", v)} placeholder="2" />
                   <FieldInput label="Blood Sugar (mg/dL)" optional value={formData.bloodSugar} onChange={(v) => updateField("bloodSugar", v)} placeholder="124" />
@@ -229,14 +223,14 @@ export function RecordVitalsDialog({
               </FormSection>
 
               <FormSection title="Doctor Remarks">
-                <Textarea
+                <FormTextarea
+                  label="Doctor Remarks"
                   rows={3}
                   maxLength={1000}
                   placeholder="Enter remarks..."
                   value={formData.doctorRemarks}
-                  onChange={(e) => updateField("doctorRemarks", e.target.value)}
+                  onChange={(v) => updateField("doctorRemarks", v)}
                 />
-                <p className="mt-1 text-right text-xs text-slate-400">{formData.doctorRemarks.length}/1000</p>
               </FormSection>
             </div>
 
@@ -264,19 +258,19 @@ export function RecordVitalsDialog({
 
         {/* Footer */}
         <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-between sm:px-6">
-          <Button variant="outline" className="gap-2" onClick={() => onOpenChange(false)}>
+          <PillButton variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
-          </Button>
+          </PillButton>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button variant="outline" className="gap-2" onClick={handleSaveDraft}>
-              <FileEdit className="h-4 w-4" /> Save Draft
-            </Button>
-            <Button variant="outline" className="gap-2 border-blue-200 text-blue-600 hover:bg-blue-50" onClick={handleSaveVitals}>
-              <Save className="h-4 w-4" /> Save Vitals
-            </Button>
-            <Button className="gap-2 bg-blue-600 hover:bg-blue-700" onClick={handleSaveAndContinue}>
-              Save & Continue To Diagnosis Update <ArrowRight className="h-4 w-4" />
-            </Button>
+            <PillButton variant="outline" icon={FileEdit} onClick={handleSaveDraft}>
+              Save Draft
+            </PillButton>
+            <PillButton variant="outline" icon={Save} className="border-blue-200 text-blue-600 hover:bg-blue-50" onClick={handleSaveVitals}>
+              Save Vitals
+            </PillButton>
+            <PillButton variant="gradient" icon={ArrowRight} className="flex-row-reverse" onClick={handleSaveAndContinue}>
+              Save & Continue To Diagnosis Update
+            </PillButton>
           </div>
         </div>
       </DialogContent>
@@ -295,10 +289,12 @@ function FormSection({ title, children }: { title: string; children: React.React
 
 function FieldInput({ label, value, onChange, placeholder, optional }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; optional?: boolean }) {
   return (
-    <div>
-      <Label className="text-xs">{label}{optional && <span className="ml-1 text-slate-300">Optional</span>}</Label>
-      <Input className="mt-1" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
-    </div>
+    <SuffixedInput
+      label={optional ? `${label} (Optional)` : label}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+    />
   );
 }
 

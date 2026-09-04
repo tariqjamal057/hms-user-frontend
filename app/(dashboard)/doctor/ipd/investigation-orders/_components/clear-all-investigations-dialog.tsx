@@ -4,7 +4,7 @@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/forms/pill-button";
 import { AlertTriangle } from "lucide-react";
 
 interface ClearAllInvestigationsDialogProps {
@@ -27,16 +27,16 @@ export function ClearAllInvestigationsDialog({ open, onOpenChange, onConfirm }: 
           Do you want to delete all test reports from the list? This action cannot be undone.
         </p>
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>No</Button>
-          <Button
-            className="bg-red-600 hover:bg-red-700"
+          <PillButton variant="outline" onClick={() => onOpenChange(false)}>No</PillButton>
+          <PillButton
+            variant="danger"
             onClick={() => {
               onConfirm();
               onOpenChange(false);
             }}
           >
             Yes, Delete All
-          </Button>
+          </PillButton>
         </div>
       </DialogContent>
     </Dialog>

@@ -4,7 +4,7 @@
 import {
   CalendarDays, CheckCircle2, Pill, PackageCheck, PackageX, UserRound, X, XCircle, PauseCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/forms/pill-button";
 import { MedicineStatusBadge, DeliveryStatusBadge } from "./medicine-status-badge";
 import type { DoseGivenStatus, MedicineOrderItem } from "@/types/doctor/ipd/medicine-order-types";
 
@@ -55,9 +55,9 @@ export function MedicineDetailDrawer({ item, onClose }: MedicineDetailDrawerProp
                   </div>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-5 w-5" />
-              </Button>
+              <PillButton variant="outline" icon={X} onClick={onClose} aria-label="Close">
+                {"\u00A0"}
+              </PillButton>
             </div>
 
             <div className="space-y-6 p-5">

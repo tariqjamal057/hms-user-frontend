@@ -9,8 +9,8 @@ import {
   X,
   CheckCircle2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PillButton } from "@/components/forms/pill-button";
 import { Separator } from "@/components/ui/separator";
 import {
   InvestigationStatusBadge,
@@ -95,13 +95,11 @@ export function InvestigationViewDialog({
                 </div>
               </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
+              <PillButton
+                variant="outline"
                 onClick={() => onOpenChange(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
+                icon={X}
+              >{""}</PillButton>
             </div>
 
             <div className="space-y-6 p-5">
@@ -259,7 +257,7 @@ function ReportFile({ item }: { item: InvestigationOrderItem }) {
         </div>
       </div>
 
-      <Button
+      <PillButton
         variant="outline"
         className="gap-2 border-blue-200 text-blue-600"
         onClick={() => {
@@ -267,10 +265,10 @@ function ReportFile({ item }: { item: InvestigationOrderItem }) {
             window.open(item.reportFileUrl, "_blank", "noopener,noreferrer");
           }
         }}
+        icon={Download}
       >
-        <Download className="h-4 w-4" />
         Download Result
-      </Button>
+      </PillButton>
     </div>
   );
 }

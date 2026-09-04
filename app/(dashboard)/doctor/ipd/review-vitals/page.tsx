@@ -21,16 +21,10 @@ import {
   FileDown,
 } from "lucide-react";
 import { PillButton } from "@/components/forms/pill-button";
+import { SingleSelect } from "@/components/forms/select";
 import { QuickVitalsStrip } from "@/components/patient-detail/quick-vitals-strip";
 import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import {
@@ -195,30 +189,28 @@ export default function ReviewVitalsPage({
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <label className="text-xs text-slate-400">View By</label>
-                  <Select value={viewBy} onValueChange={setViewBy}>
-                    <SelectTrigger className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="chart">Chart</SelectItem>
-                      <SelectItem value="table">Table</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="w-28">
+                  <SingleSelect
+                    label="View By"
+                    value={viewBy}
+                    options={[
+                      { value: "chart", label: "Chart" },
+                      { value: "table", label: "Table" },
+                    ]}
+                    onChange={setViewBy}
+                  />
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <label className="text-xs text-slate-400">Time Range</label>
-                  <Select value={timeRange} onValueChange={setTimeRange}>
-                    <SelectTrigger className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="24">24 Hours</SelectItem>
-                      <SelectItem value="72">72 Hours</SelectItem>
-                      <SelectItem value="168">7 Days</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="w-28">
+                  <SingleSelect
+                    label="Time Range"
+                    value={timeRange}
+                    options={[
+                      { value: "24", label: "24 Hours" },
+                      { value: "72", label: "72 Hours" },
+                      { value: "168", label: "7 Days" },
+                    ]}
+                    onChange={setTimeRange}
+                  />
                 </div>
                 <PillButton
                   variant="outline"

@@ -23,14 +23,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   ConsultationDrawer,
   DrawerSection,
@@ -125,14 +117,14 @@ export default function ProgressNotesPage({
           <div className="flex items-center justify-between gap-3">
             {!embedded ? (
               <div className="flex min-w-0 items-center gap-3">
-                <Button
+                <PillButton
                   variant="outline"
-                  size="icon"
+                  size="sm"
                   onClick={() => router.back()}
-                  className="shrink-0 border-slate-200"
+                  icon={ArrowLeft}
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
+                  Back
+                </PillButton>
                 <div className="min-w-0">
                   <p className="truncate text-xs text-slate-400">
                     {patient.patientName} ·{" "}
@@ -232,31 +224,25 @@ export default function ProgressNotesPage({
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="relative min-w-0 sm:w-56">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input
-                      value={search}
-                      onChange={(event) => setSearch(event.target.value)}
-                      placeholder="Search notes..."
-                      className="border-slate-200 pl-9"
-                    />
-                  </div>
-                  <Select
+                  <SuffixedInput
+                    label=""
+                    value={search}
+                    onChange={setSearch}
+                    placeholder="Search notes..."
+                    suffix="search"
+                  />
+                  <SingleSelect
                     value={authorFilter}
-                    onValueChange={(value) =>
+                    onChange={(value) =>
                       setAuthorFilter(value as AuthorFilter)
                     }
-                  >
-                    <SelectTrigger className="w-full border-slate-200 sm:w-32">
-                      <Filter className="mr-2 h-3.5 w-3.5 text-slate-400" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All authors</SelectItem>
-                      <SelectItem value="Doctor">Doctor</SelectItem>
-                      <SelectItem value="Nurse">Nurse</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    options={[
+                      { value: "All", label: "All authors" },
+                      { value: "Doctor", label: "Doctor" },
+                      { value: "Nurse", label: "Nurse" },
+                    ]}
+                    className="sm:w-40"
+                  />
                 </div>
               </div>
             </CardHeader>
@@ -550,9 +536,9 @@ function AuditDialog({
               {note.createdAt} · {note.author}
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
+          <PillButton variant="outline" size="sm" onClick={onClose} icon={X}>
+            Close
+          </PillButton>
         </div>
         <div className="space-y-5 p-5">
           <AuditSection label="Subjective" value={note.subjective} />

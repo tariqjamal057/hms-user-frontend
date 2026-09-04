@@ -2,9 +2,9 @@
 "use client";
 
 import { Eye, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
 import { Badge } from "@/components/ui/badge";
+import { PillButton } from "@/components/forms/pill-button";
 import { InvestigationStatusBadge } from "./investigation-status-badge";
 import type { InvestigationOrderItem } from "@/types/doctor/ipd/investigation-order-types";
 
@@ -107,24 +107,18 @@ export function InvestigationOrdersTable({
       headerClassName: "text-right",
       render: (item) => (
         <div className="flex justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
+          <PillButton
+            variant="outline"
             className="h-8 w-8 text-slate-500 hover:text-blue-600"
-            title="View test details"
             onClick={() => onView(item)}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
+            icon={Eye}
+          >{""}</PillButton>
+          <PillButton
+            variant="danger"
             className="h-8 w-8 text-slate-500 hover:text-red-600"
-            title="Delete investigation"
             onClick={() => onDelete(item.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+            icon={Trash2}
+          >{""}</PillButton>
         </div>
       ),
     },

@@ -29,16 +29,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FormTextarea, SuffixedInput, DateField, DateTimeField } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { RadioGroup } from "@/components/forms/radio-group";
+import { PillButton } from "@/components/forms/pill-button";
 
 import {
   WARD_ROUND_PATIENTS,
@@ -291,13 +286,13 @@ export default function DischargeDecisionPage({
                 />
               </div>
 
-              <Button
+              <PillButton
                 variant="outline"
-                className="w-full gap-2 lg:w-auto"
+                className="w-full lg:w-auto"
                 onClick={() => setChangePatientOpen(true)}
               >
                 Change Patient
-              </Button>
+              </PillButton>
             </CardContent>
           </Card>
         )}
@@ -366,80 +361,68 @@ export default function DischargeDecisionPage({
                 <CardContent className="space-y-4 py-4">
                   <SectionTitle title="2. Discharge Plan" />
                   <Field label="Discharge Decision *">
-                    <Select
-                      value={dischargeDecision}
-                      onValueChange={(value) =>
-                        setDischargeDecision(value as DischargeDecisionType)
-                      }
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Discharge to Home">
-                          Discharge to Home
-                        </SelectItem>
-                        <SelectItem value="Discharge to Rehab">
-                          Discharge to Rehab
-                        </SelectItem>
-                        <SelectItem value="Transfer to Another Facility">
-                          Transfer to Another Facility
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="mt-1.5">
+                      <SingleSelect
+                        value={dischargeDecision}
+                        onChange={(value) =>
+                          setDischargeDecision(value as DischargeDecisionType)
+                        }
+                        options={[
+                          { value: "Discharge to Home", label: "Discharge to Home" },
+                          { value: "Discharge to Rehab", label: "Discharge to Rehab" },
+                          { value: "Transfer to Another Facility", label: "Transfer to Another Facility" },
+                        ]}
+                      />
+                    </div>
                   </Field>
 
                   <Field label="Discharge Date & Time *">
-                    <Input
-                      type="datetime-local"
-                      className="mt-1"
-                      value={dischargeDateTime}
-                      onChange={(e) => setDischargeDateTime(e.target.value)}
-                    />
+                    <div className="mt-1.5">
+                      <DateTimeField
+                        label=""
+                        value={dischargeDateTime}
+                        onChange={setDischargeDateTime}
+                        placeholder="Select discharge date & time"
+                      />
+                    </div>
                   </Field>
 
                   <Field label="Mode of Discharge">
-                    <div className="grid grid-cols-3 gap-2">
-                      {(["Walk Out", "Wheel Chair", "Stretcher"] as const).map(
-                        (mode) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => setDischargeMode(mode)}
-                            className={`rounded-lg border px-3 py-2 text-sm transition ${dischargeMode === mode ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
-                          >
-                            {mode}
-                          </button>
-                        ),
-                      )}
+                    <div className="mt-1.5">
+                      <RadioGroup
+                        value={dischargeMode}
+                        onChange={setDischargeMode}
+                        options={[
+                          { value: "Walk Out", label: "Walk Out" },
+                          { value: "Wheel Chair", label: "Wheel Chair" },
+                          { value: "Stretcher", label: "Stretcher" },
+                        ]}
+                      />
                     </div>
                   </Field>
 
                   <Field label="Accompanied By">
-                    <Input
-                      className="mt-1"
-                      value={accompaniedBy}
-                      onChange={(e) => setAccompaniedBy(e.target.value)}
-                    />
+                    <div className="mt-1.5">
+                      <SuffixedInput
+                        label=""
+                        value={accompaniedBy}
+                        onChange={setAccompaniedBy}
+                        placeholder="Enter name"
+                      />
+                    </div>
                   </Field>
 
                   <Field label="Discharge Instructions Given By">
-                    <Select
-                      value={instructionsGivenBy}
-                      onValueChange={setInstructionsGivenBy}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Dr. Amit Verma">
-                          Dr. Amit Verma
-                        </SelectItem>
-                        <SelectItem value="Dr. Ravi Sharma">
-                          Dr. Ravi Sharma
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="mt-1.5">
+                      <SingleSelect
+                        value={instructionsGivenBy}
+                        onChange={setInstructionsGivenBy}
+                        options={[
+                          { value: "Dr. Amit Verma", label: "Dr. Amit Verma" },
+                          { value: "Dr. Ravi Sharma", label: "Dr. Ravi Sharma" },
+                        ]}
+                      />
+                    </div>
                   </Field>
                 </CardContent>
               </Card>
@@ -450,14 +433,14 @@ export default function DischargeDecisionPage({
                 <CardContent className="py-4">
                   <div className="mb-3 flex items-center justify-between">
                     <SectionTitle title="3. Medications at Discharge" />
-                    <Button
+                    <PillButton
                       variant="outline"
                       size="sm"
                       className="gap-2"
                       onClick={handleAddMedicine}
                     >
                       <Plus className="h-4 w-4" /> Add Medicine
-                    </Button>
+                    </PillButton>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[620px] text-sm">
@@ -507,17 +490,17 @@ export default function DischargeDecisionPage({
                             </td>
 
                             <td className="py-3 pl-3 text-right">
-                              <Button
-                                variant="ghost"
-                                size="icon"
+                              <PillButton
+                                variant="danger"
+                                size="sm"
                                 onClick={() =>
                                   handleDeleteDischargeMedicine(medicine.id)
                                 }
-                                className="h-8 w-8 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                                title="Remove medicine"
+                                icon={Trash2}
+                                aria-label="Remove medicine"
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                                Remove
+                              </PillButton>
                             </td>
                           </tr>
                         ))}
@@ -531,52 +514,44 @@ export default function DischargeDecisionPage({
                 <CardContent className="space-y-4 py-4">
                   <SectionTitle title="4. Follow-up Plan" />
                   <Field label="Follow-up Date *">
-                    <Input
-                      type="date"
-                      className="mt-1"
-                      value={followUpDate}
-                      onChange={(e) => setFollowUpDate(e.target.value)}
-                    />
+                    <div className="mt-1.5">
+                      <DateField
+                        label=""
+                        value={followUpDate}
+                        onChange={setFollowUpDate}
+                      />
+                    </div>
                   </Field>
                   <Field label="Follow-up With *">
-                    <Select
-                      value={followUpWith}
-                      onValueChange={setFollowUpWith}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Dr. Amit Verma (Cardiology)">
-                          Dr. Amit Verma (Cardiology)
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="mt-1.5">
+                      <SingleSelect
+                        value={followUpWith}
+                        onChange={setFollowUpWith}
+                        options={[
+                          { value: "Dr. Amit Verma (Cardiology)", label: "Dr. Amit Verma (Cardiology)" },
+                        ]}
+                      />
+                    </div>
                   </Field>
                   <Field label="Visit Type">
-                    <Select value={visitType} onValueChange={setVisitType}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="OPD Follow-up">
-                          OPD Follow-up
-                        </SelectItem>
-                        <SelectItem value="Tele Follow-up">
-                          Tele Follow-up
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="mt-1.5">
+                      <SingleSelect
+                        value={visitType}
+                        onChange={setVisitType}
+                        options={[
+                          { value: "OPD Follow-up", label: "OPD Follow-up" },
+                          { value: "Tele Follow-up", label: "Tele Follow-up" },
+                        ]}
+                      />
+                    </div>
                   </Field>
-                  <Field label="Remarks (Optional)">
-                    <Textarea
-                      className="mt-1"
-                      rows={4}
-                      maxLength={250}
-                      value={remarks}
-                      onChange={(e) => setRemarks(e.target.value)}
-                    />
-                  </Field>
+                  <FormTextarea
+                    label="Remarks (Optional)"
+                    rows={4}
+                    maxLength={250}
+                    value={remarks}
+                    onChange={setRemarks}
+                  />
                 </CardContent>
               </Card>
 
@@ -604,13 +579,15 @@ export default function DischargeDecisionPage({
             <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="py-4">
                 <SectionTitle title="Additional Notes (Optional)" />
-                <Textarea
-                  className="mt-1"
-                  rows={4}
-                  maxLength={500}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
+                <div className="mt-3">
+                  <FormTextarea
+                    label=""
+                    rows={4}
+                    maxLength={500}
+                    value={notes}
+                    onChange={setNotes}
+                  />
+                </div>
               </CardContent>
             </Card>
 
@@ -625,31 +602,34 @@ export default function DischargeDecisionPage({
             )}
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-              <Button
+              <PillButton
                 variant="outline"
                 className="gap-2 sm:w-auto"
                 onClick={handleSaveDraft}
+                icon={FileText}
               >
-                <FileText className="h-4 w-4" /> Save as Draft
-              </Button>
+                Save as Draft
+              </PillButton>
 
               <div className="flex flex-col gap-2 sm:flex-row">
                 {!embedded && (
-                  <Button
+                  <PillButton
                     variant="outline"
                     className="gap-2"
                     onClick={handleBack}
+                    icon={ArrowLeft}
                   >
-                    <ArrowLeft className="h-4 w-4" /> Cancel
-                  </Button>
+                    Cancel
+                  </PillButton>
                 )}
-                <Button
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                <PillButton
+                  className="gap-2"
                   onClick={handleConfirmDischarge}
                   disabled={!overallReady}
+                  icon={ShieldCheck}
                 >
-                  <ShieldCheck className="h-4 w-4" /> Confirm Discharge
-                </Button>
+                  Confirm Discharge
+                </PillButton>
               </div>
             </div>
           </div>
@@ -667,13 +647,13 @@ export default function DischargeDecisionPage({
                     </p>
                   </div>
 
-                  <Button
+                  <PillButton
                     variant="outline"
                     size="sm"
                     onClick={() => setPatientSummaryOpen(true)}
                   >
                     View Summary
-                  </Button>
+                  </PillButton>
                 </div>
 
                 <SummaryRow

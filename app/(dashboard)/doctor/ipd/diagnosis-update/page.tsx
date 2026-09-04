@@ -19,11 +19,9 @@ import {
   Droplets,
   Gauge,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { PillButton } from "@/components/forms/pill-button";
+import { FormTextarea } from "@/components/forms/form-controls";
 import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
 
 import {
@@ -228,13 +226,13 @@ export default function DiagnosisUpdatePage({
                   value={patient.admissionDateTime}
                 />
               </div>
-              <Button
+              <PillButton
                 variant="outline"
-                className="w-full gap-2 lg:w-auto"
+                className="w-full lg:w-auto"
                 onClick={() => setChangePatientOpen(true)}
               >
                 Change Patient
-              </Button>
+              </PillButton>
             </CardContent>
           </Card>
         )}
@@ -281,18 +279,13 @@ export default function DiagnosisUpdatePage({
 
             <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="py-4">
-                <p className="mb-3 text-sm font-semibold text-slate-800">
-                  Clinical Impression (Summary) *
-                </p>
-                <Textarea
+                <FormTextarea
+                  label="Clinical Impression (Summary) *"
                   rows={5}
                   maxLength={1000}
                   value={clinicalImpression}
-                  onChange={(e) => setClinicalImpression(e.target.value)}
+                  onChange={setClinicalImpression}
                 />
-                <p className="text-right text-xs text-slate-400">
-                  {clinicalImpression.length}/1000
-                </p>
               </CardContent>
             </Card>
 
@@ -320,15 +313,17 @@ export default function DiagnosisUpdatePage({
             {/* Navigation */}
             {!embedded && (
               <div className="flex justify-between gap-2">
-                <Button variant="outline" className="gap-2" onClick={handleBack}>
+                <PillButton variant="outline" className="gap-2" onClick={handleBack}>
                   <ArrowLeft className="h-4 w-4" /> Back
-                </Button>
-                <Button
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                </PillButton>
+                <PillButton
+                  variant="gradient"
+                  className="gap-2"
                   onClick={handleNextProgressNote}
                 >
-                  Next: Progress Note <ArrowRight className="h-4 w-4" />
-                </Button>
+                  <ArrowRight className="h-4 w-4" />
+                  Next: Progress Note
+                </PillButton>
               </div>
             )}
           </div>

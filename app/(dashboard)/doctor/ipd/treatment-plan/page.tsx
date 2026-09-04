@@ -5,15 +5,12 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Info, Plus, ClipboardCheck, FileText, StickyNote, Upload, Activity, HeartPulse, Thermometer, Wind, Droplets, Gauge } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { FormTextarea, DateField } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { PillButton } from "@/components/forms/pill-button";
 
 import { WARD_ROUND_PATIENTS, getPatientByUhid } from "@/lib/doctor/ipd/ward-round-data";
 import { getVitalsForPatient } from "@/lib/doctor/ipd/vitals-data";
@@ -128,9 +125,9 @@ export default function TreatmentPlanPage({
                 <InfoBlock label="Admission Date" value={patient.admissionDateTime} />
               </div>
 
-              <Button variant="outline" className="w-full gap-2 lg:w-auto" onClick={() => setChangePatientOpen(true)}>
+              <PillButton variant="outline" className="w-full gap-2 lg:w-auto" onClick={() => setChangePatientOpen(true)}>
                 Change Patient
-              </Button>
+              </PillButton>
             </CardContent>
           </Card>
         )}
@@ -148,14 +145,13 @@ export default function TreatmentPlanPage({
             <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="py-4">
                 <p className="mb-3 text-sm font-semibold text-slate-800">1. Treatment Goals</p>
-                <Textarea
+                <FormTextarea
+                  label=""
                   rows={6}
                   maxLength={1000}
                   value={goalsText}
-                  onChange={(e) => setGoalsText(e.target.value)}
-                  className="leading-7"
+                  onChange={setGoalsText}
                 />
-                <p className="text-right text-xs text-slate-400">{goalsText.length}/1000</p>
               </CardContent>
             </Card>
 
@@ -181,9 +177,9 @@ export default function TreatmentPlanPage({
                 <TreatmentPlanTable items={items} onEdit={handleEdit} onDelete={handleDelete} />
 
                 <div className="mt-4">
-                  <Button variant="outline" className="gap-2" onClick={handleOpenAddPlan}>
+                  <PillButton variant="outline" className="gap-2" onClick={handleOpenAddPlan}>
                     <Plus className="h-4 w-4" /> Add Plan
-                  </Button>
+                  </PillButton>
                 </div>
               </CardContent>
             </Card>
@@ -192,13 +188,13 @@ export default function TreatmentPlanPage({
               <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="py-4">
                   <p className="mb-3 text-sm font-semibold text-slate-800">3. Additional Notes (Optional)</p>
-                  <Textarea
+                  <FormTextarea
+                    label=""
                     rows={6}
                     maxLength={1000}
                     value={additionalNotes}
-                    onChange={(e) => setAdditionalNotes(e.target.value)}
+                    onChange={setAdditionalNotes}
                   />
-                  <p className="text-right text-xs text-slate-400">{additionalNotes.length}/1000</p>
                 </CardContent>
               </Card>
 
@@ -207,41 +203,35 @@ export default function TreatmentPlanPage({
                   <p className="text-sm font-semibold text-slate-800">4. Follow Up Plan</p>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="text-xs text-slate-500">Review After</label>
-                      <Select value={reviewAfter} onValueChange={setReviewAfter}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1 Day">1 Day</SelectItem>
-                          <SelectItem value="2 Days">2 Days</SelectItem>
-                          <SelectItem value="3 Days">3 Days</SelectItem>
-                          <SelectItem value="1 Week">1 Week</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <SingleSelect
+                      label="Review After"
+                      value={reviewAfter}
+                      onChange={setReviewAfter}
+                      options={[
+                        { value: "1 Day", label: "1 Day" },
+                        { value: "2 Days", label: "2 Days" },
+                        { value: "3 Days", label: "3 Days" },
+                        { value: "1 Week", label: "1 Week" },
+                      ]}
+                    />
 
-                    <div>
-                      <label className="text-xs text-slate-500">Next Review Date</label>
-                      <Input
-                        type="date"
-                        className="mt-1"
-                        value={nextReviewDate}
-                        onChange={(e) => setNextReviewDate(e.target.value)}
-                      />
-                    </div>
+                    <DateField
+                      label="Next Review Date"
+                      value={nextReviewDate}
+                      onChange={setNextReviewDate}
+                    />
                   </div>
 
-                  <div>
-                    <label className="text-xs text-slate-500">Review Focus</label>
-                    <Select value={reviewFocus} onValueChange={setReviewFocus}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Symptom relief, BP & Sugar control">Symptom relief, BP & Sugar control</SelectItem>
-                        <SelectItem value="Hemodynamic monitoring">Hemodynamic monitoring</SelectItem>
-                        <SelectItem value="Medication response">Medication response</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <SingleSelect
+                    label="Review Focus"
+                    value={reviewFocus}
+                    onChange={setReviewFocus}
+                    options={[
+                      { value: "Symptom relief, BP & Sugar control", label: "Symptom relief, BP & Sugar control" },
+                      { value: "Hemodynamic monitoring", label: "Hemodynamic monitoring" },
+                      { value: "Medication response", label: "Medication response" },
+                    ]}
+                  />
 
                   <div className="flex items-center gap-2 pt-1">
                     <Checkbox
@@ -267,12 +257,12 @@ export default function TreatmentPlanPage({
 
             {!embedded && (
               <div className="flex justify-between gap-2">
-                <Button variant="outline" className="gap-2" onClick={handleBack}>
+                <PillButton variant="outline" className="gap-2" onClick={handleBack}>
                   <ArrowLeft className="h-4 w-4" /> Back
-                </Button>
-                <Button className="gap-2 bg-blue-600 hover:bg-blue-700" onClick={handleNextDischarge}>
+                </PillButton>
+                <PillButton className="gap-2" onClick={handleNextDischarge}>
                   Next: Discharge Decission <ArrowRight className="h-4 w-4" />
-                </Button>
+                </PillButton>
               </div>
             )}
           </div>

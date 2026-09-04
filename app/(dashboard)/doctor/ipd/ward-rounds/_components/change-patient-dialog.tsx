@@ -2,12 +2,12 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { Search, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { SuffixedInput } from "@/components/forms/form-controls";
+import { PillButton } from "@/components/forms/pill-button";
 import { PatientStatusBadge } from "./patient-status-badge";
 import { cn } from "@/lib/utils";
 import { WardRoundPatient } from "@/types/doctor/ipd/ward-round-types";
@@ -61,16 +61,13 @@ export function ChangePatientDialog({ patients, currentUhid, open, onOpenChange,
         </DialogHeader>
 
         <div className="shrink-0 px-5 pt-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              autoFocus
-              placeholder="Search by Name / UHID / IPD No. / Bed"
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+          <SuffixedInput
+            label="Search"
+            placeholder="Search by Name / UHID / IPD No. / Bed"
+            className="pl-9"
+            value={search}
+            onChange={setSearch}
+          />
         </div>
 
         <div className="flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
@@ -110,10 +107,10 @@ export function ChangePatientDialog({ patients, currentUhid, open, onOpenChange,
         </div>
 
         <div className="flex shrink-0 justify-end gap-3 border-t border-slate-100 px-5 py-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => handleConfirm(highlightedUhid)}>
+          <PillButton variant="outline" onClick={() => onOpenChange(false)}>Cancel</PillButton>
+          <PillButton variant="gradient" onClick={() => handleConfirm(highlightedUhid)}>
             Select Patient
-          </Button>
+          </PillButton>
         </div>
       </DialogContent>
     </Dialog>

@@ -2,7 +2,7 @@
 "use client";
 
 import { Eye, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/forms/pill-button";
 import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
 import { MedicineStatusBadge } from "./medicine-status-badge";
 import { TodayDoseIndicator } from "./today-dose-indicator";
@@ -81,33 +81,33 @@ export function MedicineOrdersTable({ items, onEdit, onDelete, onView }: Medicin
       headerClassName: "text-right",
       render: (item) => (
         <div className="flex justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-slate-500 hover:text-blue-600"
+          <PillButton
+            variant="outline"
+            size="sm"
+            icon={Eye}
             onClick={() => onView(item)}
-            title="View details"
+            aria-label="View details"
           >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-slate-500 hover:text-blue-600"
+            {"\u00A0"}
+          </PillButton>
+          <PillButton
+            variant="outline"
+            size="sm"
+            icon={Pencil}
             onClick={() => onEdit(item)}
-            title="Edit medicine"
+            aria-label="Edit medicine"
           >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-slate-500 hover:text-red-600"
+            {"\u00A0"}
+          </PillButton>
+          <PillButton
+            variant="danger"
+            size="sm"
+            icon={Trash2}
             onClick={() => onDelete(item.id)}
-            title="Delete medicine"
+            aria-label="Delete medicine"
           >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+            {"\u00A0"}
+          </PillButton>
         </div>
       ),
     },
