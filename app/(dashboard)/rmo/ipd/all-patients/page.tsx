@@ -1,6 +1,7 @@
 // app/(dashboard)/rmo/ipd/all-patients/page.tsx
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -19,7 +20,6 @@ import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButto
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import { PatientStatusBadge } from "./_components/rmo-badges";
-import { RmoDetailDrawer } from "./_components/drawer/rmo-detail-drawer";
 
 type ViewMode = "list" | "grid";
 const initialFilters: RmoFiltersState = {
@@ -37,10 +37,14 @@ const previousDay = {
 };
 
 export default function RmoAllPatientsPage() {
-  const [patients, setPatients] = useState<RmoPatient[]>(RMO_PATIENTS);
+  const router = useRouter();
+  const [patients] = useState<RmoPatient[]>(RMO_PATIENTS);
   const [filters, setFilters] = useState<RmoFiltersState>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [viewingPatient, setViewingPatient] = useState<RmoPatient | null>(null);
+
+  const openPatient = useCallback((patient: RmoPatient) => {
+    router.push(`/rmo/ipd/all-patients/${patient.uhid}`);
+  }, [router]);
 
   const filtered = useMemo(
     () =>
@@ -73,18 +77,11 @@ export default function RmoAllPatientsPage() {
     [patients],
   );
 
-  function updateFilter<K extends keyof RmoFiltersState>(
+function updateFilter<K extends keyof RmoFiltersState>(
     key: K,
     value: RmoFiltersState[K],
   ) {
     setFilters((previous) => ({ ...previous, [key]: value }));
-  }
-
-  function handlePatientUpdate(updated: RmoPatient) {
-    setPatients((previous) =>
-      previous.map((p) => (p.uhid === updated.uhid ? updated : p)),
-    );
-    setViewingPatient(updated);
   }
 
   const hasActiveFilters =
@@ -214,7 +211,7 @@ export default function RmoAllPatientsPage() {
         <OpsActionButton
           label="View Details"
           icon={Eye}
-          onClick={() => setViewingPatient(p)}
+          onClick={() => openPatient(p)}
         />
       ),
     },
@@ -270,10 +267,10 @@ export default function RmoAllPatientsPage() {
             </div>
           </div>
 
-          <Button
+<Button
             className="mt-4 w-full gap-2 border-blue-200 text-blue-700"
             variant="outline"
-            onClick={() => setViewingPatient(p)}
+            onClick={() => openPatient(p)}
           >
             <Eye className="h-4 w-4" />
             View Details
@@ -363,27 +360,21 @@ export default function RmoAllPatientsPage() {
         </div>
 
         {view === "list" ? (
-          <OpsTable
+<OpsTable
             data={filtered}
             rowKey={(p) => p.uhid}
             columns={columns}
-           
+            onRowClick={openPatient}
             showColumnToggle
           />
         ) : (
-          <OpsGrid
+<OpsGrid
             data={filtered}
             rowKey={(p) => p.uhid}
             renderCard={renderCard}
             pageSize={6}
           />
         )}
-
-        <RmoDetailDrawer
-          patient={viewingPatient}
-          onClose={() => setViewingPatient(null)}
-          onPatientUpdate={handlePatientUpdate}
-        />
       </main>
     </div>
   );

@@ -1,6 +1,7 @@
 // app/(dashboard)/rmo/emergency/all-patients/page.tsx
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Eye,
@@ -10,12 +11,9 @@ import {
   UserRoundCog,
   Users,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type {
   EmergencyFilters,
-  EmergencyPatient,
 } from "@/types/emergency/emergency-types";
 import type {
   AssignmentRole,
@@ -34,7 +32,6 @@ import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import { EmergencyStatusBadge } from "@/app/(dashboard)/admission/emergency/all-patients/_components/emergency-badges";
 import { AssignmentDrawer } from "./_components/assignment-drawer";
-import { RmoPatientDetailsDrawer } from "./_components/rmo-patient-details-drawer";
 
 type ViewMode = "list" | "grid";
 
@@ -53,17 +50,20 @@ const previousDay = {
 };
 
 export default function RmoEmergencyAllPatientsPage() {
+  const router = useRouter();
   const [patients, setPatients] = useState<RmoEmergencyPatient[]>(
     EMERGENCY_PATIENTS.map((p) => ({ ...p, criticalNotifications: [] })),
   );
   const [filters, setFilters] = useState<EmergencyFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [drawerPatient, setDrawerPatient] =
-    useState<RmoEmergencyPatient | null>(null);
   const [assignment, setAssignment] = useState<{
     patient: RmoEmergencyPatient;
     role: AssignmentRole;
   } | null>(null);
+
+  const openPatient = useCallback((p: RmoEmergencyPatient) => {
+    router.push(`/rmo/emergency/all-patients/${p.emergencyNumber}`);
+  }, [router]);
 
   const filtered = useMemo(
     () =>
@@ -98,19 +98,15 @@ export default function RmoEmergencyAllPatientsPage() {
     [patients],
   );
 
-  function updatePatient(updated: RmoEmergencyPatient) {
+function updatePatient(updated: RmoEmergencyPatient) {
     setPatients((rows) =>
       rows.map((p) =>
         p.emergencyNumber === updated.emergencyNumber ? updated : p,
       ),
     );
-    setDrawerPatient(updated);
   }
 
-  function assign(
-    selection: AvailableDoctor | AvailableNurse,
-    showToast: boolean = true,
-  ) {
+function assign(selection: AvailableDoctor | AvailableNurse) {
     if (!assignment) return;
     const stamp = new Date().toLocaleString("en-IN", {
       day: "2-digit",
@@ -274,7 +270,7 @@ export default function RmoEmergencyAllPatientsPage() {
             {
               label: "View Details",
               icon: Eye,
-              onClick: () => setDrawerPatient(p),
+              onClick: () => openPatient(p),
             },
             {
               label: p.attendingDoctor === "Unassigned" ? "Assign Doctor" : "Doctor Assigned",
@@ -319,7 +315,7 @@ export default function RmoEmergencyAllPatientsPage() {
                 {
                   label: "View Details",
                   icon: Eye,
-                  onClick: () => setDrawerPatient(p),
+                  onClick: () => openPatient(p),
                 },
                 {
                   label: p.attendingDoctor === "Unassigned" ? "Assign Doctor" : "Doctor Assigned",
@@ -402,11 +398,11 @@ export default function RmoEmergencyAllPatientsPage() {
         </div>
 
         {view === "list" ? (
-          <OpsTable
+<OpsTable
             data={filtered}
             rowKey={(p) => p.emergencyNumber}
             columns={columns}
-           
+            onRowClick={openPatient}
             showColumnToggle
           />
         ) : (
@@ -418,18 +414,13 @@ export default function RmoEmergencyAllPatientsPage() {
           />
         )}
 
-        <AssignmentDrawer
+<AssignmentDrawer
           patient={assignment?.patient || null}
           role={assignment?.role || null}
           doctors={AVAILABLE_DOCTORS}
           nurses={AVAILABLE_NURSES}
           onClose={() => setAssignment(null)}
-          onAssign={assign}
-        />
-        <RmoPatientDetailsDrawer
-          patient={drawerPatient}
-          onClose={() => setDrawerPatient(null)}
-          onUpdate={updatePatient}
+          onAssign={(sel) => assign(sel)}
         />
       </main>
     </div>
