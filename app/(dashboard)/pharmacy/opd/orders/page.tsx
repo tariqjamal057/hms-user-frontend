@@ -1,6 +1,7 @@
 // app/(dashboard)/pharmacy/opd/orders/page.tsx
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   IndianRupee,
@@ -8,13 +9,9 @@ import {
   ReceiptText,
   Eye,
 } from "lucide-react";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type {
   PharmacyOPDOrder,
   PharmacyOrderFilters,
-  PharmacyPaymentMethod,
 } from "@/types/pharmacy/opd/pharmacy-opd-types";
 import {
   PHARMACY_CATEGORIES,
@@ -26,7 +23,6 @@ import {
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
-import { PharmacyOrderDetailDrawer } from "./_components/pharmacy-order-detail-drawer";
 import {
   StockBadge,
   OrderBadge,
@@ -54,12 +50,10 @@ const previousDay = {
 };
 
 export default function PharmacyOPDOrdersPage() {
-  const [orders, setOrders] = useState<PharmacyOPDOrder[]>(PHARMACY_OPD_ORDERS);
+  const router = useRouter();
+  const orders: PharmacyOPDOrder[] = PHARMACY_OPD_ORDERS;
   const [filters, setFilters] = useState<PharmacyOrderFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [selectedOrder, setSelectedOrder] = useState<PharmacyOPDOrder | null>(
-    null,
-  );
 
   const filtered = useMemo(() => {
     return orders.filter((order) => {
@@ -129,36 +123,6 @@ export default function PharmacyOPDOrdersPage() {
     value: PharmacyOrderFilters[K],
   ) {
     setFilters((previous) => ({ ...previous, [key]: value }));
-  }
-
-  function markDelivered(
-    orderId: string,
-    paymentMethod: PharmacyPaymentMethod,
-  ) {
-    const timestamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              status: "Delivered",
-              paymentMethod,
-              deliveredAt: timestamp,
-            }
-          : order,
-      ),
-    );
-    const delivered = orders.find((order) => order.id === orderId);
-    setSelectedOrder(null);
-    toast.success(
-      `Medicines dispatched and delivered to ${delivered?.patient.name ?? "patient"} successfully.`,
-    );
   }
 
   function getOrderDateAsIso(orderDateTime: string) {
@@ -294,7 +258,7 @@ export default function PharmacyOPDOrdersPage() {
       enableHiding: false,
       cell: (o) => (
         <div className="text-right">
-          <OpsActionButton label="View Details" icon={Eye} onClick={() => setSelectedOrder(o)} className="border-blue-200 text-blue-700" />
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => router.push(`/pharmacy/opd/orders/${o.id}`)} className="border-blue-200 text-blue-700" />
         </div>
       ),
     },
@@ -346,13 +310,12 @@ export default function PharmacyOPDOrdersPage() {
             <StockBadge status={getOrderStockStatus(o)} />
             <span className="text-xs text-slate-400">{o.orderDateTime}</span>
           </div>
-          <Button
-            className="mt-4 w-full border-blue-200 text-blue-700"
-            variant="outline"
-            onClick={() => setSelectedOrder(o)}
+          <button
+            className="mt-4 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+            onClick={() => router.push(`/pharmacy/opd/orders/${o.id}`)}
           >
             View & Dispense
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -471,12 +434,6 @@ export default function PharmacyOPDOrdersPage() {
             pageSize={6}
           />
         )}
-
-        <PharmacyOrderDetailDrawer
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-          onDelivered={markDelivered}
-        />
       </main>
     </div>
   );

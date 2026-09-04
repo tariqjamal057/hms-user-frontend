@@ -1,6 +1,7 @@
 // app/(dashboard)/pharmacy/ipd/orders/page.tsx
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CalendarClock,
@@ -8,23 +9,15 @@ import {
   ReceiptText,
   Eye,
 } from "lucide-react";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type {
-  DailyDoseLog,
-  PharmacyIpdMedicineItem,
   PharmacyIpdOrder,
   PharmacyIpdOrderFilters,
-  PharmacyPaymentMethod,
 } from "@/types/pharmacy/ipd/pharmacy-ipd-order-types";
 import {
-  CURRENT_PHARMACY_STAFF,
   PHARMACY_IPD_DOCTORS,
   PHARMACY_IPD_ORDERS,
   PHARMACY_IPD_WARDS,
   getBalanceDueValue,
-  getDefaultBatch,
   getNetPayableValue,
   getTotalPaidValue,
   getAdmittedDays,
@@ -39,7 +32,6 @@ import {
   PaymentBadge,
   UrgencyBadge,
 } from "./_components/pharmacy-ipd-badges";
-import { PharmacyIpdOrderDrawer } from "./_components/pharmacy-ipd-order-drawer";
 
 type ViewMode = "list" | "grid";
 const initialFilters: PharmacyIpdOrderFilters = {
@@ -72,11 +64,10 @@ function hasUrgent(order: PharmacyIpdOrder) {
 }
 
 export default function PharmacyIpdOrdersPage() {
-  const [orders, setOrders] = useState<PharmacyIpdOrder[]>(PHARMACY_IPD_ORDERS);
+  const router = useRouter();
+  const orders: PharmacyIpdOrder[] = PHARMACY_IPD_ORDERS;
   const [filters, setFilters] = useState<PharmacyIpdOrderFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [selectedOrder, setSelectedOrder] =
-    useState<PharmacyIpdOrder | null>(null);
 
   const filteredOrders = useMemo(
     () =>
@@ -127,219 +118,11 @@ export default function PharmacyIpdOrdersPage() {
     return { income, totalOrders: orders.length, totalMedicines, urgentOrders, outstanding };
   }, [orders]);
 
-  function updateFilter<K extends keyof PharmacyIpdOrderFilters>(
+function updateFilter<K extends keyof PharmacyIpdOrderFilters>(
     key: K,
     value: PharmacyIpdOrderFilters[K],
   ) {
     setFilters((previous) => ({ ...previous, [key]: value }));
-  }
-
-  function syncSelected(
-    orderId: string,
-    updater: (order: PharmacyIpdOrder) => PharmacyIpdOrder,
-  ) {
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === orderId ? updater(order) : order,
-      ),
-    );
-    setSelectedOrder((previous) =>
-      previous?.id === orderId ? updater(previous) : previous,
-    );
-  }
-
-  function handleSelectBatch(
-    orderId: string,
-    medicine: PharmacyIpdMedicineItem,
-    batchId: string,
-  ) {
-    syncSelected(orderId, (order) => ({
-      ...order,
-      medicines: order.medicines.map((item) =>
-        item.id === medicine.id ? { ...item, selectedBatchId: batchId } : item,
-      ),
-    }));
-  }
-
-  function handleDeliverDose(
-    orderId: string,
-    medicine: PharmacyIpdMedicineItem,
-    log: DailyDoseLog,
-    qty: number,
-  ) {
-    const activeBatch =
-      medicine.batches.find((batch) => batch.id === medicine.selectedBatchId) ??
-      getDefaultBatch(medicine);
-    if (!activeBatch || activeBatch.availableQuantity <= 0) return;
-
-    const stamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const isFull = qty >= log.orderedQtyForDose;
-
-    syncSelected(orderId, (order) => ({
-      ...order,
-      medicines: order.medicines.map((item) => {
-        if (item.id !== medicine.id) return item;
-        const updatedBatches = item.batches.map((batch) =>
-          batch.id === activeBatch.id
-            ? {
-                ...batch,
-                availableQuantity: Math.max(
-                  0,
-                  batch.availableQuantity - qty,
-                ),
-              }
-            : batch,
-        );
-        const updatedLogs = item.dailyLogs.map((entry) =>
-          entry.id === log.id
-            ? {
-                ...entry,
-                status: (isFull
-                  ? "Delivered"
-                  : "Partially Delivered") as DailyDoseLog["status"],
-                deliveredQtyForDose: qty,
-                batchNumberUsed: activeBatch.batchNumber,
-                unitPriceUsed: activeBatch.unitPrice,
-                amount: qty * activeBatch.unitPrice,
-                deliveredBy: CURRENT_PHARMACY_STAFF.name,
-                deliveredAt: stamp,
-                wardReceivedAt: stamp,
-              }
-            : entry,
-        );
-        return { ...item, batches: updatedBatches, dailyLogs: updatedLogs };
-      }),
-    }));
-    toast.success(
-      `${medicine.medicineName} (${log.slot}) marked delivered and sent to ward.`,
-    );
-  }
-
-  function handleNotifyDoctor(
-    orderId: string,
-    medicine: PharmacyIpdMedicineItem,
-    log: DailyDoseLog,
-  ) {
-    const stamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    syncSelected(orderId, (order) => ({
-      ...order,
-      medicines: order.medicines.map((item) =>
-        item.id === medicine.id
-          ? {
-              ...item,
-              dailyLogs: item.dailyLogs.map((entry) =>
-                entry.id === log.id
-                  ? {
-                      ...entry,
-                      doctorNotified: true,
-                      doctorNotifiedAt: stamp,
-                    }
-                  : entry,
-              ),
-            }
-          : item,
-      ),
-    }));
-    toast.success(
-      `Doctor and nurse notified: ${medicine.medicineName} is out of stock.`,
-    );
-  }
-
-  function handleAddPayments(
-    orderId: string,
-    lines: Array<{ method: PharmacyPaymentMethod; amount: number }>,
-  ) {
-    const stamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    syncSelected(orderId, (order) => {
-      const newPayments = lines.map((line, index) => ({
-        id: `PAY-${Date.now()}-${index}`,
-        method: line.method,
-        amount: line.amount,
-        receivedOn: stamp,
-        receivedBy: CURRENT_PHARMACY_STAFF.name,
-      }));
-      const updatedOrder = {
-        ...order,
-        payments: [...order.payments, ...newPayments],
-      };
-      const balance = getBalanceDueValue(updatedOrder);
-      return {
-        ...updatedOrder,
-        paymentStatus: balance <= 0 ? "Paid" : "Partially Paid",
-        status: balance <= 0 ? "Payment Received" : "Partially Paid",
-      };
-    });
-    toast.success("Payment recorded successfully.");
-  }
-
-  function handleAddDiscount(
-    orderId: string,
-    percentage: number,
-    amount: number,
-    reason: string,
-  ) {
-    const stamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    syncSelected(orderId, (order) => ({
-      ...order,
-      discounts: [
-        ...order.discounts,
-        {
-          id: `DIS-${Date.now()}`,
-          percentage,
-          amount,
-          reason,
-          givenBy: CURRENT_PHARMACY_STAFF.name,
-          givenByRole: CURRENT_PHARMACY_STAFF.role,
-          givenOn: stamp,
-        },
-      ],
-    }));
-    toast.success(
-      `${percentage}% discount (₹${amount.toFixed(2)}) applied by ${CURRENT_PHARMACY_STAFF.name}.`,
-    );
-  }
-
-  function handleSendToBillingDept(orderId: string) {
-    const stamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const current = orders.find((order) => order.id === orderId);
-    syncSelected(orderId, (order) => ({
-      ...order,
-      billSentToBillingDeptAt: stamp,
-      status: "Billed to Department",
-    }));
-    toast.success(
-      `Bill sent to IPD Billing Department for ${current?.patientName ?? "patient"}.`,
-    );
   }
 
   const hasActiveFilters =
@@ -530,7 +313,7 @@ export default function PharmacyIpdOrdersPage() {
       enableHiding: false,
       cell: (o) => (
         <div className="text-right">
-          <OpsActionButton label="View" icon={Eye} onClick={() => setSelectedOrder(o)} className="border-blue-200 text-blue-700" />
+          <OpsActionButton label="View" icon={Eye} onClick={() => router.push(`/pharmacy/ipd/orders/${o.id}`)} className="border-blue-200 text-blue-700" />
         </div>
       ),
     },
@@ -589,13 +372,12 @@ export default function PharmacyIpdOrdersPage() {
               ₹{getNetPayableValue(o).toFixed(2)}
             </span>
           </div>
-          <Button
-            className="mt-3 w-full border-blue-200 text-blue-700"
-            variant="outline"
-            onClick={() => setSelectedOrder(o)}
+<button
+            className="mt-3 w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+            onClick={() => router.push(`/pharmacy/ipd/orders/${o.id}`)}
           >
             Manage Order
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -724,24 +506,13 @@ export default function PharmacyIpdOrdersPage() {
             showColumnToggle
           />
         ) : (
-          <OpsGrid
+<OpsGrid
             data={filteredOrders}
             rowKey={(o) => o.id}
             renderCard={renderCard}
             pageSize={6}
           />
         )}
-
-        <PharmacyIpdOrderDrawer
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-          onSelectBatch={handleSelectBatch}
-          onDeliverDose={handleDeliverDose}
-          onNotifyDoctor={handleNotifyDoctor}
-          onAddPayments={handleAddPayments}
-          onAddDiscount={handleAddDiscount}
-          onSendToBillingDept={handleSendToBillingDept}
-        />
       </main>
     </div>
   );

@@ -60,6 +60,8 @@ export type PatientDetailShellProps = {
   onStatusChange?: (status: string) => void;
   tabs: PatientTab[];
   defaultTab?: string;
+  // When true and there is exactly one tab, hide the tab bar (content still renders).
+  hideSingleTab?: boolean;
   showStatusSelector?: boolean;
   showPatientSwitcher?: boolean;
   onSwitchPatient?: (uhid: string) => void;
@@ -79,6 +81,7 @@ export function PatientDetailShell({
   onStatusChange,
   tabs,
   defaultTab,
+  hideSingleTab = false,
   showStatusSelector = false,
   showPatientSwitcher = false,
   onSwitchPatient,
@@ -173,8 +176,10 @@ export function PatientDetailShell({
                       {patient.acuity && <AcuityBadge acuity={patient.acuity} />}
                     </div>
                     <p className="mt-1 text-sm text-slate-600">
-                      {patient.age} years · {patient.gender} · Blood Group{" "}
-                      <span className="font-semibold">{patient.bloodGroup}</span>
+                      {patient.age} years · {patient.gender}
+                      {patient.bloodGroup ? (
+                        <> · Blood Group <span className="font-semibold">{patient.bloodGroup}</span></>
+                      ) : null}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                       UHID: {patient.uhid} · {patient.moduleIdLabel}: {patient.moduleId}
@@ -272,7 +277,9 @@ export function PatientDetailShell({
         </div>
 
         {/* ── Tabs (separate, flush under header) ── */}
+        {tabs.length > 0 && (
         <Tabs value={tab} onValueChange={handleTabChange}>
+          {!(hideSingleTab && tabs.length === 1) && (
           <TabsList
             variant="line"
             className="w-full justify-start overflow-x-auto rounded-none border border-slate-200 bg-white p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -299,8 +306,9 @@ export function PatientDetailShell({
               );
             })}
           </TabsList>
+          )}
 
-            <div className="min-h-[240px]">
+            <div className={hideSingleTab && tabs.length === 1 ? "min-h-0" : "min-h-[240px]"}>
               <AnimatePresence mode="wait" custom={direction} initial={false}>
                 {activeTab && (
                   <motion.div
@@ -322,6 +330,7 @@ export function PatientDetailShell({
               </AnimatePresence>
             </div>
           </Tabs>
+        )}
       </div>
     </div>
   );
