@@ -311,11 +311,12 @@ export function FormButton({
     <Button
       onClick={onClick}
       size={size}
+      variant="ghost"
       disabled={disabled}
       className={cn(
         variant === "gradient"
-          ? "bg-gradient-to-r from-blue-600 to-cyan-600"
-          : "border-slate-200",
+          ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white  hover:text-slate-50 shadow-sm hover:from-blue-700 hover:to-cyan-600"
+          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800",
         className,
       )}
     >

@@ -2,14 +2,11 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-  History, Plus, ShieldAlert, Signature, Trash2,
-} from "lucide-react";
+import { History, Plus, ShieldAlert, Signature } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConsultationShell } from "@/components/consultation/consultation-shell";
-import { ConsultationProgressBar } from "@/components/consultation/consultation-stepper";
+import { SelectedItemsList } from "@/components/consultation/selected-items-list";
 import {
   DateField,
   FormButton,
@@ -30,6 +27,22 @@ import { LabDrawer, type LabDraft } from "@/components/consultation/lab-drawer";
 import { getPatientByUhid } from "@/lib/doctor/opd/opd-mock-data";
 
 type Step = 1 | 2 | 3 | 4;
+
+const DIAG_TYPE_BADGE: Record<"provisional" | "active" | "chronic", string> = {
+  provisional: "bg-amber-50 text-amber-700 border-amber-200",
+  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  chronic: "bg-red-50 text-red-700 border-red-200",
+};
+
+const DEPT_BADGE: Record<"pathology" | "radiology", string> = {
+  pathology: "bg-blue-50 text-blue-700 border-blue-200",
+  radiology: "bg-violet-50 text-violet-700 border-violet-200",
+};
+
+const PRIORITY_BADGE: Record<"routine" | "priority", string> = {
+  routine: "bg-slate-100 text-slate-600 border-slate-200",
+  priority: "bg-orange-50 text-orange-700 border-orange-200",
+};
 
 interface Diagnosis {
   id: string;
@@ -242,7 +255,7 @@ export default function DoctorConsultationPage() {
                     </FormButton>
                   </div>
                 </CardContent>
-                <ConsultationProgressBar currentStep={currentStep} totalSteps={steps.length} className="rounded-none" />
+                
               </Card>
             )}
 
@@ -265,35 +278,22 @@ export default function DoctorConsultationPage() {
                   <div className="mt-6">
                     <div className="flex items-center justify-between mb-3">
                       <label className="text-sm font-semibold text-slate-700">Diagnosis</label>
-                        <FormButton variant="outline" size="sm" onClick={() => setIsDiagnosisDialogOpen(true)}>
+                        <FormButton size="sm" onClick={() => setIsDiagnosisDialogOpen(true)}>
                           <Plus className="w-4 h-4 mr-1" />
                           Add Diagnosis
                         </FormButton>
                     </div>
-                    {diagnoses.length > 0 ? (
-                      <div className="space-y-2">
-                        {diagnoses.map((d) => (
-                          <div key={d.id} className="p-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800">{d.name}</p>
-                              <p className="text-xs text-slate-500 mt-0.5">
-                                ICD-10: {d.icd10} • <span className="capitalize">{d.type}</span>
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => handleRemoveDiagnosis(d.id)}
-                              className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors flex-shrink-0"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-6 text-center border border-slate-200 rounded-xl bg-slate-50">
-                        <p className="text-sm text-slate-400">No diagnosis added yet. Click &quot;Add Diagnosis&quot; to begin.</p>
-                      </div>
-                    )}
+                    <SelectedItemsList
+                      items={diagnoses.map((d) => ({
+                        id: d.id,
+                        title: d.name,
+                        meta: `ICD-10: ${d.icd10}`,
+                        gradient: d.type === "chronic" ? "amber" : d.type === "active" ? "emerald" : "blue",
+                        badges: [{ label: d.type, className: `capitalize ${DIAG_TYPE_BADGE[d.type]}` }],
+                      }))}
+                      onRemove={handleRemoveDiagnosis}
+                      emptyMessage="No diagnosis added yet. Click &quot;Add Diagnosis&quot; to begin."
+                    />
                   </div>
                   <FormTextarea
                     label="Doctor Notes & Care Advice"
@@ -312,7 +312,7 @@ export default function DoctorConsultationPage() {
                     </FormButton>
                   </div>
                 </CardContent>
-                <ConsultationProgressBar currentStep={currentStep} totalSteps={steps.length} className="rounded-none" />
+                
               </Card>
             )}
 
@@ -325,51 +325,25 @@ export default function DoctorConsultationPage() {
                       <h2 className="text-lg font-bold text-slate-800">E-Prescription</h2>
                       <p className="text-sm text-slate-500 mt-1">Medication safety checks against allergies and interactions.</p>
                     </div>
-                    <FormButton variant="outline" size="sm" onClick={() => setIsMedicineDialogOpen(true)}>
+                    <FormButton size="sm" onClick={() => setIsMedicineDialogOpen(true)}>
                       <Plus className="w-4 h-4 mr-1" />
                       Add Medicine
                     </FormButton>
                   </div>
 
-                  {medicines.length > 0 ? (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200">
-                            <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600">Medicine</th>
-                            <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600">Dosage</th>
-                            <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600">Frequency</th>
-                            <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600">Duration</th>
-                            <th className="text-left px-4 py-3 text-xs font-semibold text-slate-600">Instructions</th>
-                            <th className="text-right px-4 py-3 text-xs font-semibold text-slate-600">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {medicines.map((med) => (
-                            <tr key={med.id}>
-                              <td className="px-4 py-3 font-semibold text-slate-800">{med.name}</td>
-                              <td className="px-4 py-3 text-slate-600">{med.dosage}</td>
-                              <td className="px-4 py-3 text-slate-600">{med.frequency}</td>
-                              <td className="px-4 py-3 text-slate-600">{med.duration}</td>
-                              <td className="px-4 py-3 text-slate-600">{med.instructions}</td>
-                              <td className="px-4 py-3 text-right">
-                                <button
-                                  onClick={() => handleRemoveMedicine(med.id)}
-                                  className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center border border-slate-200 rounded-xl bg-slate-50">
-                      <p className="text-slate-500">No medicines added yet. Click &quot;Add Medicine&quot; to begin.</p>
-                    </div>
-                  )}
+                  <SelectedItemsList
+                    items={medicines.map((med) => ({
+                      id: med.id,
+                      title: med.name,
+                      meta: `${med.dosage} · ${med.frequency} · ${med.duration}`,
+                      gradient: "emerald",
+                      badges: med.instructions
+                        ? [{ label: med.instructions, className: "bg-teal-50 text-teal-700 border-teal-200" }]
+                        : undefined,
+                    }))}
+                    onRemove={handleRemoveMedicine}
+                    emptyMessage="No medicines added yet. Click &quot;Add Medicine&quot; to begin."
+                  />
 
                   <FormTextarea
                     label="Non-Pharmacological Advice"
@@ -388,7 +362,7 @@ export default function DoctorConsultationPage() {
                     </FormButton>
                   </div>
                 </CardContent>
-                <ConsultationProgressBar currentStep={currentStep} totalSteps={steps.length} className="rounded-none" />
+                
               </Card>
             )}
 
@@ -401,43 +375,31 @@ export default function DoctorConsultationPage() {
                       <h2 className="text-lg font-bold text-slate-800">Investigations & Clinical Plan</h2>
                       <p className="text-sm text-slate-500 mt-1">Place orders, define follow-up, and finalize.</p>
                     </div>
-                    <FormButton variant="outline" size="sm" onClick={() => setIsLabDialogOpen(true)}>
+                    <FormButton size="sm" onClick={() => setIsLabDialogOpen(true)}>
                       <Plus className="w-4 h-4 mr-1" />
                       Add Lab Order
                     </FormButton>
                   </div>
 
-                  {labOrders.length > 0 ? (
-                    <div className="space-y-2 mb-5">
-                      {labOrders.map((order) => (
-                        <div key={order.id} className="p-3 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-800">{order.test}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className={`capitalize text-[11px] font-semibold ${order.department === "pathology" ? "text-blue-600" : "text-violet-600"}`}>
-                                {order.department === "pathology" ? "🧪" : "📷"} {order.department}
-                              </span>
-                              <span className="text-slate-300">•</span>
-                              <span className="text-[11px] text-slate-500 capitalize">{order.priority}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="bg-blue-100 text-blue-700">Ordered</Badge>
-                            <button
-                              onClick={() => handleRemoveLabOrder(order.id)}
-                              className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center border border-slate-200 rounded-xl bg-slate-50 mb-5">
-                      <p className="text-slate-500">No lab orders added yet.</p>
-                    </div>
-                  )}
+                  <SelectedItemsList
+                    items={labOrders.map((order) => ({
+                      id: order.id,
+                      title: order.test,
+                      gradient: order.department === "pathology" ? "blue" : "violet",
+                      badges: [
+                        { label: order.department, className: `${DEPT_BADGE[order.department]} capitalize` },
+                        { label: order.priority, className: `${PRIORITY_BADGE[order.priority]} capitalize` },
+                      ],
+                      trailing: (
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                          Ordered
+                        </span>
+                      ),
+                    }))}
+                    onRemove={handleRemoveLabOrder}
+                    className="mb-5"
+                    emptyMessage="No lab orders added yet."
+                  />
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="relative min-w-0">
@@ -473,7 +435,7 @@ export default function DoctorConsultationPage() {
                     </FormButton>
                   </div>
                 </CardContent>
-                <ConsultationProgressBar currentStep={currentStep} totalSteps={steps.length} className="rounded-none" />
+                
               </Card>
             )}
           </div>
