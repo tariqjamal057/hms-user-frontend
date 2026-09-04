@@ -1,13 +1,12 @@
 // app/(dashboard)/nurse-admin/ipd/all-ward-patients/page.tsx
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, BedDouble, CheckCircle2, Eye, LogOut } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { WardPatientFull } from "@/types/nurse-admin/ipd/ward-detail-types";
 import { ALL_WARDS, WARD_PATIENTS_FULL } from "@/lib/nurse-admin/ipd/ward-detail-data";
-import { PatientDetailDrawer } from "./_components/drawer/patient-detail-drawer";
 import { PatientStatusBadge } from "./_components/status-badges";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
@@ -18,12 +17,12 @@ type ViewMode = "list" | "grid";
 const previousDay = { total: 32, stable: 20, underObservation: 8, critical: 3, discharged: 1 };
 
 export default function AllWardPatientsPage() {
-  const [patients, setPatients] = useState<WardPatientFull[]>(WARD_PATIENTS_FULL);
+  const router = useRouter();
+  const patients = WARD_PATIENTS_FULL;
   const [searchQuery, setSearchQuery] = useState("");
   const [wardFilter, setWardFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [viewingPatient, setViewingPatient] = useState<WardPatientFull | null>(null);
 
   const filtered = useMemo(() => patients.filter((patient) => {
     const query = searchQuery.trim().toLowerCase();
@@ -40,11 +39,6 @@ export default function AllWardPatientsPage() {
     underObservation: patients.filter((p) => p.status === "Under Observation").length,
     discharged: patients.filter((p) => p.status === "Discharged").length,
   }), [patients]);
-
-  function handlePatientUpdate(updated: WardPatientFull) {
-    setPatients((previous) => previous.map((p) => p.uhid === updated.uhid ? updated : p));
-    setViewingPatient(updated);
-  }
 
   const infoCards: KpiCardProps[] = [
     { label: "Total Patients", value: String(stats.total), icon: BedDouble, accent: "blue", footer: "Across all wards", trend: buildTrend(stats.total, previousDay.total) },
@@ -110,7 +104,7 @@ export default function AllWardPatientsPage() {
         <OpsActionButton
           label="View Details"
           icon={Eye}
-          onClick={() => setViewingPatient(p)}
+          onClick={() => router.push(`/nurseAdmin/ipd/all-ward-patients/${p.uhid}`)}
         />
       ),
     },
@@ -139,7 +133,7 @@ export default function AllWardPatientsPage() {
             <p className="mt-1 truncate text-sm font-bold text-slate-700">{patient.currentDiagnosis}</p>
           </div>
 
-          <Button className="mt-4 w-full gap-2 border-blue-200 text-blue-700" variant="outline" onClick={() => setViewingPatient(patient)}>
+          <Button className="mt-4 w-full gap-2 border-blue-200 text-blue-700" variant="outline" onClick={() => router.push(`/nurseAdmin/ipd/all-ward-patients/${patient.uhid}`)}>
             <Eye className="h-4 w-4" />View Details
           </Button>
         </CardContent>
@@ -207,8 +201,6 @@ export default function AllWardPatientsPage() {
           <OpsGrid data={filtered} rowKey={(p) => p.uhid} renderCard={renderCard} pageSize={6} />
         )}
       </main>
-
-      <PatientDetailDrawer patient={viewingPatient} onClose={() => setViewingPatient(null)} onPatientUpdate={handlePatientUpdate} />
     </div>
   );
 }

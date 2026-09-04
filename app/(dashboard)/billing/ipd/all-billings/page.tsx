@@ -1,11 +1,11 @@
 // app/(dashboard)/billing/ipd/page.tsx
 "use client";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, TrendingUp, Wallet, Eye } from "lucide-react";
 import type { BillingFilters as BillingFiltersState, BillingPatient } from "@/types/billing/ipd/billing-types";
 import { BILLING_PATIENTS, BILLING_WARDS, THIS_MONTH_PREFIX, TODAY_ISO } from "@/lib/billing/ipd/billing-data";
 import { computeBilling, formatCurrency } from "@/lib/billing/ipd/billing-calculations";
-import { BillingDetailDrawer } from "./_components/drawer/billing-detail-drawer";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
@@ -17,10 +17,14 @@ const initialFilters: BillingFiltersState = { search: "", ward: "All", status: "
 const previousDay = { collectedToday: 81250, collectedMonth: 1260000, due: 980000, fullyPaid: 14 };
 
 export default function IpdBillingPage() {
-  const [patients, setPatients] = useState<BillingPatient[]>(BILLING_PATIENTS);
+  const router = useRouter();
+  const [patients] = useState<BillingPatient[]>(BILLING_PATIENTS);
   const [filters, setFilters] = useState<BillingFiltersState>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [viewingPatient, setViewingPatient] = useState<BillingPatient | null>(null);
+
+  const openPatient = useCallback((patient: BillingPatient) => {
+    router.push(`/billing/ipd/all-billings/${patient.uhid}`);
+  }, [router]);
 
   const filtered = useMemo(() => patients.filter((patient) => {
     const query = filters.search.trim().toLowerCase();
@@ -53,11 +57,6 @@ export default function IpdBillingPage() {
     setFilters((previous) => ({ ...previous, [key]: value }));
   }
 
-  function handlePatientUpdate(updated: BillingPatient) {
-    setPatients((previous) => previous.map((p) => p.uhid === updated.uhid ? updated : p));
-    setViewingPatient(updated);
-  }
-
   const columns = useMemo<OpsColumn<BillingPatient>[]>(() => [
     { key: "Patient", header: "Patient", cell: (row) => <div><p className="font-semibold text-slate-800">{row.patientName}</p><p className="text-xs text-slate-400">{row.uhid}</p></div> },
     { key: "IPD ID", header: "IPD ID", cell: (row) => <span className="text-sm text-slate-600">{row.ipdId}</span> },
@@ -67,8 +66,8 @@ export default function IpdBillingPage() {
     { key: "Collected", header: "Collected", cell: (row) => <span className="text-sm font-semibold text-emerald-600">{formatCurrency(computeBilling(row).totalCollected)}</span> },
     { key: "Due", header: "Due", cell: (row) => { const due = computeBilling(row).dueAmount; return <span className={`text-sm font-bold ${due > 0 ? "text-red-600" : "text-slate-400"}`}>{formatCurrency(due)}</span>; } },
     { key: "Status", header: "Status", cell: (row) => <BillingStatusBadge status={computeBilling(row).status} /> },
-    { key: "Action", header: "Action", enableHiding: false, headerClassName: "text-right", cell: (row) => (<div className="text-right"><OpsActionButton label="View Details" icon={Eye} onClick={() => setViewingPatient(row)} /></div>) },
-  ], []);
+    { key: "Action", header: "Action", enableHiding: false, headerClassName: "text-right", cell: (row) => (<div className="text-right"><OpsActionButton label="View Details" icon={Eye} onClick={() => openPatient(row)} /></div>) },
+  ], [openPatient]);
 
   const infoCards: KpiCardProps[] = [
     { label: "Collected Today", value: formatCurrency(stats.collectedToday), icon: Wallet, accent: "emerald", footer: "24 Aug 2026", trend: buildTrend(stats.collectedToday, previousDay.collectedToday, "vs yesterday") },
@@ -113,7 +112,7 @@ export default function IpdBillingPage() {
             columns={columns}
             data={filtered}
             rowKey={(row) => row.uhid}
-            onRowClick={setViewingPatient}
+            onRowClick={openPatient}
           />
         ) : (
           <OpsGrid
@@ -138,13 +137,11 @@ export default function IpdBillingPage() {
                   <div className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-2"><p className="text-[9px] uppercase text-emerald-500">Collected</p><p className="mt-1 text-sm font-bold text-emerald-700">{formatCurrency(computeBilling(row).totalCollected)}</p></div>
                   <div className="rounded-lg border border-red-100 bg-red-50/40 p-2"><p className="text-[9px] uppercase text-red-500">Due</p><p className="mt-1 text-sm font-bold text-red-700">{formatCurrency(computeBilling(row).dueAmount)}</p></div>
                 </div>
-                <button type="button" onClick={() => setViewingPatient(row)} className="mt-4 w-full rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">View Details</button>
+                <button type="button" onClick={() => openPatient(row)} className="mt-4 w-full rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">View Details</button>
               </div>
             )}
           />
         )}
-
-        <BillingDetailDrawer patient={viewingPatient} onClose={() => setViewingPatient(null)} onPatientUpdate={handlePatientUpdate} />
       </div>
     </div>
   );
