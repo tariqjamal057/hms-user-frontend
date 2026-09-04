@@ -1,6 +1,7 @@
 // app/(dashboard)/lab/radiology/opd-orders/page.tsx
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Clock3,
@@ -9,16 +10,12 @@ import {
   ReceiptText,
   ScanLine,
 } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import type {
   RadiologyOPDOrder,
   RadiologyOrderFilters,
-  RadiologyPaymentMethod,
-  RadiologyTestItem,
 } from "@/types/lab/radiology/radiology-opd-types";
 import {
   RADIOLOGY_CATEGORIES,
@@ -28,7 +25,6 @@ import {
   getTotalRadiologyValue,
 } from "@/lib/lab/radiology/radiology-opd-orders-data";
 import { RadiologyTestStatusBadge, RadiologyPaymentStatusBadge } from "./_components/radiology-status-badges";
-import { RadiologyOrderDetailDrawer } from "./_components/radiology-order-detail-drawer";
 
 type ViewMode = "list" | "grid";
 const initialFilters: RadiologyOrderFilters = {
@@ -56,10 +52,10 @@ const previousDay = {
 };
 
 export default function RadiologyOPDOrdersPage() {
-  const [orders, setOrders] = useState<RadiologyOPDOrder[]>(RADIOLOGY_OPD_ORDERS);
+  const router = useRouter();
+  const orders = RADIOLOGY_OPD_ORDERS;
   const [filters, setFilters] = useState<RadiologyOrderFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [selectedOrder, setSelectedOrder] = useState<RadiologyOPDOrder | null>(null);
 
   const filteredOrders = useMemo(
     () =>
@@ -135,68 +131,11 @@ export default function RadiologyOPDOrdersPage() {
     return Array.from(dates).sort().reverse();
   }, [orders]);
 
-  function updateFilter<K extends keyof RadiologyOrderFilters>(
+function updateFilter<K extends keyof RadiologyOrderFilters>(
     key: K,
     value: RadiologyOrderFilters[K],
   ) {
     setFilters((previous) => ({ ...previous, [key]: value }));
-  }
-
-  function updateTest(orderId: string, updatedTest: RadiologyTestItem) {
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              tests: order.tests.map((test) =>
-                test.id === updatedTest.id ? updatedTest : test,
-              ),
-            }
-          : order,
-      ),
-    );
-    setSelectedOrder((previous) =>
-      previous?.id === orderId
-        ? {
-            ...previous,
-            tests: previous.tests.map((test) =>
-              test.id === updatedTest.id ? updatedTest : test,
-            ),
-          }
-        : previous,
-    );
-    toast.success(
-      updatedTest.status === "Report Ready"
-        ? `${updatedTest.testName} report uploaded and locked.`
-        : `${updatedTest.testName} moved to ${updatedTest.status}.`,
-    );
-  }
-
-  function collectPayment(orderId: string, method: RadiologyPaymentMethod) {
-    const stamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const target = orders.find((order) => order.id === orderId);
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              paymentStatus: "Paid",
-              paymentMethod: method,
-              paidAt: stamp,
-            }
-          : order,
-      ),
-    );
-    setSelectedOrder(null);
-    toast.success(
-      `Payment collected successfully from ${target?.patient.name ?? "patient"}.`,
-    );
   }
 
   const infoCards: KpiCardProps[] = [
@@ -273,7 +212,7 @@ export default function RadiologyOPDOrdersPage() {
       className: "text-right",
       cell: (order) => (
         <div className="text-right">
-          <OpsActionButton label="View Details" icon={Eye} onClick={() => setSelectedOrder(order)} className="border-sky-200 text-sky-700" />
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => router.push(`/lab/radiology/opd-orders/${order.id}`)} className="border-sky-200 text-sky-700" />
         </div>
       ),
     },
@@ -302,10 +241,10 @@ export default function RadiologyOPDOrdersPage() {
             <span className="text-xs text-slate-400">{order.orderedAt}</span>
           </>
         }
-        action={{
+action={{
           label: "Process Imaging",
           icon: Eye,
-          onClick: () => setSelectedOrder(order),
+          onClick: () => router.push(`/lab/radiology/opd-orders/${order.id}`),
         }}
       />
     );
@@ -393,18 +332,11 @@ export default function RadiologyOPDOrdersPage() {
           />
         </div>
 
-        {view === "list" ? (
+{view === "list" ? (
           <OpsTable data={filteredOrders} rowKey={(o) => o.id} columns={columns} showColumnToggle />
         ) : (
           <OpsGrid data={filteredOrders} rowKey={(o) => o.id} renderCard={renderCard} pageSize={6} />
         )}
-
-        <RadiologyOrderDetailDrawer
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-          onUpdateTest={updateTest}
-          onCollectPayment={collectPayment}
-        />
       </main>
     </div>
   );

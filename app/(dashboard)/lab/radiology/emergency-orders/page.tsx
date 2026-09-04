@@ -1,6 +1,7 @@
 // app/(dashboard)/lab/radiology/emergency-orders/page.tsx
 "use client";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -9,17 +10,13 @@ import {
   IndianRupee,
   ReceiptText,
 } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import type {
   RadiologyIpdOrder,
   RadiologyIpdOrderFilters,
-  RadiologyIpdTestItem,
 } from "@/types/lab/radiology/radiology-ipd-types";
-import type { RadiologyPaymentMethod } from "@/types/lab/radiology/radiology-opd-types";
 import {
   RADIOLOGY_EMERGENCY_DOCTORS,
   RADIOLOGY_EMERGENCY_ORDERS,
@@ -29,7 +26,6 @@ import {
 } from "@/lib/lab/radiology/radiology-emergency-orders-data";
 import { RadiologyTestStatusBadge } from "../opd-orders/_components/radiology-status-badges";
 import { RadiologyUrgencyBadge, RadiologyIpdPaymentBadge } from "../ipd-orders/_components/radiology-ipd-badges";
-import { RadiologyIpdOrderDetailDrawer } from "../ipd-orders/_components/radiology-ipd-order-detail-drawer";
 
 type ViewMode = "list" | "grid";
 const initialFilters: RadiologyIpdOrderFilters = {
@@ -58,10 +54,10 @@ const previousDay = {
 };
 
 export default function RadiologyEmergencyOrdersPage() {
-  const [orders, setOrders] = useState<RadiologyIpdOrder[]>(RADIOLOGY_EMERGENCY_ORDERS);
+  const router = useRouter();
+  const orders = RADIOLOGY_EMERGENCY_ORDERS;
   const [filters, setFilters] = useState<RadiologyIpdOrderFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [selectedOrder, setSelectedOrder] = useState<RadiologyIpdOrder | null>(null);
 
   const filteredOrders = useMemo(
     () =>
@@ -154,90 +150,11 @@ export default function RadiologyEmergencyOrdersPage() {
     return Array.from(dates).sort().reverse();
   }, [orders]);
 
-  function updateFilter<K extends keyof RadiologyIpdOrderFilters>(
+function updateFilter<K extends keyof RadiologyIpdOrderFilters>(
     key: K,
     value: RadiologyIpdOrderFilters[K],
   ) {
     setFilters((previous) => ({ ...previous, [key]: value }));
-  }
-
-  function updateTest(orderId: string, updatedTest: RadiologyIpdTestItem) {
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              tests: order.tests.map((test) =>
-                test.id === updatedTest.id ? updatedTest : test,
-              ),
-            }
-          : order,
-      ),
-    );
-    setSelectedOrder((previous) =>
-      previous?.id === orderId
-        ? {
-            ...previous,
-            tests: previous.tests.map((test) =>
-              test.id === updatedTest.id ? updatedTest : test,
-            ),
-          }
-        : previous,
-    );
-    toast.success(
-      updatedTest.status === "Report Ready"
-        ? `${updatedTest.testName} report uploaded and locked.`
-        : `${updatedTest.testName} moved to ${updatedTest.status}.`,
-    );
-  }
-
-  function collectPayment(orderId: string, method: RadiologyPaymentMethod) {
-    const stamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const current = orders.find((order) => order.id === orderId);
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              paymentStatus: "Paid",
-              paymentMethod: method,
-              paidAt: stamp,
-            }
-          : order,
-      ),
-    );
-    setSelectedOrder(null);
-    toast.success(
-      `Payment collected successfully from ${current?.patient.name ?? "patient"}.`,
-    );
-  }
-
-  function sendToBillingDept(orderId: string) {
-    const stamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const current = orders.find((order) => order.id === orderId);
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === orderId
-          ? { ...order, billSentToBillingDeptAt: stamp }
-          : order,
-      ),
-    );
-    setSelectedOrder(null);
-    toast.success(
-      `Radiology reports delivered for ${current?.patient.name ?? "patient"}. Bill sent to Emergency Billing Department.`,
-    );
   }
 
   const infoCards: KpiCardProps[] = [
@@ -329,7 +246,7 @@ export default function RadiologyEmergencyOrdersPage() {
       className: "text-right",
       cell: (order) => (
         <div className="text-right">
-          <OpsActionButton label="View Details" icon={Eye} onClick={() => setSelectedOrder(order)} className="border-sky-200 text-sky-700" />
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => router.push(`/lab/radiology/emergency-orders/${order.id}`)} className="border-sky-200 text-sky-700" />
         </div>
       ),
     },
@@ -358,10 +275,10 @@ export default function RadiologyEmergencyOrdersPage() {
             <RadiologyUrgencyBadge urgency={hasUrgentRadiologyIpdTest(order) ? "Urgent" : "Routine"} />
           </>
         }
-        action={{
+action={{
           label: "Process Imaging",
           icon: Eye,
-          onClick: () => setSelectedOrder(order),
+          onClick: () => router.push(`/lab/radiology/emergency-orders/${order.id}`),
         }}
       />
     );
@@ -453,19 +370,11 @@ export default function RadiologyEmergencyOrdersPage() {
           />
         </div>
 
-        {view === "list" ? (
+{view === "list" ? (
           <OpsTable data={filteredOrders} rowKey={(o) => o.id} columns={columns} showColumnToggle />
         ) : (
           <OpsGrid data={filteredOrders} rowKey={(o) => o.id} renderCard={renderCard} pageSize={6} />
         )}
-
-        <RadiologyIpdOrderDetailDrawer
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-          onUpdateTest={updateTest}
-          onCollectPayment={collectPayment}
-          onSendToBillingDept={sendToBillingDept}
-        />
       </main>
     </div>
   );

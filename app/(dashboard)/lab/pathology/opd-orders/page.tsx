@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Clock3,
@@ -10,16 +11,12 @@ import {
   ReceiptText,
   TestTube2,
 } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import type {
   PathologyOPDOrder,
   PathologyOrderFilters,
-  PathologyPaymentMethod,
-  PathologyTestItem,
 } from "@/types/lab/pathology/pathology-opd-types";
 import {
   PATHOLOGY_CATEGORIES,
@@ -29,7 +26,6 @@ import {
   getTotalTestValue,
 } from "@/lib/lab/pathology/pathology-opd-orders-data";
 import { TestStatusBadge, PaymentStatusBadge } from "./_components/pathology-status-badges";
-import { PathologyOrderDetailDrawer } from "./_components/pathology-order-detail-drawer";
 
 type ViewMode = "list" | "grid";
 const initialFilters: PathologyOrderFilters = {
@@ -60,10 +56,10 @@ const previousDay = {
 };
 
 export default function PathologyOPDOrdersPage() {
-  const [orders, setOrders] = useState<PathologyOPDOrder[]>(PATHOLOGY_OPD_ORDERS);
+  const router = useRouter();
+  const orders = PATHOLOGY_OPD_ORDERS;
   const [filters, setFilters] = useState<PathologyOrderFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [selectedOrder, setSelectedOrder] = useState<PathologyOPDOrder | null>(null);
 
   const filteredOrders = useMemo(
     () =>
@@ -149,68 +145,11 @@ export default function PathologyOPDOrdersPage() {
     return Array.from(dates).sort().reverse();
   }, [orders]);
 
-  function updateFilter<K extends keyof PathologyOrderFilters>(
+function updateFilter<K extends keyof PathologyOrderFilters>(
     key: K,
     value: PathologyOrderFilters[K],
   ) {
     setFilters((previous) => ({ ...previous, [key]: value }));
-  }
-
-  function updateTest(orderId: string, updatedTest: PathologyTestItem) {
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              tests: order.tests.map((test) =>
-                test.id === updatedTest.id ? updatedTest : test,
-              ),
-            }
-          : order,
-      ),
-    );
-    setSelectedOrder((previous) =>
-      previous?.id === orderId
-        ? {
-            ...previous,
-            tests: previous.tests.map((test) =>
-              test.id === updatedTest.id ? updatedTest : test,
-            ),
-          }
-        : previous,
-    );
-    toast.success(
-      updatedTest.status === "Report Ready"
-        ? `${updatedTest.testName} report finalized and locked.`
-        : `${updatedTest.testName} status updated to ${updatedTest.status}.`,
-    );
-  }
-
-  function collectPayment(orderId: string, method: PathologyPaymentMethod) {
-    const timestamp = new Date().toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const current = orders.find((order) => order.id === orderId);
-    setOrders((previous) =>
-      previous.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              paymentStatus: "Paid",
-              paymentMethod: method,
-              paidAt: timestamp,
-            }
-          : order,
-      ),
-    );
-    setSelectedOrder(null);
-    toast.success(
-      `Payment collected successfully from ${current?.patient.name ?? "patient"}.`,
-    );
   }
 
   const infoCards: KpiCardProps[] = [
@@ -287,7 +226,7 @@ export default function PathologyOPDOrdersPage() {
       className: "text-right",
       cell: (order) => (
         <div className="text-right">
-          <OpsActionButton label="View Details" icon={Eye} onClick={() => setSelectedOrder(order)} className="border-blue-200 text-blue-700" />
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => router.push(`/lab/pathology/opd-orders/${order.id}`)} className="border-blue-200 text-blue-700" />
         </div>
       ),
     },
@@ -319,7 +258,7 @@ export default function PathologyOPDOrdersPage() {
         action={{
           label: "Process Tests",
           icon: Eye,
-          onClick: () => setSelectedOrder(order),
+          onClick: () => router.push(`/lab/pathology/opd-orders/${order.id}`),
         }}
       />
     );
@@ -408,18 +347,11 @@ export default function PathologyOPDOrdersPage() {
           />
         </div>
 
-        {view === "list" ? (
+{view === "list" ? (
           <OpsTable data={filteredOrders} rowKey={(o) => o.id} columns={columns} showColumnToggle />
         ) : (
           <OpsGrid data={filteredOrders} rowKey={(o) => o.id} renderCard={renderCard} pageSize={6} />
         )}
-
-        <PathologyOrderDetailDrawer
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-          onUpdateTest={updateTest}
-          onCollectPayment={collectPayment}
-        />
       </main>
     </div>
   );

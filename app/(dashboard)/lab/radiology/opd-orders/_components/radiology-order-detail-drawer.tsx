@@ -46,6 +46,7 @@ interface Props {
   onClose: () => void;
   onUpdateTest: (orderId: string, test: RadiologyTestItem) => void;
   onCollectPayment: (orderId: string, method: RadiologyPaymentMethod) => void;
+  inline?: boolean;
 }
 
 export function RadiologyOrderDetailDrawer({
@@ -53,6 +54,7 @@ export function RadiologyOrderDetailDrawer({
   onClose,
   onUpdateTest,
   onCollectPayment,
+  inline = false,
 }: Props) {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [payment, setPayment] = useState<RadiologyPaymentMethod>("Cash");
@@ -97,29 +99,9 @@ export function RadiologyOrderDetailDrawer({
       reportReadyAt: stamp,
     });
   }
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-slate-950/40" onClick={onClose} />
-      <aside className="absolute right-0 top-0 h-full w-full max-w-3xl overflow-y-auto bg-white shadow-2xl">
-        <header className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-5 py-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-800">
-                Radiology OPD Order
-              </h2>
-              <RadiologyPaymentStatusBadge
-                status={selectedOrder.paymentStatus}
-              />
-            </div>
-            <p className="mt-1 text-xs text-slate-500">
-              {selectedOrder.id} · {selectedOrder.appointmentId}
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
-        </header>
-        <main className="space-y-5 p-5">
+  const content = (
+    <>
+      <main className={inline ? "space-y-5" : "space-y-5 p-5"}>
           <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Info
               title="Patient Details"
@@ -192,7 +174,7 @@ export function RadiologyOrderDetailDrawer({
             </div>
           </section>
         </main>
-        <footer className="sticky bottom-0 border-t border-slate-200 bg-white p-5">
+        <footer className={inline ? "mt-5 border-t border-slate-200 bg-white p-5" : "sticky bottom-0 border-t border-slate-200 bg-white p-5"}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs text-slate-500">
@@ -230,6 +212,37 @@ export function RadiologyOrderDetailDrawer({
             }}
           />
         )}
+      </>
+    );
+
+    if (inline) {
+      return (
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50/60 px-5 py-3">
+            <h2 className="text-lg font-bold text-slate-800">Radiology OPD Order</h2>
+            <RadiologyPaymentStatusBadge status={selectedOrder.paymentStatus} />
+            <span className="text-xs text-slate-500">{selectedOrder.id} · {selectedOrder.appointmentId}</span>
+          </div>
+          <div className="p-5">{content}</div>
+        </div>
+      );
+    }
+
+    return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-slate-950/40" onClick={onClose} />
+      <aside className="absolute right-0 top-0 h-full w-full max-w-3xl overflow-y-auto bg-white shadow-2xl">
+        <header className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-5 py-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-bold text-slate-800">Radiology OPD Order</h2>
+              <RadiologyPaymentStatusBadge status={selectedOrder.paymentStatus} />
+            </div>
+            <p className="mt-1 text-xs text-slate-500">{selectedOrder.id} · {selectedOrder.appointmentId}</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose}><X className="h-5 w-5" /></Button>
+        </header>
+        {content}
       </aside>
     </div>
   );

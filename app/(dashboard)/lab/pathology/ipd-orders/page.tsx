@@ -2,26 +2,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle, CheckCircle2, Clock3, Eye, IndianRupee,
   ReceiptText,
 } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsGridCard, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
 import type {
-  PathologyIpdOrder, PathologyIpdOrderFilters, PathologyIpdTestItem,
+  PathologyIpdOrder, PathologyIpdOrderFilters,
 } from "@/types/lab/pathology/pathology-ipd-types";
-import type { PathologyPaymentMethod } from "@/types/lab/pathology/pathology-opd-types";
 import {
   PATHOLOGY_IPD_DOCTORS, PATHOLOGY_IPD_ORDERS,
   getIpdAggregateStatus, getTotalIpdTestValue, hasUrgentTest,
 } from "@/lib/lab/pathology/pathology-ipd-orders-data";
 import { TestStatusBadge } from "../opd-orders/_components/pathology-status-badges";
 import { UrgencyBadge, IpdPaymentBadge } from "./_components/pathology-ipd-badges";
-import { PathologyIpdOrderDetailDrawer } from "./_components/pathology-ipd-order-detail-drawer";
 
 type ViewMode = "list" | "grid";
 const initialFilters: PathologyIpdOrderFilters = { search: "", date: "", doctor: "", category: "", status: "All", urgency: "All", paymentStatus: "All" };
@@ -42,10 +39,10 @@ const previousDay = {
 };
 
 export default function PathologyIpdOrdersPage() {
-  const [orders, setOrders] = useState<PathologyIpdOrder[]>(PATHOLOGY_IPD_ORDERS);
+  const router = useRouter();
+  const orders = PATHOLOGY_IPD_ORDERS;
   const [filters, setFilters] = useState<PathologyIpdOrderFilters>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
-  const [selectedOrder, setSelectedOrder] = useState<PathologyIpdOrder | null>(null);
 
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const query = filters.search.trim().toLowerCase();
@@ -78,30 +75,8 @@ export default function PathologyIpdOrdersPage() {
     return Array.from(dates).sort().reverse();
   }, [orders]);
 
-  function updateFilter<K extends keyof PathologyIpdOrderFilters>(key: K, value: PathologyIpdOrderFilters[K]) {
+function updateFilter<K extends keyof PathologyIpdOrderFilters>(key: K, value: PathologyIpdOrderFilters[K]) {
     setFilters((previous) => ({ ...previous, [key]: value }));
-  }
-
-  function updateTest(orderId: string, updatedTest: PathologyIpdTestItem) {
-    setOrders((previous) => previous.map((order) => order.id === orderId ? { ...order, tests: order.tests.map((test) => test.id === updatedTest.id ? updatedTest : test) } : order));
-    setSelectedOrder((previous) => previous?.id === orderId ? { ...previous, tests: previous.tests.map((test) => test.id === updatedTest.id ? updatedTest : test) } : previous);
-    toast.success(updatedTest.status === "Report Ready" ? `${updatedTest.testName} report finalized and locked.` : `${updatedTest.testName} status updated to ${updatedTest.status}.`);
-  }
-
-  function collectPayment(orderId: string, method: PathologyPaymentMethod) {
-    const timestamp = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-    const current = orders.find((order) => order.id === orderId);
-    setOrders((previous) => previous.map((order) => order.id === orderId ? { ...order, paymentStatus: "Paid", paymentMethod: method, paidAt: timestamp } : order));
-    setSelectedOrder(null);
-    toast.success(`Payment collected successfully from ${current?.patient.name ?? "patient"}.`);
-  }
-
-  function sendToBillingDept(orderId: string) {
-    const timestamp = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-    const current = orders.find((order) => order.id === orderId);
-    setOrders((previous) => previous.map((order) => order.id === orderId ? { ...order, billSentToBillingDeptAt: timestamp } : order));
-    setSelectedOrder(null);
-    toast.success(`Reports delivered for ${current?.patient.name ?? "patient"}. Bill sent to IPD Billing Department.`);
   }
 
   const infoCards: KpiCardProps[] = [
@@ -193,7 +168,7 @@ export default function PathologyIpdOrdersPage() {
       className: "text-right",
       cell: (order) => (
         <div className="text-right">
-          <OpsActionButton label="View Details" icon={Eye} onClick={() => setSelectedOrder(order)} className="border-violet-200 text-violet-700" />
+          <OpsActionButton label="View Details" icon={Eye} onClick={() => router.push(`/lab/pathology/ipd-orders/${order.id}`)} className="border-violet-200 text-violet-700" />
         </div>
       ),
     },
@@ -222,10 +197,10 @@ export default function PathologyIpdOrdersPage() {
             <UrgencyBadge urgency={hasUrgentTest(order) ? "Urgent" : "Routine"} />
           </>
         }
-        action={{
+action={{
           label: "Process Tests",
           icon: Eye,
-          onClick: () => setSelectedOrder(order),
+          onClick: () => router.push(`/lab/pathology/ipd-orders/${order.id}`),
         }}
       />
     );
@@ -318,19 +293,11 @@ export default function PathologyIpdOrdersPage() {
           />
         </div>
 
-        {view === "list" ? (
+{view === "list" ? (
           <OpsTable data={filteredOrders} rowKey={(o) => o.id} columns={columns} showColumnToggle />
         ) : (
           <OpsGrid data={filteredOrders} rowKey={(o) => o.id} renderCard={renderCard} pageSize={6} />
         )}
-
-        <PathologyIpdOrderDetailDrawer
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-          onUpdateTest={updateTest}
-          onCollectPayment={collectPayment}
-          onSendToBillingDept={sendToBillingDept}
-        />
       </main>
     </div>
   );
