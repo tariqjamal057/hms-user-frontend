@@ -12,9 +12,15 @@ import {
   StickyNote,
   Pill,
   PlusCircle,
+  Activity,
+  HeartPulse,
+  Thermometer,
+  Wind,
+  Droplets,
+  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { PillButton } from "@/components/forms/pill-button";
@@ -39,8 +45,8 @@ import type {
 import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
 
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
-import { LatestVitalsMini } from "../clinical-examination/_components/latest-vitals-mini";
-import { LabAlertsMini } from "../clinical-examination/_components/lab-alerts-mini";
+import { QuickVitalsStrip } from "@/components/patient-detail/quick-vitals-strip";
+import { LabAlertsCard } from "../clinical-examination/_components/lab-alerts-card";
 
 export default function DiagnosisUpdatePage({
   uhid: propUhid,
@@ -233,110 +239,123 @@ export default function DiagnosisUpdatePage({
           </Card>
         )}
 
-        {/* Main layout */}
+        {/* Page heading */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-lg font-semibold text-slate-800">
+              Diagnosis Update
+            </h1>
+            <p className="text-xs text-slate-400">
+              Review and update patient diagnosis, active problems and
+              clinical impressions.
+            </p>
+          </div>
+        </div>
+
+        {/* Main layout: 2-column grid */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_300px] lg:items-start">
+          {/* Left column */}
           <div className="min-w-0 space-y-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-lg font-semibold text-slate-800">
-                  Diagnosis Update
-                </h1>
-                <p className="text-xs text-slate-400">
-                  Review and update patient diagnosis, active problems and
-                  clinical impressions.
+            <Card className="border-slate-200 shadow-sm py-0">
+              <CardContent className="py-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-800">
+                    Current Diagnoses
+                  </p>
+                  <PillButton
+                    size="sm"
+                    variant="gradient"
+                    icon={PlusCircle}
+                    onClick={() => setAddDiagnosisOpen(true)}
+                  >
+                    Add Diagnosis
+                  </PillButton>
+                </div>
+                <CurrentDiagnosesTable
+                  diagnoses={currentDiagnoses}
+                  onRemove={handleRemoveDiagnosis}
+                  onStatusChange={handleDiagnosisStatusChange}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 shadow-sm py-0">
+              <CardContent className="py-4">
+                <p className="mb-3 text-sm font-semibold text-slate-800">
+                  Clinical Impression (Summary) *
+                </p>
+                <Textarea
+                  rows={5}
+                  maxLength={1000}
+                  value={clinicalImpression}
+                  onChange={(e) => setClinicalImpression(e.target.value)}
+                />
+                <p className="text-right text-xs text-slate-400">
+                  {clinicalImpression.length}/1000
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Resolved / Inactive diagnoses */}
+            <Card className="border-slate-200 shadow-sm py-0">
+              <CardContent className="py-4">
+                <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                  Resolved / Inactive Diagnoses{" "}
+                  <Info className="h-3.5 w-3.5 text-slate-300" />
+                </p>
+                <ResolvedDiagnosesTable diagnoses={resolvedDiagnoses} />
+              </CardContent>
+            </Card>
+
+            {/* Footer note */}
+            {!embedded && (
+              <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                <p className="flex items-center gap-2">
+                  <Info className="h-4 w-4 shrink-0" /> Ensure diagnosis is
+                  updated based on latest findings and clinical judgement.
                 </p>
               </div>
-              {/*<div className="flex items-center gap-2">
-                <label className="whitespace-nowrap text-xs font-medium text-slate-500">Assessment Date & Time</label>
-                <Input type="datetime-local" value={assessmentDateTime} onChange={(e) => setAssessmentDateTime(e.target.value)} className="w-56 text-sm" />
-              </div> */}
-            </div>
+            )}
 
-            <div className="space-y-5">
-                <Card className="border-slate-200 shadow-sm">
-                  <CardContent className="py-4">
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-slate-800">
-                        Current Diagnoses
-                      </p>
-                      <PillButton
-                        size="sm"
-                        variant="gradient"
-                        icon={PlusCircle}
-                        onClick={() => setAddDiagnosisOpen(true)}
-                      >
-                        Add Diagnosis
-                      </PillButton>
-                    </div>
-                    <CurrentDiagnosesTable
-                      diagnoses={currentDiagnoses}
-                      onRemove={handleRemoveDiagnosis}
-                      onStatusChange={handleDiagnosisStatusChange}
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card className="border-slate-200 shadow-sm">
-                  <CardContent className="py-4">
-                    <p className="mb-3 text-sm font-semibold text-slate-800">
-                      Clinical Impression (Summary) *
-                    </p>
-                    <Textarea
-                      rows={5}
-                      maxLength={1000}
-                      value={clinicalImpression}
-                      onChange={(e) => setClinicalImpression(e.target.value)}
-                    />
-                    <p className="text-right text-xs text-slate-400">
-                      {clinicalImpression.length}/1000
-                    </p>
-                  </CardContent>
-                </Card>
+            {/* Navigation */}
+            {!embedded && (
+              <div className="flex justify-between gap-2">
+                <Button variant="outline" className="gap-2" onClick={handleBack}>
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </Button>
+                <Button
+                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                  onClick={handleNextProgressNote}
+                >
+                  Next: Progress Note <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
-
-              {/* Resolved / Inactive diagnoses */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardContent className="py-4">
-                  <p className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-                    Resolved / Inactive Diagnoses{" "}
-                    <Info className="h-3.5 w-3.5 text-slate-300" />
-                  </p>
-                  <ResolvedDiagnosesTable diagnoses={resolvedDiagnoses} />
-                </CardContent>
-              </Card>
-
-              {/* Footer note */}
-              {!embedded && (
-                <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                  <p className="flex items-center gap-2">
-                    <Info className="h-4 w-4 shrink-0" /> Ensure diagnosis is
-                    updated based on latest findings and clinical judgement.
-                  </p>
-                </div>
-              )}
-
-              {/* Navigation */}
-              {!embedded && (
-                <div className="flex justify-between gap-2">
-                  <Button variant="outline" className="gap-2" onClick={handleBack}>
-                    <ArrowLeft className="h-4 w-4" /> Back
-                  </Button>
-                  <Button
-                    className="gap-2 bg-blue-600 hover:bg-blue-700"
-                    onClick={handleNextProgressNote}
-                  >
-                    Next: Progress Note <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* Sidebar */}
+          {/* Right sidebar */}
           <div className="space-y-5 lg:sticky lg:top-6">
-            <LatestVitalsMini vitals={vitals} onViewAll={handleViewAllVitals} />
-
-            <LabAlertsMini
+            {vitals && (
+              <Card className="border-slate-200 shadow-sm p-0">
+                <CardContent className="py-4">
+                  <p className="mb-3 text-sm font-semibold text-slate-800">
+                    Vitals Trend
+                  </p>
+                  <QuickVitalsStrip
+                    vitals={[
+                      { label: "BP", value: vitals.bp, unit: "mmHg", icon: Activity, recordedOn: vitals.dateTime },
+                      { label: "Pulse", value: String(vitals.pulse), unit: "/min", icon: HeartPulse, recordedOn: vitals.dateTime },
+                      { label: "Temp", value: String(vitals.temp), unit: "°F", icon: Thermometer, recordedOn: vitals.dateTime },
+                      { label: "RR", value: String(vitals.respRate), unit: "/min", icon: Wind, recordedOn: vitals.dateTime },
+                      { label: "SpO₂", value: String(vitals.spo2), unit: "%", icon: Droplets, recordedOn: vitals.dateTime },
+                      { label: "Pain", value: String(vitals.pain), unit: "/10", icon: Gauge, recordedOn: vitals.dateTime },
+                    ]}
+                    gridClassName="grid-cols-1 sm:grid-cols-2"
+                  />
+                </CardContent>
+              </Card>
+            )}
+            <LabAlertsCard
               alerts={labAlerts}
               onViewAll={handleViewAllLabResults}
             />
@@ -377,6 +396,7 @@ export default function DiagnosisUpdatePage({
         onOpenChange={setAddDiagnosisOpen}
         onSubmit={handleAddDiagnosisDrafts}
       />
+    </div>
     </div>
   );
 }

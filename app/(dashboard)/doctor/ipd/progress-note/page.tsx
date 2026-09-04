@@ -16,14 +16,14 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  UserRound,
+  HeartPulse,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -31,7 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import {
+  ConsultationDrawer,
+  DrawerSection,
+} from "@/components/consultation/drawer";
+import {
+  FormTextarea,
+  SuffixedInput,
+} from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
 import {
   getPatientByUhid,
   WARD_ROUND_PATIENTS,
@@ -48,6 +56,7 @@ import type {
 } from "@/types/doctor/ipd/progress-note-types";
 import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
+import { PillButton } from "@/components/forms/pill-button";
 
 type AuthorFilter = "All" | ProgressNoteAuthorRole;
 
@@ -145,14 +154,14 @@ export default function ProgressNotesPage({
                 </p>
               </div>
             )}
-            <Button
+            <PillButton
+              size="default"
+              icon={Plus}
               onClick={() => setNoteDrawerOpen(true)}
-              className="shrink-0 bg-blue-600 text-white hover:bg-blue-700"
             >
-              <Plus className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">New Progress Note</span>
               <span className="sm:hidden">New Note</span>
-            </Button>
+            </PillButton>
           </div>
         </div>
       </header>
@@ -197,13 +206,13 @@ export default function ProgressNotesPage({
                   value={patient.admissionDateTime}
                 />
               </div>
-              <Button
+              <PillButton
                 variant="outline"
-                className="w-full border-slate-200 lg:w-auto"
+                className="w-full lg:w-auto"
                 onClick={() => setChangePatientOpen(true)}
               >
                 Change Patient
-              </Button>
+              </PillButton>
             </CardContent>
           </Card>
         )}
@@ -274,13 +283,12 @@ export default function ProgressNotesPage({
 
               {!embedded && (
                 <div className="flex justify-end border-t border-slate-100 pt-5">
-                  <Button
+                  <PillButton
+                    icon={ArrowRight}
                     onClick={handleNextMedicineOrders}
-                    className="gap-2 bg-blue-600 hover:bg-blue-700"
                   >
                     Next: Review Medicine Orders
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+                  </PillButton>
                 </div>
               )}
             </CardContent>
@@ -324,6 +332,21 @@ function InfoBlock({ label, value }: { label: string; value: string }) {
   );
 }
 
+const CATEGORY_BADGE: Record<ProgressNoteCategory, string> = {
+  "Doctor Round": "border-indigo-200 bg-indigo-50 text-indigo-700",
+  "Nursing Update": "border-emerald-200 bg-emerald-50 text-emerald-700",
+  "Clinical Review": "border-sky-200 bg-sky-50 text-sky-700",
+  "Care Plan": "border-violet-200 bg-violet-50 text-violet-700",
+  "Transfer / Handover": "border-amber-200 bg-amber-50 text-amber-700",
+  "Discharge Planning": "border-rose-200 bg-rose-50 text-rose-700",
+};
+
+const PRIORITY_BADGE: Record<ProgressNotePriority, string> = {
+  Routine: "border-slate-200 bg-slate-50 text-slate-600",
+  Important: "border-amber-200 bg-amber-50 text-amber-700",
+  Urgent: "border-red-200 bg-red-50 text-red-700",
+};
+
 function ProgressNoteCard({
   note,
   onView,
@@ -332,49 +355,99 @@ function ProgressNoteCard({
   onView: () => void;
 }) {
   const isDoctor = note.role === "Doctor";
+  const initials = note.author
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 transition-shadow hover:shadow-sm sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Badge
-            className={
-              isDoctor
-                ? "border-blue-200 bg-blue-50 text-blue-700"
-                : "border-emerald-200 bg-emerald-50 text-emerald-700"
-            }
-          >
-            {note.role.toUpperCase()}
-          </Badge>
-          <Badge
-            variant="outline"
-            className={
-              note.priority === "Urgent"
-                ? "border-red-200 text-red-600"
-                : "border-slate-200 text-slate-500"
-            }
-          >
-            {note.priority}
-          </Badge>
+    <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+      {/* Left role strip */}
+      <div className="flex">
+        <span
+          className={`w-1 shrink-0 ${isDoctor ? "bg-gradient-to-b from-blue-500 to-cyan-500" : "bg-gradient-to-b from-emerald-500 to-teal-500"}`}
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                  isDoctor
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-emerald-100 text-emerald-700"
+                }`}
+              >
+                {initials}
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge
+                    className={
+                      isDoctor
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    }
+                  >
+                    {note.role.toUpperCase()}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={PRIORITY_BADGE[note.priority]}
+                  >
+                    {note.priority}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  {note.author} · {note.createdAt}
+                </p>
+              </div>
+            </div>
+            <PillButton
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={onView}
+            >
+              View audit <ChevronRight className="ml-0.5 h-3.5 w-3.5" />
+            </PillButton>
+          </div>
+
+          <h2 className="mt-3 text-base font-bold text-slate-800">
+            {note.title}
+          </h2>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <Badge variant="outline" className={CATEGORY_BADGE[note.category]}>
+              {note.category}
+            </Badge>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            {note.noteText}
+          </p>
+
+          {note.vitals && (
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 sm:grid-cols-5">
+              {Object.entries(note.vitals).map(([key, value]) => (
+                <div key={key} className="rounded-md bg-white px-2 py-1.5 text-center shadow-sm">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                    {key}
+                  </p>
+                  <p className="text-xs font-bold text-slate-700">{value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+              <LockKeyhole className="h-3.5 w-3.5" /> {note.status}
+            </span>
+            <span className="text-[11px] text-slate-400">
+              Note ID: {note.id}
+            </span>
+          </div>
         </div>
-        <Button
-          variant="link"
-          size="sm"
-          onClick={onView}
-          className="h-auto p-0 text-blue-600"
-        >
-          View audit <ChevronRight className="ml-1 h-3.5 w-3.5" />
-        </Button>
-      </div>
-      <h2 className="mt-3 text-base font-bold text-slate-800">{note.title}</h2>
-      <p className="mt-1 text-xs text-slate-500">
-        {note.createdAt} · {note.author} · {note.category}
-      </p>
-      <p className="mt-4 text-sm leading-6 text-slate-600">{note.noteText}</p>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
-          <LockKeyhole className="h-3.5 w-3.5" /> {note.status}
-        </span>
-        <span className="text-xs text-slate-400">Note ID: {note.id}</span>
       </div>
     </article>
   );
@@ -611,192 +684,150 @@ function NewProgressNoteDrawer({
     reset();
   }
   return (
-    <div
-      className={`fixed inset-0 z-40 transition ${open ? "pointer-events-auto" : "pointer-events-none"}`}
-    >
-      <div
-        className={`absolute inset-0 bg-slate-950/35 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
-        onClick={close}
-      />
-      <aside
-        className={`absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto bg-white shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-5 py-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-800">
-              New Progress Note
-            </h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Create a structured clinical note for {patient.patientName}.
-            </p>
-            <p className="mt-1 text-[11px] text-slate-400">
-              UHID: {patient.uhid} · {patient.wardRoomBed}
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={close}>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-        <div className="space-y-5 p-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FieldLabel label="Author role">
-              <Select
-                value={role}
-                onValueChange={(value) =>
-                  setRole(value as ProgressNoteAuthorRole)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Doctor">Doctor</SelectItem>
-                  <SelectItem value="Nurse">Nurse</SelectItem>
-                </SelectContent>
-              </Select>
-            </FieldLabel>
-            <FieldLabel label="Priority">
-              <Select
-                value={priority}
-                onValueChange={(value) =>
-                  setPriority(value as ProgressNotePriority)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Routine">Routine</SelectItem>
-                  <SelectItem value="Important">Important</SelectItem>
-                  <SelectItem value="Urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-            </FieldLabel>
-          </div>
-          <FieldLabel label="Note category">
-            <Select
-              value={category}
-              onValueChange={(value) =>
-                setCategory(value as ProgressNoteCategory)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[
-                  "Doctor Round",
-                  "Nursing Update",
-                  "Clinical Review",
-                  "Care Plan",
-                  "Transfer / Handover",
-                  "Discharge Planning",
-                ].map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldLabel>
-          <FieldLabel label="Note title *">
-            <Input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="e.g. Morning ward round"
-            />
-          </FieldLabel>
-          <FieldLabel
-            label="Subjective findings *"
-            hint="Patient or family-reported symptoms and concerns"
-          >
-            <Textarea
-              value={subjective}
-              onChange={(event) => setSubjective(event.target.value)}
-              rows={4}
-              placeholder="Document symptoms, complaints, sleep, appetite, pain, or family concerns..."
-            />
-          </FieldLabel>
-          <FieldLabel
-            label="Objective findings"
-            hint="Examination findings, observations, devices, and relevant results"
-          >
-            <Textarea
-              value={objective}
-              onChange={(event) => setObjective(event.target.value)}
-              rows={4}
-              placeholder="Document examination findings, vitals, oxygen support, drains, wounds, and investigations..."
-            />
-          </FieldLabel>
-          <FieldLabel label="Clinical assessment *">
-            <Textarea
-              value={assessment}
-              onChange={(event) => setAssessment(event.target.value)}
-              rows={4}
-              placeholder="Summarise the current clinical assessment and response to treatment..."
-            />
-          </FieldLabel>
-          <FieldLabel label="Plan and next actions *">
-            <Textarea
-              value={plan}
-              onChange={(event) => setPlan(event.target.value)}
-              rows={4}
-              placeholder="Document medicines, investigations, monitoring, escalation, review time, and communication plan..."
-            />
-          </FieldLabel>
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-            <div>
-              <p className="text-sm font-medium text-slate-700">
-                Include latest vitals
-              </p>
-              <p className="text-xs text-slate-500">
-                Attach the latest recorded vitals to this note.
-              </p>
-            </div>
-            <Switch
-              checked={includeVitals}
-              onCheckedChange={setIncludeVitals}
-            />
-          </div>
-          <div className="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs leading-5 text-blue-800">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              Signing this note will create an immutable audit entry.
-              Corrections must be documented as an amendment.
-            </span>
-          </div>
-        </div>
-        <div className="sticky bottom-0 flex gap-3 border-t border-slate-200 bg-white p-5">
-          <Button variant="outline" onClick={close} className="flex-1">
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) close();
+      }}
+      title="New Progress Note"
+      description={`Create a structured clinical note for ${patient.patientName}.`}
+      icon={<ClipboardList className="h-5 w-5" />}
+      accent="blue"
+      meta={
+        <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+          {patient.uhid} · {patient.wardRoomBed}
+        </span>
+      }
+      footer={
+        <div className="flex gap-3">
+          <PillButton variant="outline" className="flex-1" onClick={close}>
             Cancel
-          </Button>
-          <Button
-            onClick={save}
-            className="flex-1 bg-blue-600 hover:bg-blue-700"
-          >
+          </PillButton>
+          <PillButton className="flex-1" onClick={save}>
             Save & Sign Note
-          </Button>
+          </PillButton>
         </div>
-      </aside>
-    </div>
-  );
-}
+      }
+    >
+      <div className="space-y-5">
+      <DrawerSection
+        title="Note details"
+        caption="Author, priority, category, and a short title"
+        icon={<ClipboardList className="h-4 w-4" />}
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <SingleSelect
+            label="Author role"
+            value={role}
+            options={[
+              { value: "Doctor", label: "Doctor" },
+              { value: "Nurse", label: "Nurse" },
+            ]}
+            onChange={(value) => setRole(value as ProgressNoteAuthorRole)}
+          />
+          <SingleSelect
+            label="Priority"
+            value={priority}
+            options={[
+              { value: "Routine", label: "Routine" },
+              { value: "Important", label: "Important" },
+              { value: "Urgent", label: "Urgent" },
+            ]}
+            onChange={(value) => setPriority(value as ProgressNotePriority)}
+          />
+        </div>
+        <SingleSelect
+          label="Note category"
+          value={category}
+          options={[
+            "Doctor Round",
+            "Nursing Update",
+            "Clinical Review",
+            "Care Plan",
+            "Transfer / Handover",
+            "Discharge Planning",
+          ].map((item) => ({ value: item, label: item }))}
+          onChange={(value) => setCategory(value as ProgressNoteCategory)}
+        />
+        <SuffixedInput
+          label="Note title *"
+          value={title}
+          onChange={setTitle}
+          placeholder="e.g. Morning ward round"
+        />
+      </DrawerSection>
 
-function FieldLabel({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs font-semibold text-slate-700">{label}</Label>
-      {hint && <p className="text-[10px] text-slate-400">{hint}</p>}
-      {children}
-    </div>
+      <DrawerSection
+        title="Clinical note"
+        caption="Structured SOAP documentation"
+        icon={<HeartPulse className="h-4 w-4" />}
+      >
+        <FormTextarea
+          label="Subjective findings *"
+          value={subjective}
+          onChange={setSubjective}
+          rows={4}
+          placeholder="Document symptoms, complaints, sleep, appetite, pain, or family concerns..."
+        />
+        <FormTextarea
+          label="Objective findings"
+          value={objective}
+          onChange={setObjective}
+          rows={4}
+          placeholder="Document examination findings, vitals, oxygen support, drains, wounds, and investigations..."
+        />
+        <FormTextarea
+          label="Clinical assessment *"
+          value={assessment}
+          onChange={setAssessment}
+          rows={4}
+          placeholder="Summarise the current clinical assessment and response to treatment..."
+        />
+        <FormTextarea
+          label="Plan and next actions *"
+          value={plan}
+          onChange={setPlan}
+          rows={4}
+          placeholder="Document medicines, investigations, monitoring, escalation, review time, and communication plan..."
+        />
+      </DrawerSection>
+
+      <DrawerSection
+        title="Attachments & signing"
+        caption="Vitals attachment and audit behaviour"
+        icon={<ShieldCheck className="h-4 w-4" />}
+      >
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+          <span>
+            <span className="block text-sm font-medium text-slate-700">
+              Include latest vitals
+            </span>
+            <span className="block text-xs text-slate-500">
+              Attach the latest recorded vitals to this note.
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={includeVitals}
+            onClick={() => setIncludeVitals((v) => !v)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition ${includeVitals ? "bg-blue-600" : "bg-slate-300"}`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${includeVitals ? "left-5.5" : "left-0.5"}`}
+            />
+          </button>
+        </label>
+        <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs leading-5 text-blue-800">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Signing this note will create an immutable audit entry. Corrections
+            must be documented as an amendment.
+          </span>
+        </div>
+      </DrawerSection>
+      </div>
+    </ConsultationDrawer>
   );
 }
 

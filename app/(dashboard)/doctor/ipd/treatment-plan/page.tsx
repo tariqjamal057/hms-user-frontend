@@ -4,7 +4,7 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Info, Plus, ClipboardCheck, FileText, StickyNote, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Info, Plus, ClipboardCheck, FileText, StickyNote, Upload, Activity, HeartPulse, Thermometer, Wind, Droplets, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuickActionsCard } from "@/components/patient-detail/quick-actions-card";
@@ -24,8 +24,8 @@ import { TreatmentPlanTable } from "./_components/treatment-plan-table";
 import { TreatmentPlanDialog } from "./_components/treatment-plan-dialog";
 import { Badge } from "@/components/ui/badge";
 import type { TreatmentPlanItem } from "@/types/doctor/ipd/treatment-plan-types";
-import { LatestVitalsMini } from "../clinical-examination/_components/latest-vitals-mini";
-import { LabAlertsMini } from "../clinical-examination/_components/lab-alerts-mini";
+import { QuickVitalsStrip } from "@/components/patient-detail/quick-vitals-strip";
+import { LabAlertsCard } from "../clinical-examination/_components/lab-alerts-card";
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
 import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
 
@@ -105,7 +105,7 @@ export default function TreatmentPlanPage({
     <div className="min-h-screen">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         {!embedded && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 shadow-sm py-0">
             <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
@@ -145,7 +145,7 @@ export default function TreatmentPlanPage({
       
             </div>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="py-4">
                 <p className="mb-3 text-sm font-semibold text-slate-800">1. Treatment Goals</p>
                 <Textarea
@@ -159,7 +159,7 @@ export default function TreatmentPlanPage({
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="py-4">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm font-semibold text-slate-800">2. Plan of Care</p>
@@ -189,7 +189,7 @@ export default function TreatmentPlanPage({
             </Card>
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="py-4">
                   <p className="mb-3 text-sm font-semibold text-slate-800">3. Additional Notes (Optional)</p>
                   <Textarea
@@ -202,7 +202,7 @@ export default function TreatmentPlanPage({
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="space-y-4 py-4">
                   <p className="text-sm font-semibold text-slate-800">4. Follow Up Plan</p>
 
@@ -278,7 +278,26 @@ export default function TreatmentPlanPage({
           </div>
 
           <div className="space-y-5 lg:sticky lg:top-6">
-            <LatestVitalsMini vitals={vitals} />
+            {vitals && (
+              <Card className="border-slate-200 shadow-sm py-0">
+                <CardContent className="py-4">
+                  <p className="mb-3 text-sm font-semibold text-slate-800">
+                    Vitals Trend
+                  </p>
+                  <QuickVitalsStrip
+                    vitals={[
+                      { label: "BP", value: vitals.bp, unit: "mmHg", icon: Activity, recordedOn: vitals.dateTime },
+                      { label: "Pulse", value: String(vitals.pulse), unit: "/min", icon: HeartPulse, recordedOn: vitals.dateTime },
+                      { label: "Temp", value: String(vitals.temp), unit: "°F", icon: Thermometer, recordedOn: vitals.dateTime },
+                      { label: "RR", value: String(vitals.respRate), unit: "/min", icon: Wind, recordedOn: vitals.dateTime },
+                      { label: "SpO₂", value: String(vitals.spo2), unit: "%", icon: Droplets, recordedOn: vitals.dateTime },
+                      { label: "Pain", value: String(vitals.pain), unit: "/10", icon: Gauge, recordedOn: vitals.dateTime },
+                    ]}
+                    gridClassName="grid-cols-1 sm:grid-cols-2"
+                  />
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="py-4">
@@ -302,7 +321,7 @@ export default function TreatmentPlanPage({
               </CardContent>
             </Card>
 
-            <LabAlertsMini alerts={labAlerts} />
+            <LabAlertsCard alerts={labAlerts} />
 
             <QuickActionsCard
               actions={[

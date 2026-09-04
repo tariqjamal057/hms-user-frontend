@@ -14,6 +14,12 @@ import {
   FileText,
   History,
   CircleAlert,
+  Activity,
+  HeartPulse,
+  Thermometer,
+  Wind,
+  Droplets,
+  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,13 +41,20 @@ import {
 } from "@/lib/doctor/ipd/ward-round-data";
 import { getVitalsForPatient } from "@/lib/doctor/ipd/vitals-data";
 import { getDiagnosisData } from "@/lib/doctor/ipd/diagnosis-data";
-import { getInvestigationOrdersData } from "@/lib/doctor/ipd/investigation-orders-data";
+import {
+  getInvestigationOrdersData,
+  PATHOLOGY_TESTS,
+  RADIOLOGY_TESTS,
+} from "@/lib/doctor/ipd/investigation-orders-data";
 import { InvestigationOrdersTable } from "./_components/investigation-orders-table";
-import { AddInvestigationDialog } from "./_components/add-investigation-dialog";
+import { LabDrawer, type LabDraft } from "@/components/consultation/lab-drawer";
 import { ClearAllInvestigationsDialog } from "./_components/clear-all-investigations-dialog";
-import type { InvestigationOrderItem } from "@/types/doctor/ipd/investigation-order-types";
+import type {
+  InvestigationDepartment,
+  InvestigationOrderItem,
+} from "@/types/doctor/ipd/investigation-order-types";
 import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
-import { LatestVitalsMini } from "../clinical-examination/_components/latest-vitals-mini";
+import { QuickVitalsStrip } from "@/components/patient-detail/quick-vitals-strip";
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
 import { InvestigationViewDialog } from "./_components/investigation-view-dialog";
 
@@ -64,9 +77,6 @@ export default function InvestigationOrdersPage({
   const [changePatientOpen, setChangePatientOpen] = useState(false);
   const [addInvestigationOpen, setAddInvestigationOpen] = useState(false);
   const [clearAllOpen, setClearAllOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<InvestigationOrderItem | null>(
-    null,
-  );
 
   const [orderDateTime, setOrderDateTime] = useState("2024-05-20T11:20");
   const [searchInvestigation, setSearchInvestigation] = useState("");
@@ -95,7 +105,6 @@ export default function InvestigationOrdersPage({
 
     setViewItem(null);
     setViewOpen(false);
-    setEditingItem(null);
   }, [uhid]);
 
   function handleView(item: InvestigationOrderItem) {
@@ -125,35 +134,44 @@ export default function InvestigationOrdersPage({
   }
 
   function handleOpenAddInvestigation() {
-    setEditingItem(null);
     setAddInvestigationOpen(true);
   }
 
-  function handleSaveInvestigation(item: InvestigationOrderItem) {
-    if (editingItem) {
-      setItems((previous) =>
-        previous.map((row) =>
-          row.id === item.id
-            ? {
-                ...item,
-                status: "Pending",
-              }
-            : row,
-        ),
-      );
-
-      toast.success("Investigation updated and marked pending");
-      return;
-    }
-
-    setItems((previous) => [...previous, item]);
-    toast.success("Investigation added as pending");
-  }
-
-  function handleEdit(item: InvestigationOrderItem) {
-    console.log("Edit investigation:", item);
-    setEditingItem(item);
-    setAddInvestigationOpen(true);
+  function handleAddInvestigationDrafts(drafts: LabDraft[]) {
+    if (drafts.length === 0) return;
+    const today = new Date();
+    const orderDate = today.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const newItems: InvestigationOrderItem[] = drafts.map((d) => {
+      const department: InvestigationDepartment =
+        d.department === "pathology" ? "Pathology" : "Radiology";
+      const pool =
+        department === "Pathology" ? PATHOLOGY_TESTS : RADIOLOGY_TESTS;
+      const ref = pool.find((t) => t.name === d.test);
+      return {
+        id: `INV-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        investigationName: d.test,
+        department,
+        category: ref?.category ?? d.category ?? department,
+        priority: d.priority === "priority" ? "Urgent" : "Normal",
+        sample: ref?.sample ?? "",
+        orderDate,
+        orderedBy: "Dr. Amit Verma",
+        status: "Pending",
+        indication: "",
+        additionalInstructions: "",
+        expectedReportTime: ref?.expectedReportTime ?? "",
+      };
+    });
+    setItems((previous) => [...previous, ...newItems]);
+    toast.success(
+      `${newItems.length} investigation${newItems.length > 1 ? "s" : ""} added as pending`,
+    );
   }
 
   function handleDelete(id: string) {
@@ -213,7 +231,7 @@ export default function InvestigationOrdersPage({
     <div className="min-h-screen">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         {!embedded && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 shadow-sm py-0">
             <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
@@ -277,7 +295,7 @@ export default function InvestigationOrdersPage({
               </div>
             </div>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="space-y-4 py-4">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px_180px_auto]">
                   <div>
@@ -392,7 +410,7 @@ export default function InvestigationOrdersPage({
             </Card>
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="py-4">
                   <p className="mb-3 text-sm font-semibold text-slate-800">
                     Clinical Indication / Reason
@@ -409,7 +427,7 @@ export default function InvestigationOrdersPage({
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="py-4">
                   <p className="mb-3 text-sm font-semibold text-slate-800">
                     Additional Instructions (Optional)
@@ -453,7 +471,26 @@ export default function InvestigationOrdersPage({
           </div>
 
           <div className="space-y-5 lg:sticky lg:top-6">
-            <LatestVitalsMini vitals={vitals} onViewAll={handleViewAllVitals} />
+            {vitals && (
+              <Card className="border-slate-200 shadow-sm p-0">
+                <CardContent className="py-4">
+                  <p className="mb-3 text-sm font-semibold text-slate-800">
+                    Vitals Trend
+                  </p>
+                  <QuickVitalsStrip
+                    vitals={[
+                      { label: "BP", value: vitals.bp, unit: "mmHg", icon: Activity, recordedOn: vitals.dateTime },
+                      { label: "Pulse", value: String(vitals.pulse), unit: "/min", icon: HeartPulse, recordedOn: vitals.dateTime },
+                      { label: "Temp", value: String(vitals.temp), unit: "°F", icon: Thermometer, recordedOn: vitals.dateTime },
+                      { label: "RR", value: String(vitals.respRate), unit: "/min", icon: Wind, recordedOn: vitals.dateTime },
+                      { label: "SpO₂", value: String(vitals.spo2), unit: "%", icon: Droplets, recordedOn: vitals.dateTime },
+                      { label: "Pain", value: String(vitals.pain), unit: "/10", icon: Gauge, recordedOn: vitals.dateTime },
+                    ]}
+                    gridClassName="grid-cols-1 sm:grid-cols-2"
+                  />
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="space-y-3 py-4">
@@ -522,11 +559,10 @@ export default function InvestigationOrdersPage({
         />
       )}
 
-      <AddInvestigationDialog
+      <LabDrawer
         open={addInvestigationOpen}
         onOpenChange={setAddInvestigationOpen}
-        editingItem={editingItem}
-        onSave={handleSaveInvestigation}
+        onSubmit={handleAddInvestigationDrafts}
       />
 
       <ClearAllInvestigationsDialog

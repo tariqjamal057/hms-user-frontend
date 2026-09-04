@@ -57,8 +57,7 @@ import type {
 } from "@/types/doctor/ipd/discharge-decision-types";
 import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
-import { AddMedicineDialog } from "../medicine-orders/_components/add-medicine-dialog";
-import type { MedicineOrderItem } from "@/types/doctor/ipd/medicine-order-types";
+import { MedicineDrawer, type MedicineDraft } from "@/components/consultation/medicine-drawer";
 
 export default function DischargeDecisionPage({
   uhid: propUhid,
@@ -86,8 +85,6 @@ export default function DischargeDecisionPage({
   const [confirmed, setConfirmed] = useState(false);
 
   const [addMedicineOpen, setAddMedicineOpen] = useState(false);
-  const [editingMedicine, setEditingMedicine] =
-    useState<MedicineOrderItem | null>(null);
   const [patientSummaryOpen, setPatientSummaryOpen] = useState(false);
 
   const [assessmentDateTime, setAssessmentDateTime] =
@@ -155,7 +152,6 @@ export default function DischargeDecisionPage({
     setNotes(data.notes);
     setMedications(data.medications);
 
-    setEditingMedicine(null);
     setAddMedicineOpen(false);
     setPatientSummaryOpen(false);
     setConfirmed(false);
@@ -174,22 +170,24 @@ export default function DischargeDecisionPage({
   }
 
   function handleAddMedicine() {
-    setEditingMedicine(null);
     setAddMedicineOpen(true);
   }
 
-  function handleSaveDischargeMedicine(medicine: MedicineOrderItem) {
-    const dischargeMedicine: DischargeMedication = {
-      id: medicine.id,
-      medicineName: medicine.medicineName,
-      dose: medicine.dose,
-      frequency: medicine.frequency,
-      duration: medicine.duration,
-    };
+  function handleSaveDischargeMedicines(drafts: MedicineDraft[]) {
+    if (drafts.length === 0) return;
+    const dischargeMedicines: DischargeMedication[] = drafts.map((d) => ({
+      id: `dis-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      medicineName: d.name,
+      dose: d.dosage,
+      frequency: d.frequency,
+      duration: d.duration,
+    }));
 
-    setMedications((previous) => [...previous, dischargeMedicine]);
+    setMedications((previous) => [...previous, ...dischargeMedicines]);
 
-    toast.success(`${medicine.medicineName} added to discharge medications`);
+    toast.success(
+      `${dischargeMedicines.length} medicine${dischargeMedicines.length > 1 ? "s" : ""} added to discharge medications`,
+    );
   }
 
   function handleDeleteDischargeMedicine(id: string) {
@@ -253,7 +251,7 @@ export default function DischargeDecisionPage({
     <div className="min-h-screen ">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         {!embedded && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 shadow-sm py-0">
             <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
@@ -318,7 +316,7 @@ export default function DischargeDecisionPage({
             </div>
 
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="space-y-5 py-4">
                   <SectionTitle title="1. Discharge Readiness Assessment" />
                   <ChecklistRow
@@ -364,7 +362,7 @@ export default function DischargeDecisionPage({
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="space-y-4 py-4">
                   <SectionTitle title="2. Discharge Plan" />
                   <Field label="Discharge Decision *">
@@ -448,7 +446,7 @@ export default function DischargeDecisionPage({
             </div>
 
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1fr_0.9fr]">
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="py-4">
                   <div className="mb-3 flex items-center justify-between">
                     <SectionTitle title="3. Medications at Discharge" />
@@ -529,7 +527,7 @@ export default function DischargeDecisionPage({
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="space-y-4 py-4">
                   <SectionTitle title="4. Follow-up Plan" />
                   <Field label="Follow-up Date *">
@@ -582,7 +580,7 @@ export default function DischargeDecisionPage({
                 </CardContent>
               </Card>
 
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-slate-200 shadow-sm py-0">
                 <CardContent className="space-y-3 py-4">
                   <SectionTitle title="5. Advice & Instructions to Patient" />
                   <ul className="space-y-2 text-sm text-slate-700">
@@ -603,7 +601,7 @@ export default function DischargeDecisionPage({
               </Card>
             </div>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="py-4">
                 <SectionTitle title="Additional Notes (Optional)" />
                 <Textarea
@@ -657,7 +655,7 @@ export default function DischargeDecisionPage({
           </div>
 
           <div className="space-y-5 lg:sticky lg:top-6">
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="py-4">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div>
@@ -761,11 +759,10 @@ export default function DischargeDecisionPage({
         />
       )}
 
-      <AddMedicineDialog
+      <MedicineDrawer
         open={addMedicineOpen}
         onOpenChange={setAddMedicineOpen}
-        editingItem={editingMedicine}
-        onSave={handleSaveDischargeMedicine}
+        onSubmit={handleSaveDischargeMedicines}
       />
 
       <PatientSummaryDrawer

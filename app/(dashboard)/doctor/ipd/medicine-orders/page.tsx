@@ -4,11 +4,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import {
-  ArrowLeft, ArrowRight, Info, Plus, Trash2,
+import { ArrowLeft, ArrowRight, Info, Plus, Trash2,
   FileText,
   StickyNote,
   PillBottle,
+  Activity,
+  HeartPulse,
+  Thermometer,
+  Wind,
+  Droplets,
+  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,12 +25,12 @@ import { WARD_ROUND_PATIENTS, getPatientByUhid } from "@/lib/doctor/ipd/ward-rou
 import { getVitalsForPatient } from "@/lib/doctor/ipd/vitals-data";
 import { getMedicineOrdersData } from "@/lib/doctor/ipd/medicine-orders-data";
 import { MedicineOrdersTable } from "./_components/medicine-orders-table";
-import { AddMedicineDialog } from "./_components/add-medicine-dialog";
 import { ClearAllMedicinesDialog } from "./_components/clear-all-medicines-dialog";
 import { MedicineDetailDrawer } from "./_components/medicine-detail-drawer";
+import { MedicineDrawer, type MedicineDraft } from "@/components/consultation/medicine-drawer";
 import type { MedicineOrderItem } from "@/types/doctor/ipd/medicine-order-types";
 import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
-import { LatestVitalsMini } from "../clinical-examination/_components/latest-vitals-mini";
+import { QuickVitalsStrip } from "@/components/patient-detail/quick-vitals-strip";
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
 
 export default function MedicineOrdersPage({
@@ -43,7 +48,6 @@ export default function MedicineOrdersPage({
   const [changePatientOpen, setChangePatientOpen] = useState(false);
   const [addMedicineOpen, setAddMedicineOpen] = useState(false);
   const [clearAllOpen, setClearAllOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<MedicineOrderItem | null>(null);
   const [viewingItem, setViewingItem] = useState<MedicineOrderItem | null>(null);
 
   const [searchMedicine, setSearchMedicine] = useState("");
@@ -54,7 +58,6 @@ export default function MedicineOrdersPage({
     setItems(getMedicineOrdersData(uhid).items);
     setNotes(getMedicineOrdersData(uhid).notes);
     setSearchMedicine("");
-    setEditingItem(null);
     setViewingItem(null);
   }, [uhid]);
 
@@ -72,23 +75,41 @@ export default function MedicineOrdersPage({
   }
 
   function handleOpenAddMedicine() {
-    setEditingItem(null);
     setAddMedicineOpen(true);
   }
 
-  function handleSaveMedicine(item: MedicineOrderItem) {
-    if (editingItem) {
-      setItems((prev) => prev.map((row) => (row.id === item.id ? item : row)));
-      toast.success("Medicine updated and marked as pending");
-    } else {
-      setItems((prev) => [...prev, item]);
-      toast.success("Medicine added with pending status");
-    }
+  function handleAddMedicineDrafts(drafts: MedicineDraft[]) {
+    if (drafts.length === 0) return;
+    const today = new Date();
+    const orderedOn = today.toLocaleString("en-IN", {
+      day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+    const newItems: MedicineOrderItem[] = drafts.map((d) => {
+      const { dose, route } = splitDosage(d.dosage);
+      return {
+        id: `MED-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        medicineName: d.name,
+        strengthForm: "",
+        dose,
+        route,
+        frequency: d.frequency,
+        timesPerDay: timesPerDayFor(d.frequency),
+        duration: d.duration,
+        startDate: today.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+        endDate: "",
+        instructions: d.instructions,
+        orderedBy: "Dr. Amit Verma",
+        orderedOn,
+        status: "Pending",
+        dailyLogs: [],
+      };
+    });
+    setItems((prev) => [...prev, ...newItems]);
+    toast.success(`${newItems.length} medicine${newItems.length > 1 ? "s" : ""} added with pending status`);
   }
 
   function handleEdit(item: MedicineOrderItem) {
-    setEditingItem(item);
-    setAddMedicineOpen(true);
+    setViewingItem(item);
   }
 
   function handleDelete(id: string) {
@@ -134,7 +155,7 @@ export default function MedicineOrdersPage({
     <div className="min-h-screen">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         {!embedded && (
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-slate-200 shadow-sm ">
             <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
@@ -173,7 +194,7 @@ export default function MedicineOrdersPage({
               </div>
             </div>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="space-y-4 py-4">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
                   <div>
@@ -219,7 +240,7 @@ export default function MedicineOrdersPage({
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-slate-200 shadow-sm py-0">
               <CardContent className="py-4">
                 <p className="mb-3 text-sm font-semibold text-slate-800">Order Instructions / Notes (Optional)</p>
                 <Textarea rows={5} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -248,7 +269,26 @@ export default function MedicineOrdersPage({
           </div>
 
           <div className="space-y-5 lg:sticky lg:top-6">
-            <LatestVitalsMini vitals={vitals} onViewAll={handleViewAllVitals} />
+            {vitals && (
+              <Card className="border-slate-200 shadow-sm p-0">
+                <CardContent className="py-4">
+                  <p className="mb-3 text-sm font-semibold text-slate-800">
+                    Vitals Trend
+                  </p>
+                  <QuickVitalsStrip
+                    vitals={[
+                      { label: "BP", value: vitals.bp, unit: "mmHg", icon: Activity, recordedOn: vitals.dateTime },
+                      { label: "Pulse", value: String(vitals.pulse), unit: "/min", icon: HeartPulse, recordedOn: vitals.dateTime },
+                      { label: "Temp", value: String(vitals.temp), unit: "°F", icon: Thermometer, recordedOn: vitals.dateTime },
+                      { label: "RR", value: String(vitals.respRate), unit: "/min", icon: Wind, recordedOn: vitals.dateTime },
+                      { label: "SpO₂", value: String(vitals.spo2), unit: "%", icon: Droplets, recordedOn: vitals.dateTime },
+                      { label: "Pain", value: String(vitals.pain), unit: "/10", icon: Gauge, recordedOn: vitals.dateTime },
+                    ]}
+                    gridClassName="grid-cols-1 sm:grid-cols-2"
+                  />
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="space-y-3 py-4">
@@ -293,11 +333,10 @@ export default function MedicineOrdersPage({
         />
       )}
 
-      <AddMedicineDialog
+      <MedicineDrawer
         open={addMedicineOpen}
         onOpenChange={setAddMedicineOpen}
-        editingItem={editingItem}
-        onSave={handleSaveMedicine}
+        onSubmit={handleAddMedicineDrafts}
       />
 
       <MedicineDetailDrawer item={viewingItem} onClose={() => setViewingItem(null)} />
@@ -327,5 +366,22 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <span className="font-semibold text-slate-800">{value}</span>
     </div>
   );
+}
+
+const KNOWN_ROUTES = ["PO", "IV", "IM", "SC", "SL", "PR", "INH", "TOP", "SUB"];
+
+function splitDosage(dosage: string): { dose: string; route: string } {
+  const tokens = dosage.trim().split(/\s+/);
+  const last = tokens[tokens.length - 1]?.toUpperCase();
+  if (last && KNOWN_ROUTES.includes(last)) {
+    return { dose: tokens.slice(0, -1).join(" "), route: last };
+  }
+  return { dose: dosage.trim(), route: "" };
+}
+
+function timesPerDayFor(frequency: string): number {
+  const map: Record<string, number> = { OD: 1, BD: 2, TDS: 3, QID: 4, SOS: 1 };
+  const key = frequency.trim().split(/\s+/)[0]?.toUpperCase() ?? "";
+  return map[key] ?? 1;
 }
 

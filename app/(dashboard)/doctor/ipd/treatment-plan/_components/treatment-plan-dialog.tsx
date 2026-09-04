@@ -5,15 +5,15 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ClipboardPlus } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+  ConsultationDrawer,
+  DrawerSection,
+} from "@/components/consultation/drawer";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+  FormTextarea,
+  SuffixedInput,
+} from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { PillButton } from "@/components/forms/pill-button";
 import type { PlanCategory, PlanPriority, TreatmentPlanItem } from "@/types/doctor/ipd/treatment-plan-types";
 
 interface TreatmentPlanDialogProps {
@@ -85,107 +85,94 @@ export function TreatmentPlanDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-[95vw] !max-w-[760px] max-h-[90vh] overflow-y-auto p-0">
-        <DialogHeader className="border-b border-slate-100 px-5 py-4">
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold text-slate-800">
-            <ClipboardPlus className="h-5 w-5 text-blue-600" />
-            {editingItem ? "Edit Treatment Plan" : "Add Treatment Plan"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 px-5 py-5">
-          <div>
-            <Label className="text-xs text-slate-500">Problem / Diagnosis *</Label>
-            <Input
-              className="mt-1"
-              value={form.problemDiagnosis}
-              onChange={(e) => update("problemDiagnosis", e.target.value)}
-              placeholder="Enter diagnosis/problem"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label className="text-xs text-slate-500">Category</Label>
-              <Select value={form.category} onValueChange={(v) => update("category", v as PlanCategory)}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Medical Management">Medical Management</SelectItem>
-                  <SelectItem value="Monitoring">Monitoring</SelectItem>
-                  <SelectItem value="Diet & Lifestyle">Diet & Lifestyle</SelectItem>
-                  <SelectItem value="Therapy & Rehabilitation">Therapy & Rehabilitation</SelectItem>
-                  <SelectItem value="Patient Education">Patient Education</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-xs text-slate-500">Priority</Label>
-              <Select value={form.priority} onValueChange={(v) => update("priority", v as PlanPriority)}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="Low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-xs text-slate-500">Intervention / Management *</Label>
-            <Textarea
-              className="mt-1"
-              rows={3}
-              value={form.intervention}
-              onChange={(e) => update("intervention", e.target.value)}
-              placeholder="Enter intervention/management"
-            />
-          </div>
-
-          <div>
-            <Label className="text-xs text-slate-500">Target / Goal *</Label>
-            <Textarea
-              className="mt-1"
-              rows={2}
-              value={form.targetGoal}
-              onChange={(e) => update("targetGoal", e.target.value)}
-              placeholder="Enter target/goal"
-            />
-          </div>
-
-          <div>
-            <Label className="text-xs text-slate-500">Duration *</Label>
-            <Input
-              className="mt-1"
-              value={form.duration}
-              onChange={(e) => update("duration", e.target.value)}
-              placeholder="e.g. Ongoing / 5 Days / 2 Weeks"
-            />
-          </div>
-
-          <div>
-            <Label className="text-xs text-slate-500">Notes</Label>
-            <Textarea
-              className="mt-1"
-              rows={3}
-              maxLength={500}
-              value={form.notes}
-              onChange={(e) => update("notes", e.target.value)}
-              placeholder="Additional notes..."
-            />
-            <p className="text-right text-xs text-slate-400">{form.notes.length}/500</p>
-          </div>
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<ClipboardPlus className="h-5 w-5" />}
+      title={editingItem ? "Edit Treatment Plan" : "Add Treatment Plan"}
+      description="Capture the problem, management approach, and expected outcome."
+      footer={
+        <div className="flex gap-3">
+          <PillButton variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+            Cancel
+          </PillButton>
+          <PillButton className="flex-1" onClick={handleSave}>
+            {editingItem ? "Save Changes" : "Save Plan"}
+          </PillButton>
         </div>
+      }
+    >
+      <div className="space-y-5">
+        <DrawerSection
+          title="Problem"
+          caption="Diagnosis and classification"
+          icon={<ClipboardPlus className="h-4 w-4" />}
+        >
+          <SuffixedInput
+            label="Problem / Diagnosis *"
+            value={form.problemDiagnosis}
+            onChange={(value) => update("problemDiagnosis", value)}
+            placeholder="Enter diagnosis/problem"
+          />
+          <SingleSelect
+            label="Category"
+            value={form.category}
+            options={[
+              "Medical Management",
+              "Monitoring",
+              "Diet & Lifestyle",
+              "Therapy & Rehabilitation",
+              "Patient Education",
+            ].map((c) => ({ value: c, label: c }))}
+            onChange={(value) => update("category", value as PlanCategory)}
+          />
+          <SingleSelect
+            label="Priority"
+            value={form.priority}
+            options={[
+              { value: "High", label: "High" },
+              { value: "Medium", label: "Medium" },
+              { value: "Low", label: "Low" },
+            ]}
+            onChange={(value) => update("priority", value as PlanPriority)}
+          />
+        </DrawerSection>
 
-        <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSave}>
-            Save
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        <DrawerSection
+          title="Management plan"
+          caption="Intervention, goal, duration and notes"
+          icon={<ClipboardPlus className="h-4 w-4" />}
+        >
+          <FormTextarea
+            label="Intervention / Management *"
+            value={form.intervention}
+            onChange={(value) => update("intervention", value)}
+            rows={3}
+            placeholder="Enter intervention/management"
+          />
+          <FormTextarea
+            label="Target / Goal *"
+            value={form.targetGoal}
+            onChange={(value) => update("targetGoal", value)}
+            rows={2}
+            placeholder="Enter target/goal"
+          />
+          <SuffixedInput
+            label="Duration *"
+            value={form.duration}
+            onChange={(value) => update("duration", value)}
+            placeholder="e.g. Ongoing / 5 Days / 2 Weeks"
+          />
+          <FormTextarea
+            label="Notes"
+            value={form.notes}
+            onChange={(value) => update("notes", value)}
+            rows={3}
+            maxLength={500}
+            placeholder="Additional notes..."
+          />
+        </DrawerSection>
+      </div>
+    </ConsultationDrawer>
   );
 }
