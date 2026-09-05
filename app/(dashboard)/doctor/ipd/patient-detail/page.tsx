@@ -17,13 +17,14 @@ import { DataTable, type DataColumn } from "@/components/patient-detail/data-tab
 import { CareStatusStepper, type CareStatus } from "@/components/patient-detail/care-status";
 import { FluidBalanceSection } from "@/components/patient-detail/fluid-balance-section";
 import { TabHandover } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/tab-handover";
+import { TreatmentPlanTracker } from "@/components/patient-detail/treatment-plan-tracker";
+import { getTreatmentPlanTrackerData } from "@/lib/patient-detail/treatment-plan-tracker-data";
 import { CURRENT_DOCTOR } from "@/lib/doctor/icu/doctor-icu-data";
 import ReviewVitalsPage from "../review-vitals/page";
 import DiagnosisUpdatePage from "../diagnosis-update/page";
 import ProgressNotesPage from "../progress-note/page";
 import MedicineOrdersPage from "../medicine-orders/page";
 import InvestigationOrdersPage from "../investigation-orders/page";
-import TreatmentPlanPage from "../treatment-plan/page";
 import DischargeDecisionPage from "../discharge-decision/page";
 
 function parseLocation(wardRoomBed: string) {
@@ -205,7 +206,27 @@ function PatientDetailInner() {
         />
       ),
     },
-    { value: "treatment-plan", label: "Treatment Plan", content: <TreatmentPlanPage key={uhid} uhid={uhid} embedded /> },
+    {
+      value: "treatment-plan",
+      label: "Treatment Plan",
+      content: (
+        <TreatmentPlanTracker
+          key={uhid}
+          data={getTreatmentPlanTrackerData(uhid)}
+          updatedAt="Just now"
+          onOpenActivity={(a) => {
+            const tabByModule: Record<string, string> = {
+              medicine: "medicine-orders",
+              laboratory: "lab-orders",
+              vitals: "review-vitals",
+              diagnosis: "diagnosis-update",
+              fluid: "fluid",
+            };
+            setActiveTab(tabByModule[a.module] ?? "treatment-plan");
+          }}
+        />
+      ),
+    },
     {
       value: "nurse-shift",
       label: "Nurse Shift",

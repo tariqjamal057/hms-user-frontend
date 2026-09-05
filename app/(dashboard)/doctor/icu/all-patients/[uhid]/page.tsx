@@ -82,6 +82,8 @@ import { OxygenOrderForm } from "./_components/oxygen-order-form";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { TabDischarge } from "./_components/tab-discharge";
+import { TreatmentPlanTracker } from "@/components/patient-detail/treatment-plan-tracker";
+import { getTreatmentPlanTrackerData } from "@/lib/patient-detail/treatment-plan-tracker-data";
 import { Activity, CheckCircle2, ClipboardCheck, UserCog } from "lucide-react";
 
 export default function DoctorIcuPatientDetailPage() {
@@ -872,19 +874,21 @@ export default function DoctorIcuPatientDetailPage() {
       value: "treatment",
       label: "Treatment Plan",
       content: (
-        <div className="space-y-4">
-          <p className="text-xs text-slate-500">Status updated by nursing staff.</p>
-          <DataTable
-            card
-            title="Treatment Plan"
-            titleIcon={<ClipboardCheck className="h-4 w-4" />}
-            rows={plans}
-            columns={planColumns}
-            rowKey={(p) => p.id}
-            countLabel="plans"
-            emptyText="No treatment plans yet."
-          />
-        </div>
+        <TreatmentPlanTracker
+          key={patient.uhid}
+          data={getTreatmentPlanTrackerData(patient.uhid)}
+          updatedAt="Just now"
+          onOpenActivity={(a) => {
+            const tabByModule: Record<string, string> = {
+              medicine: "medicines",
+              laboratory: "laboratory",
+              vitals: "vitals",
+              diagnosis: "diagnosis",
+              fluid: "fluid",
+            };
+            setTab(tabByModule[a.module] ?? "treatment");
+          }}
+        />
       ),
     },
     {
