@@ -9,10 +9,12 @@ import type {
   EmarDose,
   FluidBalanceEntry,
   ProgressNote,
+  TreatmentPlanItem,
   VitalRecord,
 } from "@/types/nurse/ipd/nurse-ipd-types";
 import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
 import { InfoTile } from "@/components/patient-detail/info-tile";
+import { CareStatusStepper, type CareStatus } from "@/components/patient-detail/care-status";
 import { DateField } from "@/components/forms/form-controls";
 import type {
   OxygenAdministration,
@@ -56,9 +58,12 @@ import { TabOverview } from "../../../../nurse/ipd/patients/[uhid]/_components/t
 import { TabVitals } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-vitals";
 import { TabProgressNotes } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-progress-notes";
 import { TabFluidBalance } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-fluid-balance";
+import { TabTreatmentPlan } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-treatment-plan";
 
 import { TabVentilation } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/tab-ventilation";
 import { TabOxygenTherapy } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/tab-oxygen-therapy";
+import { TabMonitoring } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/monitoring-panel";
+import { TabHandover } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/tab-handover";
 
 import {
   PatientDetailShell,
@@ -82,7 +87,9 @@ export default function NurseAdminIcuPatientDetailPage() {
   const [fluidEntries, setFluidEntries] = useState<FluidBalanceEntry[]>(() =>
     getFluidBalanceForPatient(patient.uhid),
   );
-  const plans = getTreatmentPlanForPatient(patient.uhid);
+  const [plans, setPlans] = useState<TreatmentPlanItem[]>(() =>
+    getTreatmentPlanForPatient(patient.uhid),
+  );
 
   // Oxygen Therapy state
   const activeOrder = getActiveOxygenOrder(patient.uhid);
@@ -111,6 +118,10 @@ export default function NurseAdminIcuPatientDetailPage() {
   const [selectedMedicineDate, setSelectedMedicineDate] = useState<string>(
     new Date().toISOString().split("T")[0],
   );
+
+  // Encounter / Care Status — admin workspaces may only change administrative
+  // statuses (admission, movement, discharge, cancellation).
+  const [encounterStatus, setEncounterStatus] = useState<CareStatus>("Admitted");
 
   // Filter medicines for selected date. `givenAt` is stored as a display
   // string (e.g. "27 Aug 2026, 08:05 AM") or "Ongoing", so it is parsed
@@ -144,9 +155,20 @@ export default function NurseAdminIcuPatientDetailPage() {
     setNotes((previous) => [{ ...note, uhid: patient.uhid }, ...previous]);
     toast.success("Progress note saved and signed.");
   }
+  function handleEncounterStatusChange(status: CareStatus) {
+    setEncounterStatus(status);
+    toast.success(`Encounter status updated to ${status}.`);
+  }
   function addFluidEntry(entry: FluidBalanceEntry) {
     setFluidEntries((previous) => [entry, ...previous]);
     toast.success("Fluid balance entry recorded.");
+  }
+
+  function toggleFollow(plan: TreatmentPlanItem) {
+    setPlans((previous) =>
+      previous.map((item) => (item.id === plan.id ? plan : item)),
+    );
+    toast.success(`Treatment plan marked as ${plan.followStatus}.`);
   }
 
   // Oxygen handlers
@@ -205,6 +227,11 @@ export default function NurseAdminIcuPatientDetailPage() {
       value: "vitals",
       label: "Vitals",
       content: <TabVitals vitals={vitals} onAddVital={addVital} recordVitalsPath={`/nurseAdmin/icu/patients/${patient.uhid}/record-vitals`} />,
+    },
+    {
+      value: "monitoring",
+      label: "Monitoring",
+      content: <TabMonitoring patientName={patient.patientName} vitals={vitals} />,
     },
     {
       value: "ventilation",
@@ -360,57 +387,7 @@ export default function NurseAdminIcuPatientDetailPage() {
     {
       value: "treatment",
       label: "Treatment Plan",
-      content: (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-800">Treatment Plan</h3>
-            <p className="text-xs text-slate-500">
-              Status updated by nursing staff
-            </p>
-          </div>
-          {plans.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
-              No treatment plans yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {plans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-bold text-slate-800">{plan.title}</p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {plan.description}
-                      </p>
-                      <p className="mt-2 text-xs text-slate-500">
-                        Ordered by {plan.orderedBy} · {plan.orderedOn}
-                      </p>
-                    </div>
-                    <div className="ml-4 shrink-0">
-                      {plan.followStatus === "Following" ? (
-                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                          <CheckCircle2 className="mr-1 h-3 w-3" />
-                          Following
-                        </Badge>
-                      ) : (
-                        <Badge className="text-slate-600">Not Following</Badge>
-                      )}
-                      {plan.lastUpdatedBy && (
-                        <p className="mt-1 text-[10px] text-slate-400">
-                          By {plan.lastUpdatedBy}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ),
+      content: <TabTreatmentPlan plans={plans} onToggleFollow={toggleFollow} />,
     },
     {
       value: "diagnosis",
@@ -450,6 +427,19 @@ export default function NurseAdminIcuPatientDetailPage() {
             </div>
           )}
         </div>
+      ),
+    },
+    {
+      value: "handover",
+      label: "Handover",
+      content: (
+        <TabHandover
+          patient={patient}
+          vitals={vitals}
+          doses={doses}
+          notes={notes}
+          fluidEntries={fluidEntries}
+        />
       ),
     },
     {
@@ -530,22 +520,19 @@ export default function NurseAdminIcuPatientDetailPage() {
       value: "change-status",
       label: "Change Status",
       content: (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-          <h3 className="mb-2 text-lg font-bold text-slate-800">
-            Patient Status
-          </h3>
-          <p className="mb-6 text-sm text-slate-500">
-            Current condition of the patient.
-          </p>
-          <div className="rounded-lg bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-700">
-              Current Status
-            </p>
-            <p className="mt-1 text-lg font-bold text-blue-600">
-              {patient.acuity}
-            </p>
-          </div>
-        </div>
+        <CareStatusStepper
+          value={encounterStatus}
+          onChange={handleEncounterStatusChange}
+          authorityLabel="This workspace holds administrative authority — admission, patient movement, discharge and cancellation"
+          allowedStatuses={[
+            "Registered",
+            "Waiting",
+            "Admitted",
+            "Transferred",
+            "Discharged",
+            "Cancelled",
+          ]}
+        />
       ),
     },
   ];

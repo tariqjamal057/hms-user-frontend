@@ -72,6 +72,8 @@ import { CURRENT_DOCTOR } from "@/lib/doctor/icu/doctor-icu-data";
 
 import { TabVentilation } from "@/app/(dashboard)/doctor/icu/all-patients/[uhid]/_components/tab-ventilation";
 import { TabOxygenTherapy } from "@/app/(dashboard)/doctor/icu/all-patients/[uhid]/_components/tab-oxygen-therapy";
+import { TabMonitoring } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/monitoring-panel";
+import { TabHandover } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/tab-handover";
 import { MedicineForm } from "./_components/medicine-form";
 import { DiagnosisForm } from "./_components/diagnosis-form";
 import { LabDrawer } from "@/components/consultation/lab-drawer";
@@ -702,6 +704,11 @@ export default function DoctorIcuPatientDetailPage() {
       content: <TabVitals vitals={vitals} onAddVital={addVital} recordVitalsPath={`/doctor/icu/all-patients/${patient.uhid}/record-vitals`} />,
     },
     {
+      value: "monitoring",
+      label: "Continuous Monitoring",
+      content: <TabMonitoring patientName={patient.patientName} vitals={vitals} />,
+    },
+    {
       value: "ventilation",
       label: "Ventilation",
       content: (
@@ -897,8 +904,21 @@ export default function DoctorIcuPatientDetailPage() {
       ),
     },
     {
+      value: "handover",
+      label: "Handover",
+      content: (
+        <TabHandover
+          patient={patient}
+          vitals={vitals}
+          doses={doses}
+          notes={notes}
+          fluidEntries={fluidEntries}
+        />
+      ),
+    },
+    {
       value: "change-status",
-      label: "Change Status",
+      label: "Encounter Status",
       content: (
         <div className="space-y-5">
           {/* Hero — current status */}

@@ -5,6 +5,7 @@ import {
   Activity,
   Siren,
   DiamondPlus,
+  Scissors,
 } from "lucide-react";
 
 const doctorSidebar: SidebarItem[] = [
@@ -45,6 +46,14 @@ const doctorSidebar: SidebarItem[] = [
     section: "Clinical Operations",
     children: [
       { label: "All Patients", href: "/doctor/icu/all-patients" },
+    ],
+  },
+  {
+    label: "Operation Theatre",
+    icon: Scissors,
+    section: "Clinical Operations",
+    children: [
+      { label: "OT Workspace", href: "/doctor/ot/patients" },
     ],
   },
 ];

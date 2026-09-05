@@ -21,10 +21,11 @@ import { TabEmar } from "../../../ipd/patients/[uhid]/_components/tab-emar";
 import { TabProgressNotes } from "../../../ipd/patients/[uhid]/_components/tab-progress-notes";
 import { TabFluidBalance } from "../../../ipd/patients/[uhid]/_components/tab-fluid-balance";
 import { TabTreatmentPlan } from "../../../ipd/patients/[uhid]/_components/tab-treatment-plan";
-import { TabShiftHandover } from "../../../ipd/patients/[uhid]/_components/tab-shift-handover";
 
 import { TabVentilation } from "./_components/tab-ventilation";
 import { TabOxygenTherapy } from "./_components/tab-oxygen-therapy";
+import { TabMonitoring } from "./_components/monitoring-panel";
+import { TabHandover } from "./_components/tab-handover";
 import { CURRENT_NURSE } from "@/lib/nurse/icu/nurse-icu-data";
 import { getActiveVentilatorAdministration, getActiveVentilatorOrder, getVentilatorObservations, getVentilatorOrderHistory } from "@/lib/nurse/icu/ventilation-data";
 import { VentilatorAdministration, VentilatorObservation } from "@/types/nurse/icu/ventilation-types";
@@ -130,6 +131,7 @@ export default function NurseIcuPatientDetailPage() {
   const tabs: PatientTab[] = [
     { value: "overview", label: "Overview", content: <TabOverview patient={patient} onNext={() => setTab("vitals")} /> },
     { value: "vitals", label: "Vitals Monitoring", content: <TabVitals vitals={vitals} onAddVital={addVital} recordVitalsPath={`/nurse/icu/patients/${patient.uhid}/record-vitals`} /> },
+    { value: "monitoring", label: "Monitoring", content: <TabMonitoring patientName={patient.patientName} vitals={vitals} /> },
     { value: "ventilation", label: "Ventilation", content: (
       <TabVentilation
         patientName={patient.patientName}
@@ -154,11 +156,21 @@ export default function NurseIcuPatientDetailPage() {
         onSaveObservation={handleSaveObservation}
       />
     ) },
-    { value: "emar", label: "Orders & eMAR", content: <TabEmar doses={doses} onUpdateDose={updateDose} /> },
+    { value: "emar", label: "Medicines", content: <TabEmar doses={doses} onUpdateDose={updateDose} /> },
     { value: "notes", label: "Progress Notes", content: <TabProgressNotes notes={notes} onAddNote={addNote} /> },
     { value: "fluid", label: "Fluid Balance", content: <TabFluidBalance entries={fluidEntries} onAddEntry={addFluidEntry} /> },
     { value: "treatment", label: "Treatment Plan", content: <TabTreatmentPlan plans={plans} onToggleFollow={toggleFollow} /> },
-    { value: "handover", label: "Shift Handover", content: <TabShiftHandover handovers={handovers} onHandover={handleHandover} /> },
+    { value: "handover", label: "Handover", content: (
+      <TabHandover
+        patient={patient}
+        vitals={vitals}
+        doses={doses}
+        notes={notes}
+        fluidEntries={fluidEntries}
+        handovers={handovers}
+        onHandover={handleHandover}
+      />
+    ) },
     { value: "discharge", label: "Discharge", content: <TabDischarge patientName={patient.patientName} onDischarge={handleDischarge} /> },
   ];
 
