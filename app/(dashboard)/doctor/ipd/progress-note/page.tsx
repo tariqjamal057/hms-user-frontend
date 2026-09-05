@@ -46,9 +46,10 @@ import type {
   ProgressNoteCategory,
   ProgressNotePriority,
 } from "@/types/doctor/ipd/progress-note-types";
-import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
 import { PillButton } from "@/components/forms/pill-button";
+import { PatientProfileCard } from "@/components/patient-detail/patient-profile-card";
+import { wardRoundProfileDetail } from "@/lib/patient-detail/patient-profile-data";
 
 type AuthorFilter = "All" | ProgressNoteAuthorRole;
 
@@ -60,6 +61,7 @@ export default function ProgressNotesPage({
   const searchParams = useSearchParams();
   const uhid = propUhid ?? searchParams.get("uhid") ?? WARD_ROUND_PATIENTS[0].uhid;
   const patient = useMemo(() => getPatientByUhid(uhid), [uhid]);
+  const profile = useMemo(() => wardRoundProfileDetail(patient), [patient]);
 
   const [notes, setNotes] = useState<ProgressNote[]>(() =>
     getProgressNotes(uhid),
@@ -160,44 +162,11 @@ export default function ProgressNotesPage({
 
       <main className="mx-auto max-w-[1400px] space-y-5 py-5">
         {!embedded && (
-          <Card className="border-slate-200 shadow-sm">
-            <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
-                  {patient.patientName
-                    .split(" ")
-                    .map((name) => name[0])
-                    .slice(0, 2)
-                    .join("")
-                    .toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-800">
-                    {patient.patientName}
-                    <PatientStatusBadge status={patient.status} />
-                  </p>
-                  <p className="truncate text-xs text-slate-400">
-                    {patient.age} Y / {patient.gender} · UHID: {patient.uhid} ·
-                    IPD: {patient.ipdId} · Bed:{" "}
-                    {patient.wardRoomBed.split("/").pop()?.trim()}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:flex lg:items-center lg:gap-7">
-                <InfoBlock
-                  label="Ward / Room / Bed"
-                  value={patient.wardRoomBed}
-                />
-                <InfoBlock label="Department" value={patient.department} />
-                <InfoBlock
-                  label="Attending Doctor"
-                  value={patient.admittingDoctor}
-                />
-                <InfoBlock
-                  label="Admission Date"
-                  value={patient.admissionDateTime}
-                />
-              </div>
+          <PatientProfileCard
+            patient={profile}
+            patientsPath="/doctor/ipd/patients"
+            subtitle="IPD Patient"
+            headerActions={
               <PillButton
                 variant="outline"
                 className="w-full lg:w-auto"
@@ -205,8 +174,8 @@ export default function ProgressNotesPage({
               >
                 Change Patient
               </PillButton>
-            </CardContent>
-          </Card>
+            }
+          />
         )}
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
@@ -305,15 +274,6 @@ export default function ProgressNotesPage({
           onSelectPatient={handleSelectPatient}
         />
       )}
-    </div>
-  );
-}
-
-function InfoBlock({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[10px] text-slate-400">{label}</p>
-      <p className="truncate text-xs font-semibold text-slate-800">{value}</p>
     </div>
   );
 }

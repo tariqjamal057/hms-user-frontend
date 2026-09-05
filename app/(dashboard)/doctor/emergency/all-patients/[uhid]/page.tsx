@@ -45,6 +45,7 @@ function toDetailData(p: EmergencyPatient): PatientDetailData {
     moduleId: p.emergencyNumber,
     moduleIdLabel: "Emergency No.",
     locationParts: [p.bedOrBay],
+    causeOfProblem: p.currentCondition,
     metaLine: p.incidentType,
     fallbackInfoFields: [
       { label: "Incident", value: p.incidentType },

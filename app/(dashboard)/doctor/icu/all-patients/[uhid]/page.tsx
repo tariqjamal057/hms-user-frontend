@@ -63,6 +63,7 @@ import {
   getVentilatorOrderHistory,
 } from "@/lib/nurse/icu/ventilation-data";
 import { NURSE_ICU_PATIENTS } from "@/lib/nurse/icu/nurse-icu-data";
+import { diagnosisCause } from "@/lib/patient-detail/patient-profile-data";
 
 import { TabOverview } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-overview";
 import { TabVitals } from "../../../../nurse/ipd/patients/[uhid]/_components/tab-vitals";
@@ -312,14 +313,12 @@ export default function DoctorIcuPatientDetailPage() {
     moduleId: patient.ipdId,
     moduleIdLabel: "ICU ID",
     locationParts: [patient.ward, patient.room, patient.bed],
-    metaLine: `${patient.currentDiagnosis} (${patient.diagnosisCode})`,
+    causeOfProblem: diagnosisCause(patient.currentDiagnosis, patient.diagnosisCode),
     fallbackInfoFields: [
       { label: "Department", value: patient.department },
       { label: "Attending Doctor", value: patient.admittingDoctor },
       { label: "Admitted On", value: patient.admissionDateTime },
       { label: "Assigned Nurse", value: `${patient.assignedNurse} · ${patient.currentShift}` },
-      { label: "Diagnosis", value: patient.currentDiagnosis, highlight: true },
-      { label: "Diagnosis Code", value: patient.diagnosisCode },
     ],
   };
 

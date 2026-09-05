@@ -21,8 +21,9 @@ import { CriticalAlertsWidget } from "./_components/critical-alerts-widget";
 import { TestSummaryDonut } from "./_components/test-summary-donut";
 import { TestHistoryWidget } from "./_components/test-history-widget";
 import type { LabTestResult } from "@/types/doctor/ipd/lab-results-types";
-import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
+import { PatientProfileCard } from "@/components/patient-detail/patient-profile-card";
+import { wardRoundProfileDetail } from "@/lib/patient-detail/patient-profile-data";
 
 const CATEGORIES = ["All Results", "Hematology", "Biochemistry", "Serology", "Microbiology", "Others"] as const;
 const PAGE_SIZE = 10;
@@ -40,6 +41,7 @@ export default function ReviewLabResultsPage() {
   const [detailOpen, setDetailOpen] = useState(false);
 
   const patient = useMemo(() => getPatientByUhid(uhid), [uhid]);
+  const profile = useMemo(() => wardRoundProfileDetail(patient), [patient]);
   const allResults = useMemo(() => getLabResultsForPatient(uhid), [uhid]);
   const alerts = useMemo(() => getCriticalAlertsForPatient(uhid), [uhid]);
   const history = useMemo(() => getTestHistoryForPatient(uhid), [uhid]);
@@ -110,32 +112,17 @@ export default function ReviewLabResultsPage() {
     <div className="min-h-screen ">
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         {/* Patient header */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
-                {patient.patientName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
-              </span>
-              <div>
-                <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                  {patient.patientName} <PatientStatusBadge status={patient.status} />
-                </p>
-                <p className="text-xs text-slate-400">
-                  {patient.age} Y / {patient.gender} · UHID: {patient.uhid} · IPD: {patient.ipdId} · Bed: {patient.wardRoomBed.split("/").pop()?.trim()}
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:flex lg:items-center lg:gap-8">
-              <InfoBlock label="Ward / Room / Bed" value={patient.wardRoomBed} />
-              <InfoBlock label="Department" value={patient.department} />
-              <InfoBlock label="Admitting Doctor" value={patient.admittingDoctor} />
-              <InfoBlock label="Admission Date" value={patient.admissionDateTime} />
-            </div>
+        <PatientProfileCard
+          patient={profile}
+          patientsPath="/doctor/ipd/patients"
+          subtitle="IPD Patient"
+          flush={false}
+          headerActions={
             <Button variant="outline" className="w-full gap-2 lg:w-auto" onClick={() => setChangePatientOpen(true)}>
               Change Patient
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
 
         {/* Main layout */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
@@ -270,15 +257,6 @@ export default function ReviewLabResultsPage() {
         onSelectPatient={handleSelectPatient}
       />
       <LabResultDetailDialog result={selectedResult} open={detailOpen} onOpenChange={setDetailOpen} />
-    </div>
-  );
-}
-
-function InfoBlock({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="whitespace-nowrap text-sm font-semibold text-slate-800">{value}</p>
     </div>
   );
 }

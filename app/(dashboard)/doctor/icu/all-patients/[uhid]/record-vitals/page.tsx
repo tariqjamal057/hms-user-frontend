@@ -14,6 +14,7 @@ import {
 import { RecordVitalsForm } from "@/components/forms/record-vitals-form";
 import { PillButton } from "@/components/forms/pill-button";
 import { getNursePatientByUhid, NURSE_ICU_PATIENTS, getVitalsForPatient } from "@/lib/nurse/icu/nurse-icu-data";
+import { diagnosisCause } from "@/lib/patient-detail/patient-profile-data";
 import type { NurseIpdPatient } from "@/types/nurse/ipd/nurse-ipd-types";
 
 function toDetailData(p: NurseIpdPatient): PatientDetailData {
@@ -28,13 +29,11 @@ function toDetailData(p: NurseIpdPatient): PatientDetailData {
     moduleId: p.ipdId,
     moduleIdLabel: "ICU ID",
     locationParts: [p.ward, p.room, p.bed],
-    metaLine: `${p.currentDiagnosis} (${p.diagnosisCode})`,
+    causeOfProblem: diagnosisCause(p.currentDiagnosis, p.diagnosisCode),
     fallbackInfoFields: [
       { label: "Department", value: p.department },
       { label: "Attending Doctor", value: p.admittingDoctor },
       { label: "Admitted On", value: p.admissionDateTime },
-      { label: "Diagnosis", value: p.currentDiagnosis, highlight: true },
-      { label: "Diagnosis Code", value: p.diagnosisCode },
     ],
   };
 }

@@ -114,6 +114,7 @@ export default function DoctorOtPatientDetailPage() {
     moduleId: patient.otId,
     moduleIdLabel: "OT ID",
     locationParts: [patient.otRoom],
+    causeOfProblem: patient.indications,
     fallbackInfoFields: [
       { label: "Procedure", value: patient.procedure, highlight: true },
       { label: "Surgeon", value: patient.surgeon },

@@ -23,7 +23,7 @@ function toDetailData(p: PatientFullProfile): PatientDetailData {
     moduleId: p.appointmentNo,
     moduleIdLabel: "OPD ID",
     locationParts: [p.visitType === "video" ? "Video Visit" : "In-Person Visit"],
-    metaLine: p.reason,
+    causeOfProblem: p.reason,
     fallbackInfoFields: [
       { label: "Patient Type", value: p.patientType },
       { label: "Appointment", value: p.appointmentNo },

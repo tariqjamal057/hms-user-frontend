@@ -121,6 +121,7 @@ export default function NurseEmergencyPatientDetailPage() {
     moduleId: active.emergencyNumber,
     moduleIdLabel: "Emergency No.",
     locationParts: [active.bedOrBay],
+    causeOfProblem: active.currentCondition,
     metaLine: active.incidentType,
     fallbackInfoFields: [
       { label: "Attending Doctor", value: active.attendingDoctor },

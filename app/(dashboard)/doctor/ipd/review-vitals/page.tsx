@@ -41,7 +41,8 @@ import { LatestVitalsPanel } from "./_components/latest-vitals-panel";
 import { VitalsRecordsTable } from "./_components/vitals-records-table";
 import { NormalRangesWidget } from "./_components/normal-ranges-widget";
 import { AlertsWidget } from "./_components/alerts-widget";
-import { PatientStatusBadge } from "../ward-rounds/_components/patient-status-badge";
+import { PatientProfileCard } from "@/components/patient-detail/patient-profile-card";
+import { wardRoundProfileDetail } from "@/lib/patient-detail/patient-profile-data";
 import { ChangePatientDialog } from "../ward-rounds/_components/change-patient-dialog";
 
 export default function ReviewVitalsPage({
@@ -60,6 +61,7 @@ export default function ReviewVitalsPage({
   const [timeRange, setTimeRange] = useState("72");
 
   const patient = useMemo(() => getPatientByUhid(uhid), [uhid]);
+  const profile = useMemo(() => wardRoundProfileDetail(patient), [patient]);
   const records = useMemo(() => getVitalsForPatient(uhid), [uhid]);
   const alerts = useMemo(() => getAlertsForPatient(uhid), [uhid]);
   const latest = records[0];
@@ -104,46 +106,11 @@ export default function ReviewVitalsPage({
       <div className="mx-auto w-full max-w-[1400px] space-y-5">
         {/* Patient header bar */}
         {!embedded && (
-          <Card className="border-slate-200 shadow-sm">
-            <CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600">
-                  {patient.patientName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join("")
-                    .toUpperCase()}
-                </span>
-                <div>
-                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                    {patient.patientName}{" "}
-                    <PatientStatusBadge status={patient.status} />
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {patient.age} Y / {patient.gender} · UHID: {patient.uhid} ·
-                    IPD: {patient.ipdId} · Bed:{" "}
-                    {patient.wardRoomBed.split("/").pop()?.trim()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:flex lg:items-center lg:gap-8">
-                <InfoBlock
-                  label="Ward / Room / Bed"
-                  value={patient.wardRoomBed}
-                />
-                <InfoBlock label="Department" value={patient.department} />
-                <InfoBlock
-                  label="Admitting Doctor"
-                  value={patient.admittingDoctor}
-                />
-                <InfoBlock
-                  label="Admission Date"
-                  value={patient.admissionDateTime}
-                />
-              </div>
-
+          <PatientProfileCard
+            patient={profile}
+            patientsPath="/doctor/ipd/patients"
+            subtitle="IPD Patient"
+            headerActions={
               <PillButton
                 variant="outline"
                 className="w-full lg:w-auto"
@@ -151,8 +118,8 @@ export default function ReviewVitalsPage({
               >
                 Change Patient
               </PillButton>
-            </CardContent>
-          </Card>
+            }
+          />
         )}
 
         {/* Main layout */}
@@ -360,17 +327,6 @@ export default function ReviewVitalsPage({
           onSelectPatient={handleSelectPatient}
         />
       )}
-    </div>
-  );
-}
-
-function InfoBlock({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="whitespace-nowrap text-sm font-semibold text-slate-800">
-        {value}
-      </p>
     </div>
   );
 }

@@ -134,8 +134,8 @@ export default function DoctorConsultationPage() {
     allergies,
     moduleId: patient.appointmentNo,
     moduleIdLabel: "Appointment No",
+    causeOfProblem: patient.reason,
     fallbackInfoFields: [
-      { label: "Chief Complaint", value: patient.reason, highlight: true },
       { label: "Patient Type", value: patient.patientType },
       { label: "Visit Type", value: patient.visitType },
       { label: "Doctor", value: patient.doctor },

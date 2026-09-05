@@ -14,11 +14,8 @@ import {
 import { RecordVitalsForm } from "@/components/forms/record-vitals-form";
 import { PillButton } from "@/components/forms/pill-button";
 import { getAllWardPatients, getPatientByUhid } from "@/lib/doctor/ipd/ward-round-data";
+import { wardRoundProfileDetail } from "@/lib/patient-detail/patient-profile-data";
 import { getVitalsForPatient } from "@/lib/doctor/ipd/vitals-data";
-
-function parseLocation(wardRoomBed: string) {
-  return wardRoomBed.split("/").map((s) => s.trim()).filter(Boolean);
-}
 
 function toDetailData(p: ReturnType<typeof getPatientByUhid>): PatientDetailData {
   if (!p) {
@@ -33,25 +30,7 @@ function toDetailData(p: ReturnType<typeof getPatientByUhid>): PatientDetailData
       moduleIdLabel: "IPD ID",
     };
   }
-  return {
-    uhid: p.uhid,
-    name: p.patientName,
-    age: p.age,
-    gender: p.gender,
-    bloodGroup: p.bloodGroup,
-    allergies: p.allergies ?? [],
-    acuity: p.status,
-    moduleId: p.ipdId,
-    moduleIdLabel: "IPD ID",
-    locationParts: parseLocation(p.wardRoomBed),
-    metaLine: `${p.currentDiagnosis} (${p.diagnosisCode})`,
-    fallbackInfoFields: [
-      { label: "Department", value: p.department },
-      { label: "Attending Doctor", value: p.admittingDoctor },
-      { label: "Admitted On", value: p.admissionDateTime },
-      { label: "Diagnosis", value: p.currentDiagnosis, highlight: true },
-    ],
-  };
+  return wardRoundProfileDetail(p);
 }
 
 function RecordVitalsPageInner() {

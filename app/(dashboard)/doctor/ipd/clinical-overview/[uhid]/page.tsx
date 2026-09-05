@@ -5,46 +5,12 @@ import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PatientDetailShell, type PatientTab, type PatientDetailData, type PatientListItem } from "@/components/patient-detail/patient-detail-shell";
 import { getAllWardPatients, getPatientByUhid } from "@/lib/doctor/ipd/ward-round-data";
+import { wardRoundProfileDetail } from "@/lib/patient-detail/patient-profile-data";
 import type { WardRoundPatient } from "@/types/doctor/ipd/ward-round-types";
 import { OverviewMedicinesTab, OverviewLabsTab, OverviewVitalsTab, OverviewLogsTab } from "./_components/clinical-overview-tabs";
 
-function parseLocation(wardRoomBed: string) {
-  return wardRoomBed.split("/").map((s) => s.trim()).filter(Boolean);
-}
-
 function toDetailData(p: WardRoundPatient): PatientDetailData {
-  return {
-    uhid: p.uhid,
-    name: p.patientName,
-    age: p.age,
-    gender: p.gender,
-    bloodGroup: p.bloodGroup,
-    allergies: p.allergies ?? [],
-    acuity: p.status,
-    moduleId: p.ipdId,
-    moduleIdLabel: "IPD ID",
-    locationParts: parseLocation(p.wardRoomBed),
-    metaLine: `${p.currentDiagnosis} (${p.diagnosisCode})`,
-    contact: p.contactNumber,
-    quickVitals: [
-      { label: "BP", value: p.vitals.bp, unit: "mmHg" },
-      { label: "Pulse", value: p.vitals.pulse, unit: "/min" },
-      { label: "Temp", value: p.vitals.temp, unit: "°F" },
-      { label: "RR", value: p.vitals.rr, unit: "/min" },
-      { label: "SpO₂", value: p.vitals.spo2, unit: "%" },
-      { label: "Pain", value: p.vitals.pain, unit: "/10" },
-    ],
-    fallbackInfoFields: [
-      { label: "Department", value: p.department },
-      { label: "Attending Doctor", value: p.admittingDoctor },
-      {
-        label: "Admitted On",
-        value: p.daysAdmitted ? `${p.admissionDateTime} (${p.daysAdmitted} days)` : p.admissionDateTime,
-      },
-      { label: "Diagnosis", value: p.currentDiagnosis, highlight: true },
-      { label: "Diagnosis Code", value: p.diagnosisCode },
-    ],
-  };
+  return wardRoundProfileDetail(p);
 }
 
 export default function ClinicalOverviewPage() {

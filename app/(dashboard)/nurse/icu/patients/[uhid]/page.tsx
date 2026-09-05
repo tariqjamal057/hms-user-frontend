@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { PatientDetailShell, type PatientDetailData, type PatientListItem, type PatientTab } from "@/components/patient-detail/patient-detail-shell";
+import { diagnosisCause } from "@/lib/patient-detail/patient-profile-data";
 import type {
   DischargeSummaryForm, EmarDose, FluidBalanceEntry, ProgressNote, ShiftHandoverEntry, TreatmentPlanItem, VitalRecord,
 } from "@/types/nurse/ipd/nurse-ipd-types";
@@ -120,6 +121,7 @@ export default function NurseIcuPatientDetailPage() {
     moduleId: patient.ipdId,
     moduleIdLabel: "ICU ID",
     locationParts: [patient.ward, patient.room, patient.bed],
+    causeOfProblem: diagnosisCause(patient.currentDiagnosis, patient.diagnosisCode),
     fallbackInfoFields: [
       { label: "Department", value: patient.department },
       { label: "Attending Doctor", value: patient.admittingDoctor },

@@ -7,6 +7,7 @@ import { UserCog } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PatientDetailShell, type PatientTab, type PatientDetailData, type PatientListItem } from "@/components/patient-detail/patient-detail-shell";
 import { getAllWardPatients, getPatientByUhid } from "@/lib/doctor/ipd/ward-round-data";
+import { wardRoundProfileDetail } from "@/lib/patient-detail/patient-profile-data";
 import type { WardRoundPatient } from "@/types/doctor/ipd/ward-round-types";
 import { TabOverview } from "@/app/(dashboard)/nurse/ipd/patients/[uhid]/_components/tab-overview";
 import { getNursePatientByUhid } from "@/lib/nurse/ipd/nurse-ipd-data";
@@ -26,10 +27,6 @@ import ProgressNotesPage from "../progress-note/page";
 import MedicineOrdersPage from "../medicine-orders/page";
 import InvestigationOrdersPage from "../investigation-orders/page";
 import DischargeDecisionPage from "../discharge-decision/page";
-
-function parseLocation(wardRoomBed: string) {
-  return wardRoomBed.split("/").map((s) => s.trim()).filter(Boolean);
-}
 
 function toNurseIpdView(p: WardRoundPatient): NurseIpdPatient {
   const nurse = getNursePatientByUhid(p.uhid);
@@ -56,25 +53,7 @@ function toNurseIpdView(p: WardRoundPatient): NurseIpdPatient {
 }
 
 function toDetailData(p: WardRoundPatient): PatientDetailData {
-  return {
-    uhid: p.uhid,
-    name: p.patientName,
-    age: p.age,
-    gender: p.gender,
-    bloodGroup: p.bloodGroup,
-    allergies: p.allergies ?? [],
-    acuity: p.status,
-    moduleId: p.ipdId,
-    moduleIdLabel: "IPD ID",
-    locationParts: parseLocation(p.wardRoomBed),
-    metaLine: `${p.currentDiagnosis} (${p.diagnosisCode})`,
-    fallbackInfoFields: [
-      { label: "Department", value: p.department },
-      { label: "Attending Doctor", value: p.admittingDoctor },
-      { label: "Admitted On", value: p.admissionDateTime },
-      { label: "Diagnosis", value: p.currentDiagnosis, highlight: true },
-    ],
-  };
+  return wardRoundProfileDetail(p);
 }
 
 function PatientDetailInner() {
