@@ -18,9 +18,22 @@ import { getVitalsForPatient } from "@/lib/doctor/ipd/vitals-data";
 import type { RmoEmergencyPatient } from "@/types/emergency/rmo-emergency-types";
 import type { EmergencyPatient } from "@/types/emergency/emergency-types";
 import type { VitalRecordEntry } from "@/types/doctor/ipd/vitals-types";
+import type { EmergencyStatus } from "@/types/emergency/emergency-types";
+
+function mapEmergencyStatus(s: EmergencyStatus): "Stable" | "Critical" | "Under Observation" {
+  if (s === "Critical") return "Critical";
+  if (s === "Under Observation") return "Under Observation";
+  return "Stable";
+}
 
 function toRmo(p: EmergencyPatient): RmoEmergencyPatient {
   return { ...p, criticalNotifications: [], deathRecord: undefined, department: "Critical Care" };
+}
+
+function mapStatus(status: EmergencyPatient["status"]): "Stable" | "Critical" | "Under Observation" {
+  if (status === "Critical") return "Critical";
+  if (status === "Stable") return "Stable";
+  return "Under Observation";
 }
 
 function toDetailData(p: EmergencyPatient): PatientDetailData {
@@ -169,7 +182,7 @@ function adaptPatient(p: RmoEmergencyPatient) {
     age: p.age ?? 0,
     gender: p.gender,
     bloodGroup: "—",
-    status: p.status as never,
+    status: mapEmergencyStatus(p.status),
     ipdId: p.emergencyNumber,
     wardRoomBed: p.bedOrBay,
     department: p.department ?? "Critical Care",
@@ -186,11 +199,11 @@ function adaptPatient(p: RmoEmergencyPatient) {
     medicines: [],
     vitals: {
       bp: "—",
-      pulse: 0,
-      temp: 0,
-      respRate: 0,
-      spo2: 0,
-      pain: 0,
+      pulse: "0",
+      temp: "0",
+      rr: "0",
+      spo2: "0",
+      pain: "0",
       recordedOn: p.registeredAt,
     },
   };

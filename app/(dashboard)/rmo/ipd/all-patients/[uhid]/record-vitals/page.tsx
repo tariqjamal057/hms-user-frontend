@@ -42,11 +42,11 @@ function adaptPatient(p: RmoPatient) {
     diagnosisCode: primary?.code ?? "—",
     vitals: {
       bp: "—",
-      pulse: 0,
-      temp: 0,
-      respRate: 0,
-      spo2: 0,
-      pain: 0,
+      pulse: "0",
+      temp: "0",
+      rr: "0",
+      spo2: "0",
+      pain: "0",
       recordedOn: p.admissionDateTime,
     },
     labHighlights: [],
@@ -98,8 +98,18 @@ function RecordVitalsPageInner() {
   const all = useMemo(() => RMO_PATIENTS, []);
   const [uhidState, setUhidState] = useState<string>(uhid);
   const patient = getRmoPatientByUhid(uhidState);
-  const previousVitals = useMemo(() => toPreviousVitals(patient), [patient]);
 
+  const tabs: PatientTab[] = [];
+
+  if (!patient) {
+    return (
+      <div className="p-10 text-center text-sm text-slate-400">
+        Patient not found for UHID {uhidState}
+      </div>
+    );
+  }
+
+  const previousVitals = useMemo(() => toPreviousVitals(patient), [patient]);
   const detail: PatientDetailData = toDetailData(patient);
   const patientList: PatientListItem[] = useMemo(
     () =>
@@ -110,8 +120,6 @@ function RecordVitalsPageInner() {
       })),
     [all],
   );
-
-  const tabs: PatientTab[] = [];
 
   return (
     <div className="bg-slate-50/50">

@@ -45,6 +45,7 @@ export type InfoAlertCardProps = {
   icon?: ReactNode;
   tone?: InfoAlertTone;
   className?: string;
+  action?: ReactNode;
 };
 
 export function InfoAlertCard({
@@ -53,24 +54,28 @@ export function InfoAlertCard({
   icon,
   tone = "amber",
   className,
+  action,
 }: InfoAlertCardProps) {
   const style = TONE_STYLES[tone];
   return (
     <div className={cn("rounded-xl border p-4", style.box, className)}>
-      <p className={cn("flex items-center gap-2 text-sm font-bold", style.title)}>
-        {icon && (
-          <span
-            className={cn(
-              "flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
-              style.icon,
-            )}
-            aria-hidden
-          >
-            {icon}
-          </span>
-        )}
-        {title}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className={cn("flex items-center gap-2 text-sm font-bold", style.title)}>
+          {icon && (
+            <span
+              className={cn(
+                "flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
+                style.icon,
+              )}
+              aria-hidden
+            >
+              {icon}
+            </span>
+          )}
+          {title}
+        </p>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
       <p className={cn("mt-2 text-sm leading-relaxed whitespace-pre-line", style.body)}>
         {body}
       </p>

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { BadgeCheck, CheckCircle2, ClipboardList, LogOut, Pill, Salad, Send, Stethoscope, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/forms/pill-button";
+import { SectionHeader } from "./section-header";
 import type { DischargeDetailsFull } from "@/types/nurse-admin/ipd/ward-detail-types";
 
 interface Props {
@@ -20,16 +21,29 @@ export function SectionDischarge({ patientName, bed, ward, discharge, alreadySen
 
   if (!discharge) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-10 text-center">
-        <LogOut className="mx-auto h-10 w-10 text-slate-300" />
-        <p className="mt-3 text-sm font-semibold text-slate-500">No discharge has been initiated by the doctor yet.</p>
-        <p className="mt-1 text-xs text-slate-400">Once the doctor completes the discharge decision, full details will appear here for nurse review.</p>
+      <div className="space-y-5">
+        <SectionHeader
+          icon={<Stethoscope className="h-5 w-5" />}
+          title="Discharge Process"
+          subtitle="Doctor-approved discharge details, nurse approval and finalization to billing & admission desk."
+        />
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-10 text-center">
+          <LogOut className="mx-auto h-10 w-10 text-slate-300" />
+          <p className="mt-3 text-sm font-semibold text-slate-500">No discharge has been initiated by the doctor yet.</p>
+          <p className="mt-1 text-xs text-slate-400">Once the doctor completes the discharge decision, full details will appear here for nurse review.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <SectionHeader
+        icon={<Stethoscope className="h-5 w-5" />}
+        title="Discharge Process"
+        subtitle="Doctor-approved discharge details, nurse approval and finalization to billing & admission desk."
+      />
+
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><Stethoscope className="h-4 w-4 text-blue-600" />Doctor&apos;s Discharge Details</p>
         <div className="mt-3 space-y-3">
@@ -78,12 +92,12 @@ export function SectionDischarge({ patientName, bed, ward, discharge, alreadySen
             <p className="text-sm font-semibold text-blue-800">Confirm sending {patientName}&apos;s discharge to billing & admission desk?</p>
             <p className="mt-1 text-xs text-slate-500">This will mark the patient as Discharged and free the bed immediately.</p>
             <div className="mt-3 flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setConfirming(false)}>Cancel</Button>
-              <Button size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={() => { onSendToBilling(); setConfirming(false); }}><Send className="h-4 w-4" />Confirm & Send</Button>
+              <PillButton size="sm" variant="outline" onClick={() => setConfirming(false)}>Cancel</PillButton>
+              <PillButton size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={() => { onSendToBilling(); setConfirming(false); }}><Send className="h-4 w-4" />Confirm & Send</PillButton>
             </div>
           </div>
         ) : (
-          <Button className="mt-3 gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={() => setConfirming(true)}><Send className="h-4 w-4" />Send Discharge Details to Billing & Admission Desk</Button>
+          <PillButton className="mt-3 gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={() => setConfirming(true)}><Send className="h-4 w-4" />Send Discharge Details to Billing & Admission Desk</PillButton>
         )}
       </div>
     </div>

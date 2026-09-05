@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, UserPlus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PillButton } from "@/components/forms/pill-button";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
@@ -162,9 +162,9 @@ export default function NewAdmissionsPage() {
             <div className="rounded-lg border border-slate-100 p-3"><p className="text-[10px] uppercase text-slate-400">Admitted</p><p className="mt-1 truncate text-sm font-bold text-slate-700">{patient.admissionDateTime.split(",")[0]}</p></div>
           </div>
 
-          <Button className="mt-4 w-full gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => setAssigningPatient(patient)}>
-            <UserPlus className="h-4 w-4" />Assign Nurse
-          </Button>
+          <PillButton variant="gradient" icon={UserPlus} className="mt-4 w-full justify-center" onClick={() => setAssigningPatient(patient)}>
+            Assign Nurse
+          </PillButton>
         </CardContent>
       </Card>
     );
@@ -230,7 +230,12 @@ export default function NewAdmissionsPage() {
         )}
       </main>
 
-      <AssignNurseDrawer patient={assigningPatient} onClose={() => setAssigningPatient(null)} onSave={handleSaveAssignment} />
+      <AssignNurseDrawer
+        patient={assigningPatient}
+        open={assigningPatient !== null}
+        onOpenChange={(next) => { if (!next) setAssigningPatient(null); }}
+        onSave={handleSaveAssignment}
+      />
     </div>
   );
 }

@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, HeartPulse, PackageX, UserPlus, Users, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PillButton } from "@/components/forms/pill-button";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionMenu, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import { KpiCardProps } from "@/components/dashboard";
@@ -205,12 +205,12 @@ export default function NurseAdminIcuPatientsPage() {
           </div>
 
           <div className="mt-4 flex gap-2">
-            <Button className="flex-1 border-emerald-200 text-emerald-700" variant="outline" onClick={() => openAssignNurse(patient)}>
-              <UserPlus className="mr-2 h-4 w-4" />Assign Nurse
-            </Button>
-            <Button className="flex-1 border-blue-200 text-blue-700" variant="outline" onClick={() => viewPatient(patient)}>
-              <Eye className="mr-2 h-4 w-4" />View Details
-            </Button>
+            <PillButton variant="outline" icon={UserPlus} className="flex-1 border-emerald-300 text-emerald-700 hover:border-emerald-400" onClick={() => openAssignNurse(patient)}>
+              Assign Nurse
+            </PillButton>
+            <PillButton variant="outline" icon={Eye} className="flex-1 border-blue-300 text-blue-700 hover:border-blue-400" onClick={() => viewPatient(patient)}>
+              View Details
+            </PillButton>
           </div>
         </CardContent>
       </Card>
@@ -277,7 +277,12 @@ export default function NurseAdminIcuPatientsPage() {
         )}
       </main>
 
-      <AssignNurseDrawer patient={assignNursePatient} onClose={() => setAssignNursePatient(null)} onSave={handleSaveAssignment} />
+      <AssignNurseDrawer
+        patient={assignNursePatient}
+        open={assignNursePatient !== null}
+        onOpenChange={(next) => { if (!next) setAssignNursePatient(null); }}
+        onSave={handleSaveAssignment}
+      />
     </div>
   );
 }

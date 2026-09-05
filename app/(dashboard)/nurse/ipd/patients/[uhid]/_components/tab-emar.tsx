@@ -1,79 +1,143 @@
 // app/(dashboard)/nurse/ipd/patients/[uhid]/_components/tab-emar.tsx
 "use client";
 import { useMemo } from "react";
-import { CheckCircle2, ClipboardList, PackageX, XCircle } from "lucide-react";
+import { CheckCircle2, ClipboardList, PackageX, Pill, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
+import { PillButton } from "@/components/forms/pill-button";
+import { InfoTile } from "@/components/patient-detail/info-tile";
 import type { EmarDose } from "@/types/nurse/ipd/nurse-ipd-types";
 import { CURRENT_NURSE } from "@/lib/nurse/ipd/nurse-ipd-data";
 import { UrgencyBadge } from "../../_components/nurse-ipd-badges";
 
 export function TabEmar({ doses, onUpdateDose }: { doses: EmarDose[]; onUpdateDose: (dose: EmarDose) => void }) {
   const sorted = useMemo(() => [...doses].sort((a, b) => a.urgency === b.urgency ? 0 : a.urgency === "Urgent" ? -1 : 1), [doses]);
-  const groupedByMedicine = useMemo(() => {
-    const map = new Map<string, EmarDose[]>();
-    sorted.forEach((dose) => { const rows = map.get(dose.medicineName) ?? []; rows.push(dose); map.set(dose.medicineName, rows); });
-    return Array.from(map.entries());
-  }, [sorted]);
+  const given = sorted.filter((d) => d.status === "Given");
+  const pending = sorted.filter((d) => d.status === "Pending");
+  const notGiven = sorted.filter((d) => d.status === "Not Given");
+  const outOfStock = sorted.filter((d) => d.status === "Out of Stock");
 
   function markGiven(dose: EmarDose) {
     const stamp = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
     onUpdateDose({ ...dose, status: "Given", givenBy: CURRENT_NURSE.name, givenAt: stamp });
   }
   function markNotGiven(dose: EmarDose) {
-    onUpdateDose({ ...dose, status: "Not Given", givenBy: undefined, givenAt: undefined });
+    onUpdateDose({ ...dose, status: "Not Given" });
+  }
+  function undoGiven(dose: EmarDose) {
+    onUpdateDose({ ...dose, status: "Pending", givenBy: undefined, givenAt: undefined });
   }
 
+  const columns: DataColumn<EmarDose>[] = [
+    {
+      key: "medicine",
+      label: "Medicine",
+      render: (d) => (
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-slate-800">{d.medicineName}</p>
+            <UrgencyBadge urgency={d.urgency} />
+          </div>
+          <p className="text-xs text-slate-400">{d.strength} · {d.route} · {d.instructions}</p>
+        </div>
+      ),
+    },
+    {
+      key: "slot",
+      label: "Slot",
+      render: (d) => (
+        <Badge variant="outline" className="border-slate-200 bg-white text-slate-600">{d.slot}</Badge>
+      ),
+    },
+    {
+      key: "scheduledTime",
+      label: "Scheduled",
+      render: (d) => <span className="text-sm text-slate-600">{d.scheduledTime}</span>,
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (d) => (
+        <div className="flex items-center gap-1.5">
+          <StatusPill status={d.status} />
+          {d.remarks && <span className="text-[11px] italic text-red-500">{d.remarks}</span>}
+        </div>
+      ),
+    },
+    {
+      key: "given",
+      label: "Given",
+      render: (d) =>
+        d.givenBy && d.givenAt ? (
+          <span className="text-xs text-slate-500">{d.givenBy} · {d.givenAt}</span>
+        ) : (
+          <span className="text-slate-300">—</span>
+        ),
+      hideOnMobile: true,
+    },
+    {
+      key: "actions",
+      label: "Action",
+      align: "right",
+      render: (d) => {
+        if (d.status === "Given") {
+          return <PillButton size="sm" variant="outline" onClick={() => undoGiven(d)}>Undo</PillButton>;
+        }
+        if (d.status === "Out of Stock") {
+          return <span className="text-[11px] font-semibold text-slate-400">Awaiting stock</span>;
+        }
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            <PillButton size="sm" variant="gradient" icon={CheckCircle2} onClick={() => markGiven(d)}>Mark Given</PillButton>
+            {d.status === "Pending" && (
+              <PillButton size="sm" variant="danger" icon={XCircle} onClick={() => markNotGiven(d)}>Not Given</PillButton>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
-    <div className="space-y-4">
-      <Card className="border-slate-200">
-        <CardContent className="p-5">
-          <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><ClipboardList className="h-4 w-4 text-blue-600" />Today&apos;s Medicine Orders & eMAR</p>
-          <p className="mt-1 text-xs text-slate-500">Medicines ordered multiple times a day (e.g. after breakfast and after dinner) appear as separate dose rows — mark each dose independently.</p>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-4">
-        {groupedByMedicine.map(([medicineName, doseRows]) => (
-          <Card key={medicineName} className={`border-slate-200 ${doseRows[0].urgency === "Urgent" ? "border-red-200 bg-red-50/20" : ""}`}>
-            <CardContent className="p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-bold text-slate-800">{medicineName}</p>
-                <UrgencyBadge urgency={doseRows[0].urgency} />
-                {doseRows.length > 1 && <Badge variant="outline" className="border-cyan-200 bg-cyan-50 text-cyan-700">{doseRows.length}x today</Badge>}
-              </div>
-              <p className="mt-1 text-xs text-slate-500">{doseRows[0].strength} · {doseRows[0].route} · {doseRows[0].instructions}</p>
-
-              <div className="mt-3 space-y-2">
-                {doseRows.map((dose) => (
-                  <div key={dose.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="border-slate-200 bg-white text-slate-600">{dose.slot}</Badge>
-                      <span className="text-xs text-slate-500">Scheduled: {dose.scheduledTime}</span>
-                      <StatusPill status={dose.status} />
-                      {dose.givenBy && <span className="text-xs text-slate-400">by {dose.givenBy} · {dose.givenAt}</span>}
-                      {dose.remarks && <span className="text-xs italic text-red-500">{dose.remarks}</span>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {dose.status !== "Given" && dose.status !== "Out of Stock" && (
-                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => markGiven(dose)}>Mark Given</Button>
-                      )}
-                      {dose.status === "Given" && (
-                        <Button size="sm" variant="outline" className="border-slate-300 text-slate-600" onClick={() => markNotGiven(dose)}>Undo</Button>
-                      )}
-                      {dose.status === "Pending" && (
-                        <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50" onClick={() => markNotGiven(dose)}>Mark Not Given</Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {groupedByMedicine.length === 0 && <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">No medicine orders for today.</div>}
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-white to-cyan-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-sm">
+            <ClipboardList className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-lg font-bold tracking-tight text-slate-800">Today&apos;s Medicine Orders &amp; eMAR</p>
+            <p className="text-xs text-slate-500">
+              Medicines ordered multiple times a day appear as separate dose rows — mark each dose independently.
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <InfoTile label="Given" value={String(given.length)} tone="emerald" />
+        <InfoTile label="Pending" value={String(pending.length)} tone="amber" />
+        <InfoTile label="Not Given" value={String(notGiven.length)} tone="red" />
+        <InfoTile label="Out of Stock" value={String(outOfStock.length)} tone="slate" />
+      </div>
+
+      {/* Medicine administration table — unified DataTable */}
+      <DataTable
+        card
+        title="Medicine Administration"
+        titleIcon={<Pill className="h-4 w-4" />}
+        rows={sorted}
+        columns={columns}
+        rowKey={(d) => d.id}
+        countLabel="doses"
+        emptyText="No medicine orders for today."
+      />
+
+      <p className="text-xs text-slate-400">
+        Administrations are recorded as <span className="font-semibold text-slate-600">{CURRENT_NURSE.name}</span> ({CURRENT_NURSE.shift}).
+      </p>
     </div>
   );
 }
@@ -82,5 +146,5 @@ function StatusPill({ status }: { status: EmarDose["status"] }) {
   if (status === "Given") return <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="h-3 w-3" />Given</Badge>;
   if (status === "Not Given") return <Badge variant="outline" className="gap-1 border-red-200 bg-red-50 text-red-700"><XCircle className="h-3 w-3" />Not Given</Badge>;
   if (status === "Out of Stock") return <Badge variant="outline" className="gap-1 border-red-300 bg-red-100 text-red-800"><PackageX className="h-3 w-3" />Out of Stock</Badge>;
-  return <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Pending</Badge>;
+  return <Badge variant="outline" className="gap-1 border-amber-200 bg-amber-50 text-amber-700">Pending</Badge>;
 }

@@ -1,14 +1,26 @@
 // app/(dashboard)/nurse-admin/ipd/all-ward-patients/_components/drawer/section-treatment-plan.tsx
+"use client";
 import { CheckCircle2, ClipboardCheck, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { InfoTileCard } from "@/components/patient-detail/info-tile-card";
+import { SectionHeader } from "./section-header";
 import type { TreatmentPlanFull } from "@/types/nurse-admin/ipd/ward-detail-types";
 
 export function SectionTreatmentPlan({ plans }: { plans: TreatmentPlanFull[] }) {
+  const following = plans.filter((p) => p.followStatus === "Following").length;
+  const notFollowing = plans.filter((p) => p.followStatus === "Not Following").length;
+
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><ClipboardCheck className="h-4 w-4 text-violet-600" />Doctor&apos;s Treatment Plan</p>
-        <p className="mt-1 text-xs text-slate-500">Read-only view for admin — shows whether assigned nurses are following each plan item.</p>
+    <div className="space-y-5">
+      <SectionHeader
+        icon={<ClipboardCheck className="h-5 w-5" />}
+        title="Doctor's Treatment Plan"
+        subtitle="Read-only view — shows whether assigned nurses are following each plan item."
+      />
+
+      <div className="grid grid-cols-2 gap-3">
+        <InfoTileCard title="Following" icon={<CheckCircle2 className="h-3.5 w-3.5" />} tone="emerald" value={String(following)} subtitle="Plan items on track" />
+        <InfoTileCard title="Not Following" icon={<XCircle className="h-3.5 w-3.5" />} tone="amber" value={String(notFollowing)} subtitle="Items requiring attention" />
       </div>
 
       <div className="space-y-3">

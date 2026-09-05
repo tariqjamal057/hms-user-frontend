@@ -1,4 +1,4 @@
-// app/(dashboard)/nurse-admin/ipd/_components/assign-nurse-drawer.tsx
+// app/(dashboard)/nurseAdmin/ipd/new-admissions/_components/assign-nurse-drawer.tsx
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -7,14 +7,17 @@ import {
   ChevronLeft,
   ChevronRight,
   Save,
-  Sunrise,
+  SunMedium,
   Sunset,
-  Moon,
+  MoonStar,
   UserRound,
-  X,
+  UserRoundPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { ConsultationDrawer, DrawerSection } from "@/components/consultation/drawer";
+import { DateField } from "@/components/forms/form-controls";
+import { PillButton } from "@/components/forms/pill-button";
 import type {
   AdmittedPatient,
   DailyShiftAssignment,
@@ -27,14 +30,15 @@ import {
 
 interface Props {
   patient: AdmittedPatient | null;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSave: (uhid: string, assignments: DailyShiftAssignment[]) => void;
 }
 
 const shiftIcon: Record<ShiftName, React.ElementType> = {
-  Morning: Sunrise,
+  Morning: SunMedium,
   Evening: Sunset,
-  Night: Moon,
+  Night: MoonStar,
 };
 const shiftTone: Record<ShiftName, string> = {
   Morning: "border-amber-200 bg-amber-50 text-amber-700",
@@ -54,11 +58,9 @@ function toDisplay(iso: string) {
   });
 }
 
-export function AssignNurseDrawer({ patient, onClose, onSave }: Props) {
+export function AssignNurseDrawer({ patient, open, onOpenChange, onSave }: Props) {
   const [selectedDate, setSelectedDate] = useState(() => toIso(new Date()));
-  const [draftByDate, setDraftByDate] = useState<
-    Record<string, Record<ShiftName, string[]>>
-  >({});
+  const [draftByDate, setDraftByDate] = useState<Record<string, Record<ShiftName, string[]>>>({});
 
   useEffect(() => {
     if (patient) {
@@ -76,14 +78,14 @@ export function AssignNurseDrawer({ patient, onClose, onSave }: Props) {
     [patient?.ward],
   );
 
-  if (!patient) return null;
-  const selectedPatient = patient;
+  function handleOpenChange(next: boolean) {
+    if (!next) setDraftByDate({});
+    onOpenChange(next);
+  }
 
   function getShiftNurses(date: string, shift: ShiftName): string[] {
     if (draftByDate[date]?.[shift]) return draftByDate[date][shift];
-    const existing = selectedPatient.assignments.find(
-      (a) => a.date === date && a.shift === shift,
-    );
+    const existing = patient?.assignments.find((a) => a.date === date && a.shift === shift);
     return existing?.nurseIds ?? [];
   }
 
@@ -112,10 +114,11 @@ export function AssignNurseDrawer({ patient, onClose, onSave }: Props) {
   }
 
   function handleSaveAll() {
+    if (!patient) return;
     const merged: DailyShiftAssignment[] = [];
     const seenKeys = new Set<string>();
 
-    selectedPatient.assignments.forEach((a) => {
+    patient.assignments.forEach((a) => {
       const key = `${a.date}-${a.shift}`;
       if (!draftByDate[a.date]) {
         merged.push(a);
@@ -136,219 +139,197 @@ export function AssignNurseDrawer({ patient, onClose, onSave }: Props) {
       });
     });
 
-    onSave(selectedPatient.uhid, merged);
+    onSave(patient.uhid, merged);
+    handleOpenChange(false);
   }
 
-  const totalAssignedToday = SHIFTS.reduce(
-    (sum, shift) => sum + getShiftNurses(selectedDate, shift.name).length,
-    0,
-  );
+  const totalAssignedToday = patient
+    ? SHIFTS.reduce((sum, shift) => sum + getShiftNurses(selectedDate, shift.name).length, 0)
+    : 0;
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-slate-950/40" onClick={onClose} />
-      <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-hidden bg-white shadow-2xl">
-        <div className="flex h-full flex-col">
-          <header className="border-b border-slate-200 bg-white px-5 py-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-blue-600">
-                  Assign Nurses
-                </p>
-                <h2 className="mt-0.5 text-xl font-bold text-slate-800">
-                  {selectedPatient.patientName}
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  {selectedPatient.uhid} · {selectedPatient.ward} ·{" "}
-                  {selectedPatient.room} · {selectedPatient.bed}
-                </p>
-              </div>
-              <Button variant="outline" size="icon" onClick={onClose}>
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-          </header>
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={handleOpenChange}
+      icon={
+        <UserRoundPlus className="h-5 w-5" aria-hidden />
+      }
+      title={patient ? `Assign Nurses` : "Assign Nurses"}
+      description={
+        patient
+          ? `${patient.patientName} · ${patient.uhid} · ${patient.ward} · ${patient.room} · ${patient.bed}`
+          : undefined
+      }
+      bodyClassName="space-y-4"
+      footer={
+        <div className="flex items-center gap-3">
+          <PillButton
+            variant="outline"
+            className="flex-1"
+            onClick={handleOpenChange.bind(null, false)}
+          >
+            Cancel
+          </PillButton>
+          <PillButton
+            icon={Save}
+            className="flex-1"
+            onClick={handleSaveAll}
+            disabled={!patient || Object.keys(draftByDate).length === 0}
+          >
+            Save Assignment
+          </PillButton>
+        </div>
+      }
+    >
+      {/* Date selector */}
+      <DrawerSection
+        title="Select Date"
+        caption={`${toDisplay(selectedDate)} · ${totalAssignedToday} nurse assignment(s) across all shifts`}
+        icon={<CalendarDays className="h-4 w-4 text-blue-600" aria-hidden />}
+      >
+        <div className="flex items-center gap-2">
+          <PillButton
+            variant="outline"
+            size="sm"
+            icon={ChevronLeft}
+            onClick={() => shiftDate(-1)}
+            className="shrink-0 px-2"
+          >
+            Prev
+          </PillButton>
+          <DateField
+            label=""
+            value={selectedDate}
+            onChange={setSelectedDate}
+            className="flex-1"
+          />
+          <PillButton
+            variant="outline"
+            size="sm"
+            onClick={() => shiftDate(1)}
+            className="shrink-0 px-3"
+          >
+            Next
+          </PillButton>
+        </div>
+      </DrawerSection>
 
-          <div className="flex-1 space-y-5 overflow-y-auto p-5">
-            {/* Date selector */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  onClick={() => shiftDate(-1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="flex flex-1 items-center justify-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-blue-600" />
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(event) => setSelectedDate(event.target.value)}
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm font-semibold text-slate-800"
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  onClick={() => shiftDate(1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="mt-2 text-center text-xs text-slate-500">
-                {toDisplay(selectedDate)} · {totalAssignedToday} nurse
-                assignment(s) across all shifts
-              </p>
-            </div>
-
-            {/* Shift-wise assignment */}
-            <div className="space-y-4">
-              {SHIFTS.map((shift) => {
-                const Icon = shiftIcon[shift.name];
-                const assignedIds = getShiftNurses(selectedDate, shift.name);
+      {/* Shift-wise assignment */}
+      {SHIFTS.map((shift) => {
+        const Icon = shiftIcon[shift.name];
+        const assignedIds = patient ? getShiftNurses(selectedDate, shift.name) : [];
+        return (
+          <DrawerSection
+            key={shift.name}
+            title={`${shift.name} Shift`}
+            caption={shift.timeRange}
+            icon={<Icon className="h-4 w-4 text-slate-400" aria-hidden />}
+            action={
+              <Badge variant="outline" className={shiftTone[shift.name]}>
+                {shift.timeRange}
+              </Badge>
+            }
+          >
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {relevantNurses.map((nurse) => {
+                const selected = assignedIds.includes(nurse.id);
                 return (
-                  <div
-                    key={shift.name}
-                    className="rounded-xl border border-slate-200 p-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
-                        <Icon className="h-4 w-4" />
-                        {shift.name} Shift
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className={shiftTone[shift.name]}
-                      >
-                        {shift.timeRange}
-                      </Badge>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {relevantNurses.map((nurse) => {
-                        const selected = assignedIds.includes(nurse.id);
-                        return (
-                          <button
-                            key={nurse.id}
-                            onClick={() =>
-                              toggleNurse(selectedDate, shift.name, nurse.id)
-                            }
-                            className={`flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition ${selected ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-blue-200 hover:bg-slate-50"}`}
-                          >
-                            <div
-                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${nurse.avatarColor} text-xs font-bold text-white`}
-                            >
-                              {nurse.name.split(" ")[1]?.charAt(0) ??
-                                nurse.name.charAt(0)}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-semibold text-slate-800">
-                                {nurse.name}
-                              </p>
-                              <p className="truncate text-xs text-slate-400">
-                                {nurse.designation}
-                              </p>
-                            </div>
-                            {selected && (
-                              <Check className="h-4 w-4 shrink-0 text-blue-600" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {otherNurses.length > 0 && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs font-medium text-blue-600">
-                          Show nurses from other wards
-                        </summary>
-                        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          {otherNurses.map((nurse) => {
-                            const selected = assignedIds.includes(nurse.id);
-                            return (
-                              <button
-                                key={nurse.id}
-                                onClick={() =>
-                                  toggleNurse(
-                                    selectedDate,
-                                    shift.name,
-                                    nurse.id,
-                                  )
-                                }
-                                className={`flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition ${selected ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-blue-200 hover:bg-slate-50"}`}
-                              >
-                                <div
-                                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${nurse.avatarColor} text-xs font-bold text-white`}
-                                >
-                                  {nurse.name.split(" ")[1]?.charAt(0) ??
-                                    nurse.name.charAt(0)}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-semibold text-slate-800">
-                                    {nurse.name}
-                                  </p>
-                                  <p className="truncate text-xs text-slate-400">
-                                    {nurse.designation} · {nurse.ward}
-                                  </p>
-                                </div>
-                                {selected && (
-                                  <Check className="h-4 w-4 shrink-0 text-blue-600" />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </details>
-                    )}
-                  </div>
+                  <NurseToggle
+                    key={nurse.id}
+                    selected={selected}
+                    onClick={() => toggleNurse(selectedDate, shift.name, nurse.id)}
+                    name={nurse.name}
+                    subtitle={nurse.designation}
+                    avatarColor={nurse.avatarColor}
+                  />
                 );
               })}
             </div>
 
-            {/* Assignment summary across touched dates */}
-            {Object.keys(draftByDate).length > 0 && (
-              <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
-                <p className="flex items-center gap-2 text-sm font-bold text-blue-800">
-                  <UserRound className="h-4 w-4" />
-                  Unsaved changes for {Object.keys(draftByDate).length} date(s)
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {Object.keys(draftByDate)
-                    .sort()
-                    .map((date) => (
-                      <Badge
-                        key={date}
-                        variant="outline"
-                        className="border-blue-200 bg-white text-blue-700"
-                      >
-                        {toDisplay(date)}
-                      </Badge>
-                    ))}
+            {otherNurses.length > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-xs font-medium text-blue-600">
+                  Show nurses from other wards
+                </summary>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {otherNurses.map((nurse) => {
+                    const selected = assignedIds.includes(nurse.id);
+                    return (
+                      <NurseToggle
+                        key={nurse.id}
+                        selected={selected}
+                        onClick={() => toggleNurse(selectedDate, shift.name, nurse.id)}
+                        name={nurse.name}
+                        subtitle={`${nurse.designation} · ${nurse.ward}`}
+                        avatarColor={nurse.avatarColor}
+                      />
+                    );
+                  })}
                 </div>
-              </div>
+              </details>
             )}
-          </div>
+          </DrawerSection>
+        );
+      })}
 
-          <footer className="border-t border-slate-200 bg-white p-5">
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 gap-2 bg-blue-600 hover:bg-blue-700"
-                onClick={handleSaveAll}
-              >
-                <Save className="h-4 w-4" />
-                Save Assignment
-              </Button>
-            </div>
-          </footer>
-        </div>
-      </aside>
-    </div>
+      {/* Assignment summary across touched dates */}
+      {Object.keys(draftByDate).length > 0 && (
+        <DrawerSection
+          title={`Unsaved changes for ${Object.keys(draftByDate).length} date(s)`}
+          icon={<UserRound className="h-4 w-4 text-blue-600" aria-hidden />}
+        >
+          <div className="flex flex-wrap gap-2">
+            {Object.keys(draftByDate)
+              .sort()
+              .map((date) => (
+                <Badge key={date} variant="outline" className="border-blue-200 bg-white text-blue-700">
+                  {toDisplay(date)}
+                </Badge>
+              ))}
+          </div>
+        </DrawerSection>
+      )}
+    </ConsultationDrawer>
+  );
+}
+
+function NurseToggle({
+  selected,
+  onClick,
+  name,
+  subtitle,
+  avatarColor,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  name: string;
+  subtitle: string;
+  avatarColor: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition",
+        selected
+          ? "border-blue-500 bg-blue-50"
+          : "border-slate-200 hover:border-blue-200 hover:bg-slate-50",
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-xs font-bold text-white",
+          avatarColor,
+        )}
+      >
+        {name.split(" ")[1]?.charAt(0) ?? name.charAt(0)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-slate-800">{name}</span>
+        <span className="block truncate text-xs text-slate-400">{subtitle}</span>
+      </span>
+      {selected && <Check className="h-4 w-4 shrink-0 text-blue-600" aria-hidden />}
+    </button>
   );
 }

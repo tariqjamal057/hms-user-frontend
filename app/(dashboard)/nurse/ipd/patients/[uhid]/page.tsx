@@ -94,7 +94,7 @@ export default function NursePatientDetailPage() {
 
   const tabs: PatientTab[] = [
     { value: "overview", label: "Overview", content: <TabOverview patient={patient} onNext={() => setTab("vitals")} /> },
-    { value: "vitals", label: "Vitals Monitoring", content: <TabVitals vitals={vitals} onAddVital={addVital} /> },
+    { value: "vitals", label: "Vitals Monitoring", content: <TabVitals vitals={vitals} onAddVital={addVital} recordVitalsPath={`/nurse/ipd/patients/${patient.uhid}/record-vitals`} /> },
     { value: "emar", label: "Orders & eMAR", content: <TabEmar doses={doses} onUpdateDose={updateDose} /> },
     { value: "notes", label: "Progress Notes", content: <TabProgressNotes notes={notes} onAddNote={addNote} /> },
     { value: "fluid", label: "Fluid Balance", content: <TabFluidBalance entries={fluidEntries} onAddEntry={addFluidEntry} /> },

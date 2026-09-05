@@ -2,11 +2,10 @@
 "use client";
 import { useState } from "react";
 import { ArrowRightLeft, CheckCircle2, UserRound } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SingleSelect } from "@/components/forms/select";
+import { FormTextarea } from "@/components/forms/form-controls";
+import { PillButton } from "@/components/forms/pill-button";
+import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
 import type { ShiftHandoverEntry } from "@/types/nurse/ipd/nurse-ipd-types";
 import { AVAILABLE_NEXT_SHIFT_NURSES, CURRENT_NURSE } from "@/lib/nurse/ipd/nurse-ipd-data";
 
@@ -28,52 +27,103 @@ export function TabShiftHandover({ handovers, onHandover }: { handovers: ShiftHa
     setNextNurse(""); setNotes("");
   }
 
+  const columns: DataColumn<ShiftHandoverEntry>[] = [
+    {
+      key: "from",
+      label: "Handover From",
+      render: (e) => (
+        <div>
+          <p className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{e.fromNurse}</p>
+          <p className="text-xs text-slate-400">{e.fromShift}</p>
+        </div>
+      ),
+    },
+    {
+      key: "to",
+      label: "Handover To",
+      render: (e) => (
+        <div>
+          <p className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{e.toNurse}</p>
+          <p className="text-xs text-slate-400">{e.toShift}</p>
+        </div>
+      ),
+    },
+    {
+      key: "when",
+      label: "Handover Time",
+      render: (e) => <span className="text-sm text-slate-600">{e.handoverDateTime}</span>,
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      render: (e) =>
+        e.notes ? (
+          <span className="max-w-[280px] whitespace-normal text-xs italic text-slate-600">&quot;{e.notes}&quot;</span>
+        ) : (
+          <span className="text-slate-300">—</span>
+        ),
+    },
+  ];
+
   return (
-    <div className="space-y-4">
-      <Card className="border-slate-200">
-        <CardContent className="p-5">
-          <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><ArrowRightLeft className="h-4 w-4 text-blue-600" />Shift Handover</p>
-          <p className="mt-1 text-xs text-slate-500">Handing over from <span className="font-semibold text-slate-700">{CURRENT_NURSE.name}</span> ({CURRENT_NURSE.shift})</p>
-
-          <div className="mt-4 space-y-3">
-            <div>
-              <Label className="text-xs text-slate-500">Handover To (Next Shift Nurse) *</Label>
-              <Select value={nextNurse} onValueChange={setNextNurse}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select next shift nurse" /></SelectTrigger>
-                <SelectContent>{AVAILABLE_NEXT_SHIFT_NURSES.map((nurse) => <SelectItem key={nurse} value={nurse}>{nurse}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">Handover Notes (Optional)</Label>
-              <Textarea className="mt-1" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any specific instructions or observations for the next shift..." />
-            </div>
-            <Button disabled={!nextNurse} className="gap-2 bg-blue-600 hover:bg-blue-700" onClick={handleSubmit}><ArrowRightLeft className="h-4 w-4" />Complete Handover</Button>
-            {done && <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" />Handover completed successfully.</p>}
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-white to-cyan-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-sm">
+            <ArrowRightLeft className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-lg font-bold tracking-tight text-slate-800">Shift Handover</p>
+            <p className="text-xs text-slate-500">
+              Handing over from <span className="font-semibold text-slate-700">{CURRENT_NURSE.name}</span> ({CURRENT_NURSE.shift})
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="border-slate-200">
-        <CardContent className="p-5">
-          <p className="mb-3 text-sm font-bold text-slate-800">Handover History</p>
-          <div className="space-y-3">
-            {handovers.map((entry) => (
-              <div key={entry.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{entry.fromNurse}</span>
-                  <span className="text-xs text-slate-400">({entry.fromShift})</span>
-                  <ArrowRightLeft className="h-3.5 w-3.5 text-blue-500" />
-                  <span className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{entry.toNurse}</span>
-                  <span className="text-xs text-slate-400">({entry.toShift})</span>
-                </div>
-                <p className="mt-2 text-xs text-slate-400">{entry.handoverDateTime}</p>
-                {entry.notes && <p className="mt-2 text-sm italic text-slate-600">&quot;{entry.notes}&quot;</p>}
-              </div>
-            ))}
-            {handovers.length === 0 && <p className="text-sm text-slate-400">No shift handovers recorded for this patient yet.</p>}
+      {/* Handover form */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="space-y-4">
+          <SingleSelect
+            label="Handover To (Next Shift Nurse) *"
+            value={nextNurse}
+            onChange={setNextNurse}
+            placeholder="Select next shift nurse"
+            options={AVAILABLE_NEXT_SHIFT_NURSES.map((nurse) => ({ value: nurse, label: nurse }))}
+          />
+          <FormTextarea
+            label="Handover Notes (Optional)"
+            value={notes}
+            onChange={setNotes}
+            rows={3}
+            maxLength={300}
+            placeholder="Any specific instructions or observations for the next shift..."
+          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <PillButton variant="gradient" icon={ArrowRightLeft} onClick={handleSubmit} disabled={!nextNurse}>
+              Complete Handover
+            </PillButton>
+            {done && (
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />Handover completed successfully.
+              </p>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* Handover history — unified DataTable */}
+      <DataTable
+        card
+        title="Handover History"
+        titleIcon={<UserRound className="h-4 w-4" />}
+        rows={handovers}
+        columns={columns}
+        rowKey={(e) => e.id}
+        countLabel="handovers"
+        emptyText="No shift handovers recorded for this patient yet."
+      />
     </div>
   );
 }

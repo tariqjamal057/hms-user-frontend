@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import {
   Banknote,
-  CheckCircle2,
+  Check,
   CreditCard,
+  IndianRupee,
   Landmark,
   PackageCheck,
   Pill,
@@ -12,15 +13,17 @@ import {
   Smartphone,
   Trash2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  ConsultationDrawer,
+  DrawerSection,
+} from "@/components/consultation/drawer";
+import { FormButton, SuffixedInput } from "@/components/forms/form-controls";
+import { SingleSelect } from "@/components/forms/select";
+import { RadioGroup } from "@/components/forms/radio-group";
+import { PillButton } from "@/components/forms/pill-button";
+import { InfoTileCard } from "@/components/patient-detail/info-tile-card";
+import { InfoAlertCard } from "@/components/patient-detail/info-alert-card";
 import type {
   DispenseMedicineState,
   PharmacyOPDOrder,
@@ -71,6 +74,11 @@ export function OpdOrderDispenseWorkspace({ order, onDelivered }: Props) {
     }, 0);
   }, [order, states]);
 
+  const removedCount = states.filter((s) => !s.included).length;
+  const partialCount = states.filter((s) => s.status === "Partial").length;
+  const availableCount = states.filter((s) => s.status === "Available").length;
+  const outOfStockCount = states.filter((s) => s.status === "Out of Stock").length;
+
   function update(id: string, patch: Partial<DispenseMedicineState>) {
     setStates((previous) =>
       previous.map((row) =>
@@ -100,22 +108,57 @@ export function OpdOrderDispenseWorkspace({ order, onDelivered }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <section className="p-5">
-        <div className="mb-3 flex items-center justify-between">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-white to-cyan-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-sm">
+            <Pill className="h-5 w-5" />
+          </span>
           <div>
-            <h3 className="flex items-center gap-2 font-bold text-slate-800">
-              <Pill className="h-5 w-5 text-blue-600" />
+            <p className="text-lg font-bold tracking-tight text-slate-800">
               Medicines to Dispense
-            </h3>
+            </p>
             <p className="text-xs text-slate-500">
               Nearest-expiry available batch is selected by default (FEFO).
             </p>
           </div>
-          <span className="text-sm font-semibold text-slate-600">
-            {order.medicines.length} items
-          </span>
         </div>
+        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+          {order.medicines.length} items
+        </span>
+      </div>
+
+      {/* Summary tiles */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <InfoTileCard
+          title="Total Items"
+          icon={<Pill className="h-3.5 w-3.5" />}
+          tone="blue"
+          value={String(order.medicines.length)}
+          subtitle="Prescribed"
+        />
+        <InfoTileCard
+          title="Available"
+          tone="emerald"
+          value={String(availableCount)}
+          subtitle="Full stock"
+        />
+        <InfoTileCard
+          title="Partial"
+          tone="amber"
+          value={String(partialCount)}
+          subtitle="Short stock"
+        />
+        <InfoTileCard
+          title="Out of Stock"
+          tone="red"
+          value={String(outOfStockCount)}
+          subtitle={`${removedCount} removed from bill`}
+        />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="space-y-3">
           {order.medicines.map((medicine, index) => {
             const state = states.find((row) => row.medicineId === medicine.id);
@@ -127,13 +170,21 @@ export function OpdOrderDispenseWorkspace({ order, onDelivered }: Props) {
             return (
               <div
                 key={medicine.id}
-                className={`rounded-xl border p-4 transition ${removed ? "border-slate-200 bg-slate-50 opacity-60" : "border-slate-200 bg-white"}`}
+                className={`rounded-2xl border p-4 transition ${
+                  removed
+                    ? "border-slate-200 bg-slate-50 opacity-60"
+                    : "border-slate-200 bg-white"
+                }`}
               >
                 <div className="flex flex-col justify-between gap-3 sm:flex-row">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-slate-400">{index + 1}.</span>
-                      <p className={`font-bold ${removed ? "line-through text-slate-500" : "text-slate-800"}`}>
+                      <p
+                        className={`font-bold ${
+                          removed ? "line-through text-slate-500" : "text-slate-800"
+                        }`}
+                      >
                         {medicine.medicineName}
                       </p>
                       <StockBadge status={getMedicineStockStatus(medicine)} />
@@ -142,61 +193,98 @@ export function OpdOrderDispenseWorkspace({ order, onDelivered }: Props) {
                       {medicine.dosage} · {medicine.frequency} · {medicine.duration} · Prescribed: {medicine.prescribedQuantity} units
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
+                  <PillButton
+                    icon={Trash2}
                     size="sm"
-                    className="self-start text-red-600 hover:bg-red-50"
-                    onClick={() => update(medicine.id, { included: !state?.included })}
+                    variant={removed ? "outline" : "danger"}
+                    onClick={() =>
+                      update(medicine.id, { included: !state?.included })
+                    }
                   >
-                    <Trash2 className="mr-1 h-4 w-4" />
                     {removed ? "Restore" : "Remove"}
-                  </Button>
+                  </PillButton>
                 </div>
                 {!removed && (
                   <div className="mt-4 grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 md:grid-cols-4">
                     <div className="md:col-span-2">
-                      <p className="mb-1 text-xs font-medium text-slate-500">Select Batch (FEFO)</p>
-                      <Select value={state?.selectedBatchId ?? ""} onValueChange={(value) => selectBatch(medicine.id, value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="No stock batch" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {medicine.batches.map((batch) => (
-                            <SelectItem key={batch.id} value={batch.id} disabled={batch.availableQuantity === 0}>
-                              Batch {batch.batchNumber} · Stock {batch.availableQuantity} · Exp {batch.expiryDate}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Mini
-                      label="Rack / Shelf"
-                      value={selectedBatch ? `${selectedBatch.rackNumber} / ${selectedBatch.shelfNumber}` : "—"}
-                    />
-                    <Mini label="Expiry" value={selectedBatch?.expiryDate ?? "—"} />
-                    <div>
-                      <p className="mb-1 text-xs font-medium text-slate-500">Dispense Quantity</p>
-                      <input
-                        type="number"
-                        min={0}
-                        max={selectedBatch?.availableQuantity ?? 0}
-                        value={state?.dispenseQuantity ?? 0}
-                        onChange={(e) =>
-                          update(medicine.id, {
-                            dispenseQuantity: Math.min(
-                              Math.max(0, Number(e.target.value)),
-                              selectedBatch?.availableQuantity ?? 0,
-                            ),
-                          })
-                        }
-                        className="h-9 w-full rounded-md border border-slate-200 px-3 text-sm"
+                      <SingleSelect
+                        label="Select Batch (FEFO)"
+                        value={state?.selectedBatchId ?? ""}
+                        onChange={(value) => selectBatch(medicine.id, value)}
+                        options={medicine.batches.map((batch) => ({
+                          value: batch.id,
+                          label:
+                            batch.availableQuantity === 0
+                              ? `Batch ${batch.batchNumber} · OUT OF STOCK`
+                              : `Batch ${batch.batchNumber} · Stock ${batch.availableQuantity} · Exp ${batch.expiryDate}`,
+                        }))}
                       />
                     </div>
-                    <Mini label="Unit Price" value={selectedBatch ? `₹${selectedBatch.unitPrice}` : "—"} />
-                    <Mini label="Line Total" value={selectedBatch ? `₹${((state?.dispenseQuantity ?? 0) * selectedBatch.unitPrice).toFixed(2)}` : "₹0"} />
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Rack / Shelf
+                      </p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-700">
+                        {selectedBatch
+                          ? `${selectedBatch.rackNumber} / ${selectedBatch.shelfNumber}`
+                          : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Expiry
+                      </p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-700">
+                        {selectedBatch?.expiryDate ?? "—"}
+                      </p>
+                    </div>
+                    <SuffixedInput
+                      label="Dispense Quantity"
+                      suffix="units"
+                      type="number"
+                      value={String(state?.dispenseQuantity ?? 0)}
+                      onChange={(v) =>
+                        update(medicine.id, {
+                          dispenseQuantity: Math.min(
+                            Math.max(0, Number(v)),
+                            selectedBatch?.availableQuantity ?? 0,
+                          ),
+                        })
+                      }
+                    />
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Unit Price
+                      </p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-700">
+                        {selectedBatch ? `₹${selectedBatch.unitPrice}` : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Line Total
+                      </p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-700">
+                        ₹
+                        {selectedBatch
+                          ? (
+                              (state?.dispenseQuantity ?? 0) *
+                              selectedBatch.unitPrice
+                            ).toFixed(2)
+                          : "0.00"}
+                      </p>
+                    </div>
                     <div className="flex items-end">
-                      <Badge className={partial ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}>
-                        {partial ? `Partial: ${state?.dispenseQuantity}/${medicine.prescribedQuantity}` : "Full quantity available"}
+                      <Badge
+                        className={
+                          partial
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-emerald-50 text-emerald-700"
+                        }
+                      >
+                        {partial
+                          ? `Partial: ${state?.dispenseQuantity}/${medicine.prescribedQuantity}`
+                          : "Full quantity available"}
                       </Badge>
                     </div>
                   </div>
@@ -210,140 +298,160 @@ export function OpdOrderDispenseWorkspace({ order, onDelivered }: Props) {
             );
           })}
         </div>
-      </section>
+      </div>
 
-      <footer className="sticky bottom-0 flex flex-col gap-3 border-t border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+      {/* Action footer */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs text-slate-500">Payable for selected medicines</p>
           <p className="text-2xl font-bold text-slate-800">₹{total.toFixed(2)}</p>
         </div>
         {order.status === "Delivered" ? (
-          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-            <CheckCircle2 className="h-5 w-5" />
-            Delivered {order.deliveredAt}
-          </div>
+          <InfoAlertCard
+            tone="emerald"
+            icon={<Check className="h-3.5 w-3.5" />}
+            title="Delivered"
+            body={`Order delivered on ${order.deliveredAt}.`}
+          />
         ) : (
-          <Button
+          <PillButton
+            icon={CreditCard}
             disabled={total <= 0}
-            className="gap-2 bg-blue-600 hover:bg-blue-700"
             onClick={() => setPaymentOpen(true)}
           >
-            <CreditCard className="h-4 w-4" />
             Continue to Payment
-          </Button>
+          </PillButton>
         )}
-      </footer>
+      </div>
 
-      {paymentOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]">
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="border-b border-slate-100 bg-gradient-to-r from-blue-50 via-cyan-50 to-white px-5 py-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                  <PackageCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">Collect Pharmacy Payment</h3>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Select the patient&apos;s payment method to dispatch medicines.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="p-5">
-              <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Total Medicine Value</p>
-                    <p className="mt-1 text-3xl font-bold tracking-tight text-slate-800">₹{total.toFixed(2)}</p>
-                    <p className="mt-1 text-xs text-slate-500">Includes selected medicines and approved partial quantities.</p>
-                  </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm">
-                    <Pill className="h-6 w-6" />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-5 flex items-center justify-between">
-                <p className="text-sm font-bold text-slate-800">Payment Method</p>
-                <span className="text-xs text-slate-400">Select one option</span>
-              </div>
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {(
-                  [
-                    { value: "Cash" as const, label: "Cash", description: "Collect cash at pharmacy counter", icon: Banknote, iconClassName: "bg-emerald-100 text-emerald-600", selectedClassName: "border-emerald-500 bg-emerald-50" },
-                    { value: "UPI" as const, label: "UPI", description: "QR code or UPI application", icon: Smartphone, iconClassName: "bg-violet-100 text-violet-600", selectedClassName: "border-violet-500 bg-violet-50" },
-                    { value: "Card" as const, label: "Card", description: "Debit or credit card payment", icon: CreditCard, iconClassName: "bg-blue-100 text-blue-600", selectedClassName: "border-blue-500 bg-blue-50" },
-                    { value: "Net Banking" as const, label: "Net Banking", description: "Direct bank account transfer", icon: Landmark, iconClassName: "bg-amber-100 text-amber-600", selectedClassName: "border-amber-500 bg-amber-50" },
-                  ] satisfies Array<{
-                    value: PharmacyPaymentMethod;
-                    label: string;
-                    description: string;
-                    icon: React.ElementType;
-                    iconClassName: string;
-                    selectedClassName: string;
-                  }>
-                ).map((option) => {
-                  const Icon = option.icon;
-                  const isSelected = payment === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setPayment(option.value)}
-                      className={`relative flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                        isSelected ? `${option.selectedClassName} shadow-sm` : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${option.iconClassName}`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-800">{option.label}</p>
-                        <p className="mt-0.5 truncate text-[11px] text-slate-500">{option.description}</p>
-                      </div>
-                      {isSelected && (
-                        <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-5 flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
-                <CreditCard className="h-4 w-4 text-blue-600" />
-                <p className="text-xs text-slate-600">
-                  Selected payment method: <span className="font-bold text-slate-800">{payment}</span>
-                </p>
-              </div>
-              <div className="mt-3 flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                <p className="text-xs leading-5 text-emerald-800">
-                  Confirming payment will mark the order as paid, record the payment method, and mark all selected medicines as dispatched and delivered to the patient.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 border-t border-slate-100 bg-slate-50/60 p-5">
-              <Button variant="outline" className="flex-1 border-slate-200 bg-white" onClick={() => setPaymentOpen(false)}>
-                Cancel
-              </Button>
-              <Button className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={() => { onDelivered(order.id, payment); setPaymentOpen(false); }}>
-                <PackageCheck className="h-4 w-4" />
-                Collect & Deliver
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PaymentDrawer
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        total={total}
+        payment={payment}
+        setPayment={setPayment}
+        onConfirm={() => {
+          onDelivered(order.id, payment);
+          setPaymentOpen(false);
+        }}
+      />
     </div>
   );
 }
 
-function Mini({ label, value }: { label: string; value: string }) {
+function PaymentDrawer({
+  open,
+  onOpenChange,
+  total,
+  payment,
+  setPayment,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  total: number;
+  payment: PharmacyPaymentMethod;
+  setPayment: (payment: PharmacyPaymentMethod) => void;
+  onConfirm: () => void;
+}) {
+  const options: Array<{
+    value: PharmacyPaymentMethod;
+    label: string;
+    description: string;
+    icon: React.ElementType;
+  }> = [
+    { value: "Cash", label: "Cash", description: "Collect cash at counter", icon: Banknote },
+    { value: "UPI", label: "UPI", description: "QR or UPI application", icon: Smartphone },
+    { value: "Card", label: "Card", description: "Debit or credit card", icon: CreditCard },
+    { value: "Net Banking", label: "Net Banking", description: "Bank account transfer", icon: Landmark },
+  ];
+
   return (
-    <div>
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-slate-700">{value}</p>
-    </div>
+    <ConsultationDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<PackageCheck className="h-5 w-5" />}
+      title="Collect Pharmacy Payment"
+      description="Select the patient's payment method to dispatch medicines."
+      bodyClassName="space-y-4"
+      footer={
+        <div className="flex items-center gap-3">
+          <FormButton variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+            Cancel
+          </FormButton>
+          <FormButton className="flex-1" onClick={onConfirm} disabled={total <= 0}>
+            <Check className="mr-1 h-4 w-4" />
+            Collect &amp; Deliver
+          </FormButton>
+        </div>
+      }
+    >
+      <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50/70 p-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+            Total Medicine Value
+          </p>
+          <p className="mt-1 text-3xl font-bold tracking-tight text-slate-800">
+            ₹{total.toFixed(2)}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Includes selected medicines and approved partial quantities.
+          </p>
+        </div>
+        <IndianRupee className="h-8 w-8 text-emerald-500" />
+      </div>
+
+      <DrawerSection
+        title="Payment Method"
+        caption="Select one option"
+        icon={<CreditCard className="h-4 w-4" />}
+      >
+        <RadioGroup
+          name="opd-payment-method"
+          options={options.map((o) => ({ value: o.value, label: o.label }))}
+          value={payment}
+          onChange={(v) => setPayment(v as PharmacyPaymentMethod)}
+        />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {options.map((option) => {
+            const Icon = option.icon;
+            const isSelected = payment === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setPayment(option.value)}
+                className={`flex flex-col items-start gap-1.5 rounded-xl border-2 p-2.5 text-left transition ${
+                  isSelected
+                    ? "border-blue-500 bg-blue-50 shadow-sm"
+                    : "border-slate-200 bg-white hover:border-blue-200"
+                }`}
+              >
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                    isSelected
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+                <p className="text-xs font-bold text-slate-800">{option.label}</p>
+                <p className="text-[10px] leading-tight text-slate-500">
+                  {option.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </DrawerSection>
+
+      <InfoAlertCard
+        tone="emerald"
+        icon={<ShieldCheck className="h-3.5 w-3.5" />}
+        title="Audit Trail"
+        body="Confirming payment will mark the order as paid, record the payment method, and mark all selected medicines as dispatched and delivered to the patient."
+      />
+    </ConsultationDrawer>
   );
 }

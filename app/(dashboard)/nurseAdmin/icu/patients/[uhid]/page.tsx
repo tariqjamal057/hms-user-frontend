@@ -4,12 +4,16 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Pill } from "lucide-react";
 import type {
+  EmarDose,
   FluidBalanceEntry,
   ProgressNote,
   VitalRecord,
 } from "@/types/nurse/ipd/nurse-ipd-types";
+import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
+import { InfoTile } from "@/components/patient-detail/info-tile";
+import { DateField } from "@/components/forms/form-controls";
 import type {
   OxygenAdministration,
   OxygenObservation,
@@ -108,11 +112,11 @@ export default function NurseAdminIcuPatientDetailPage() {
     new Date().toISOString().split("T")[0],
   );
 
-  // Filter medicines for selected date
+  // Filter medicines for selected date. `givenAt` is stored as a display
+  // string (e.g. "27 Aug 2026, 08:05 AM") or "Ongoing", so it is parsed
+  // manually rather than via `new Date()` which throws on invalid values.
   const filteredDoses = doses.filter((dose) => {
-    const doseDate = dose.givenAt
-      ? new Date(dose.givenAt).toISOString().split("T")[0]
-      : null;
+    const doseDate = dose.givenAt ? givenAtToIso(dose.givenAt) : null;
     return (
       selectedMedicineDate === doseDate ||
       (!dose.givenAt &&
@@ -200,7 +204,7 @@ export default function NurseAdminIcuPatientDetailPage() {
     {
       value: "vitals",
       label: "Vitals",
-      content: <TabVitals vitals={vitals} onAddVital={addVital} />,
+      content: <TabVitals vitals={vitals} onAddVital={addVital} recordVitalsPath={`/nurseAdmin/icu/patients/${patient.uhid}/record-vitals`} />,
     },
     {
       value: "ventilation",
@@ -238,111 +242,49 @@ export default function NurseAdminIcuPatientDetailPage() {
       value: "medicines",
       label: "Medicines",
       content: (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-800">
-              Medicine Orders
-            </h3>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500">Date:</label>
-              <input
-                type="date"
-                value={selectedMedicineDate}
-                onChange={(e) => setSelectedMedicineDate(e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
-              />
+        <div className="space-y-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                <Pill className="h-5 w-5 text-blue-600" />
+                Medicine Orders
+              </h3>
+              <p className="text-xs text-slate-500">View doses administered for the selected date.</p>
             </div>
+            <DateField label="" value={selectedMedicineDate} onChange={setSelectedMedicineDate} className="w-44" />
           </div>
 
           {filteredDoses.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
               No medicines administered on{" "}
-              {new Date(selectedMedicineDate).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
+              {(() => {
+                const d = new Date(`${selectedMedicineDate}T12:00:00`);
+                return Number.isNaN(d.getTime())
+                  ? selectedMedicineDate
+                  : d.toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    });
+              })()}
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredDoses.map((dose) => (
-                <div
-                  key={dose.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-slate-800">
-                          {dose.medicineName}
-                        </p>
-                        <Badge
-                          className={
-                            dose.status === "Given"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : dose.status === "Pending"
-                                ? "bg-amber-50 text-amber-700 border-amber-200"
-                                : "bg-slate-100 text-slate-700 border-slate-200"
-                          }
-                        >
-                          {dose.status}
-                        </Badge>
-                        {dose.urgency === "Urgent" && (
-                          <Badge className="border-red-200 bg-red-50 text-red-700">
-                            Urgent
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {dose.strength} · {dose.route} · Slot: {dose.slot}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Scheduled: {dose.scheduledTime} · Qty: {dose.qtyRequired}
-                      </p>
-                      {dose.instructions && (
-                        <p className="mt-1 text-xs italic text-slate-600">
-                          {dose.instructions}
-                        </p>
-                      )}
-                      {dose.givenBy && dose.givenAt && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          <p className="text-xs text-slate-600">
-                            Given by{" "}
-                            <span className="font-semibold">{dose.givenBy}</span>{" "}
-                            at{" "}
-                            <span className="font-semibold">{dose.givenAt}</span>
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <DataTable
+              card
+              title="Medicine Administration"
+              titleIcon={<Pill className="h-4 w-4" />}
+              rows={filteredDoses}
+              columns={icuDoseColumns}
+              rowKey={(dose) => dose.id}
+              countLabel="doses"
+              emptyText="No medicines administered on the selected date."
+            />
           )}
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-emerald-600">
-                  {filteredDoses.filter((d) => d.status === "Given").length}
-                </p>
-                <p className="text-xs text-slate-600">Given</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-amber-600">
-                  {filteredDoses.filter((d) => d.status === "Pending").length}
-                </p>
-                <p className="text-xs text-slate-600">Pending</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-600">
-                  {filteredDoses.length}
-                </p>
-                <p className="text-xs text-slate-600">Total</p>
-              </div>
-            </div>
+          <div className="grid grid-cols-3 gap-3">
+            <InfoTile label="Given" value={String(filteredDoses.filter((d) => d.status === "Given").length)} tone="emerald" />
+            <InfoTile label="Pending" value={String(filteredDoses.filter((d) => d.status === "Pending").length)} tone="amber" />
+            <InfoTile label="Total" value={String(filteredDoses.length)} tone="slate" />
           </div>
         </div>
       ),
@@ -622,3 +564,71 @@ export default function NurseAdminIcuPatientDetailPage() {
     </div>
   );
 }
+
+const GIVEN_AT_MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+function givenAtToIso(givenAt: string): string | null {
+  const match = /^(\d{1,2}) ([A-Za-z]{3}) (\d{4})/.exec(givenAt);
+  if (!match) return null;
+  const monthLabel = match[2].charAt(0).toUpperCase() + match[2].slice(1).toLowerCase();
+  const monthIndex = GIVEN_AT_MONTHS.indexOf(monthLabel);
+  if (monthIndex === -1) return null;
+  const day = Number(match[1]);
+  const year = Number(match[3]);
+  if (day < 1 || day > 31) return null;
+  return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+const icuDoseColumns: DataColumn<EmarDose>[] = [
+  {
+    key: "medicineName",
+    label: "Medicine",
+    render: (dose) => (
+      <div className="min-w-0">
+        <p className="font-semibold text-slate-800">{dose.medicineName}</p>
+        <p className="text-xs text-slate-400">{dose.strength} · {dose.route} · Slot: {dose.slot}</p>
+        {dose.instructions && <p className="mt-0.5 text-xs italic text-slate-500">{dose.instructions}</p>}
+      </div>
+    ),
+  },
+  {
+    key: "scheduledTime",
+    label: "Scheduled",
+    render: (dose) => <span className="text-sm text-slate-600">{dose.scheduledTime}</span>,
+  },
+  {
+    key: "status",
+    label: "Status",
+    render: (dose) => {
+      const tone =
+        dose.status === "Given"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : dose.status === "Pending"
+            ? "border-amber-200 bg-amber-50 text-amber-700"
+            : "border-slate-200 bg-slate-100 text-slate-700";
+      return (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={tone}>{dose.status}</Badge>
+          {dose.urgency === "Urgent" && <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">Urgent</Badge>}
+        </div>
+      );
+    },
+  },
+  {
+    key: "givenBy",
+    label: "Given",
+    render: (dose) =>
+      dose.givenBy && dose.givenAt ? (
+        <span className="flex items-center gap-1.5 text-xs text-slate-600">
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+          {dose.givenBy} · {dose.givenAt}
+        </span>
+      ) : (
+        <span className="text-slate-300">—</span>
+      ),
+    hideOnMobile: true,
+  },
+];

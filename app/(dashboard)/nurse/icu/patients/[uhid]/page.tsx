@@ -129,7 +129,7 @@ export default function NurseIcuPatientDetailPage() {
 
   const tabs: PatientTab[] = [
     { value: "overview", label: "Overview", content: <TabOverview patient={patient} onNext={() => setTab("vitals")} /> },
-    { value: "vitals", label: "Vitals Monitoring", content: <TabVitals vitals={vitals} onAddVital={addVital} /> },
+    { value: "vitals", label: "Vitals Monitoring", content: <TabVitals vitals={vitals} onAddVital={addVital} recordVitalsPath={`/nurse/icu/patients/${patient.uhid}/record-vitals`} /> },
     { value: "ventilation", label: "Ventilation", content: (
       <TabVentilation
         patientName={patient.patientName}

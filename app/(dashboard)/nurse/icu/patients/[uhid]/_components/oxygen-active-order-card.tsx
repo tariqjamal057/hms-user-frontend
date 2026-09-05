@@ -2,8 +2,8 @@
 "use client";
 import { toast } from "sonner";
 import { CheckCircle2, Play, Wind } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PillButton } from "@/components/forms/pill-button";
 import type { OxygenAdministration, OxygenOrder } from "@/types/nurse/icu/oxygen-therapy-types";
 import { formatDeviceSettings } from "./oxygen-device-fields";
 
@@ -50,9 +50,9 @@ export function OxygenActiveOrderCard({
         {administration?.isActive ? (
           <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><CheckCircle2 className="h-4 w-4" />Started by {administration.startedBy}</span>
         ) : (
-          <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" onClick={handleStart}>
-            <Play className="h-3.5 w-3.5" />Start Oxygen
-          </Button>
+          <PillButton icon={Play} onClick={handleStart}>
+            Start Oxygen
+          </PillButton>
         )}
       </div>
     </div>

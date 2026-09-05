@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { Calendar1, Check, ChevronDown, ChevronUp, Lock, Moon, Plus, Sunrise, Sunset, UserCog } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PillButton } from "@/components/forms/pill-button";
+import { SectionHeader } from "./section-header";
 import type { DailyShiftAssignment, ShiftName } from "@/types/nurse-admin/ipd/nurse-admin-types";
 import { NURSE_DIRECTORY, SHIFTS } from "@/lib/nurse-admin/ipd/nurse-admin-data";
 import { getNurseName } from "@/lib/nurse-admin/ipd/ward-detail-data";
@@ -66,11 +67,12 @@ export function SectionAssignedNurses({ ward, assignments, onUpdateAssignments }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><UserCog className="h-4 w-4 text-blue-600" />Assigned Nurses</p>
-        <p className="mt-1 text-xs text-slate-500">Past assignments are locked for audit. Today and future shifts can be edited. Extend the roster further using the button below.</p>
-      </div>
+    <div className="space-y-5">
+      <SectionHeader
+        icon={<UserCog className="h-5 w-5" />}
+        title="Assigned Nurses"
+        subtitle="Past assignments are locked for audit. Today and future shifts can be edited."
+      />
 
       {pastDates.length > 0 && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -108,7 +110,7 @@ export function SectionAssignedNurses({ ward, assignments, onUpdateAssignments }
             <div key={date} className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
                 <p className="flex items-center gap-1.5 text-sm font-bold text-slate-800"><Calendar1 className="h-4 w-4 text-blue-600" />{toDisplay(date)}{date === today && <Badge variant="outline" className="ml-1 border-blue-200 bg-blue-50 text-blue-700">Today</Badge>}</p>
-                <Button size="sm" variant="outline" onClick={() => setEditingDate(editingDate === date ? null : date)}>{editingDate === date ? "Done" : "Edit"}</Button>
+                <PillButton size="sm" variant="outline" onClick={() => setEditingDate(editingDate === date ? null : date)}>{editingDate === date ? "Done" : "Edit"}</PillButton>
               </div>
 
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -142,8 +144,8 @@ export function SectionAssignedNurses({ ward, assignments, onUpdateAssignments }
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" className="gap-2 border-blue-300 text-blue-700" onClick={() => extendMoreDays(5)}><Plus className="h-4 w-4" />Extend Roster by 5 Days</Button>
-          <Button size="sm" variant="outline" className="gap-2 border-blue-300 text-blue-700" onClick={() => extendMoreDays(1)}><Plus className="h-4 w-4" />Add 1 More Day</Button>
+          <PillButton size="sm" variant="outline" className="gap-2 border-blue-300 text-blue-700" onClick={() => extendMoreDays(5)}><Plus className="h-4 w-4" />Extend Roster by 5 Days</PillButton>
+          <PillButton size="sm" variant="outline" className="gap-2 border-blue-300 text-blue-700" onClick={() => extendMoreDays(1)}><Plus className="h-4 w-4" />Add 1 More Day</PillButton>
         </div>
       </div>
     </div>

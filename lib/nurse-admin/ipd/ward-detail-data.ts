@@ -1,5 +1,5 @@
 // lib/nurse-admin/ipd/ward-detail-data.ts
-import type { BedInfo, WardPatientFull } from "@/types/nurse-admin/ipd/ward-detail-types";
+import type { BedInfo, VitalRecordFull, WardPatientFull } from "@/types/nurse-admin/ipd/ward-detail-types";
 import { NURSE_DIRECTORY } from "./nurse-admin-data";
 
 export const WARD_STRUCTURE: Record<string, string[]> = {
@@ -160,6 +160,14 @@ export const BEDS: BedInfo[] = [
 
 export function getWardPatientByUhid(uhid: string) {
   return WARD_PATIENTS_FULL.find((p) => p.uhid === uhid);
+}
+export const EXTRA_VITALS: Record<string, VitalRecordFull[]> = {};
+export function getWardVitalsForPatient(uhid: string) {
+  const source = WARD_PATIENTS_FULL.find((p) => p.uhid === uhid);
+  return [...(EXTRA_VITALS[uhid] ?? []), ...(source?.vitals ?? [])];
+}
+export function saveWardVital(uhid: string, vital: VitalRecordFull) {
+  (EXTRA_VITALS[uhid] ??= []).unshift(vital);
 }
 export function getNurseName(id: string) {
   return NURSE_DIRECTORY.find((n) => n.id === id)?.name ?? id;

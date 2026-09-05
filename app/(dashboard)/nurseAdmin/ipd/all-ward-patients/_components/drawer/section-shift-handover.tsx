@@ -1,31 +1,67 @@
 // app/(dashboard)/nurse-admin/ipd/all-ward-patients/_components/drawer/section-shift-handover.tsx
+"use client";
 import { ArrowRightLeft, UserRound } from "lucide-react";
+import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
+import { SectionHeader } from "./section-header";
 import type { ShiftHandoverFull } from "@/types/nurse-admin/ipd/ward-detail-types";
 
 export function SectionShiftHandover({ handovers }: { handovers: ShiftHandoverFull[] }) {
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="flex items-center gap-2 text-sm font-bold text-slate-800"><ArrowRightLeft className="h-4 w-4 text-blue-600" />Shift Handover Logs</p>
-        <p className="mt-1 text-xs text-slate-500">Every handover between nurses for this patient, with date and time.</p>
-      </div>
+  const columns: DataColumn<ShiftHandoverFull>[] = [
+    {
+      key: "fromNurse",
+      label: "Handover From",
+      render: (e) => (
+        <div>
+          <p className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{e.fromNurse}</p>
+          <p className="text-xs text-slate-400">{e.fromShift}</p>
+        </div>
+      ),
+    },
+    {
+      key: "toNurse",
+      label: "Handover To",
+      render: (e) => (
+        <div>
+          <p className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{e.toNurse}</p>
+          <p className="text-xs text-slate-400">{e.toShift}</p>
+        </div>
+      ),
+    },
+    {
+      key: "handoverDateTime",
+      label: "Handover Time",
+      render: (e) => <span className="text-sm text-slate-600">{e.handoverDateTime}</span>,
+    },
+    {
+      key: "notes",
+      label: "Notes",
+      render: (e) =>
+        e.notes ? (
+          <span className="max-w-[280px] whitespace-normal text-xs italic text-slate-600">&quot;{e.notes}&quot;</span>
+        ) : (
+          <span className="text-slate-300">—</span>
+        ),
+    },
+  ];
 
-      <div className="space-y-3">
-        {handovers.map((entry) => (
-          <div key={entry.id} className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{entry.fromNurse}</span>
-              <span className="text-xs text-slate-400">({entry.fromShift})</span>
-              <ArrowRightLeft className="h-3.5 w-3.5 text-blue-500" />
-              <span className="flex items-center gap-1 font-semibold text-slate-800"><UserRound className="h-3.5 w-3.5 text-slate-400" />{entry.toNurse}</span>
-              <span className="text-xs text-slate-400">({entry.toShift})</span>
-            </div>
-            <p className="mt-2 text-xs text-slate-400">{entry.handoverDateTime}</p>
-            {entry.notes && <p className="mt-2 text-sm italic text-slate-600">&quot;{entry.notes}&quot;</p>}
-          </div>
-        ))}
-        {handovers.length === 0 && <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">No shift handovers recorded for this patient.</div>}
-      </div>
+  return (
+    <div className="space-y-5">
+      <SectionHeader
+        icon={<ArrowRightLeft className="h-5 w-5" />}
+        title="Shift Handover Logs"
+        subtitle={`Every handover between nurses for this patient · ${handovers.length} recorded`}
+      />
+
+      <DataTable
+        card
+        title="Handover History"
+        titleIcon={<UserRound className="h-4 w-4" />}
+        rows={handovers}
+        columns={columns}
+        rowKey={(e) => e.id}
+        countLabel="handovers"
+        emptyText="No shift handovers recorded for this patient."
+      />
     </div>
   );
 }

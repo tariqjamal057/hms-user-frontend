@@ -49,7 +49,13 @@ export const VITALS_RECORDS: Record<string, VitalRecord[]> = {
     { id: "V4", dateTime: "27 Aug 2026, 08:10 AM", bp: "112/72", systolic: 112, diastolic: 72, pulse: 90, respRate: 19, spo2: 98, temp: 98.4, pain: 1, recordedBy: "Nurse Neha" },
   ],
 };
-export function getVitalsForPatient(uhid: string) { return VITALS_RECORDS[uhid] ?? []; }
+export const EXTRA_VITALS: Record<string, VitalRecord[]> = {};
+export function getVitalsForPatient(uhid: string) {
+  return [...(EXTRA_VITALS[uhid] ?? []), ...(VITALS_RECORDS[uhid] ?? [])];
+}
+export function saveVitalForPatient(uhid: string, vital: VitalRecord) {
+  (EXTRA_VITALS[uhid] ??= []).unshift(vital);
+}
 
 export const EMAR_DOSES: Record<string, EmarDose[]> = {
   UHID12345685: [
