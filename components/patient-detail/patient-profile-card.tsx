@@ -71,11 +71,14 @@ export function PatientProfileCard({
 
   const baseInfo = infoFields ?? patient.fallbackInfoFields ?? [];
   const shownInfo = useMemo<Array<{ label: string; value: string; highlight?: boolean }>>(
-    () =>
-      patient.contact
-        ? [...baseInfo, { label: "Contact", value: patient.contact }]
-        : baseInfo,
-    [baseInfo, patient.contact],
+    () => {
+      const list = [...baseInfo];
+      if (patient.contact) list.push({ label: "Contact", value: patient.contact });
+      if (patient.assignedNurse) list.push({ label: "Assigned Nurse", value: patient.assignedNurse });
+      if (patient.currentShift) list.push({ label: "Current Shift", value: patient.currentShift });
+      return list;
+    },
+    [baseInfo, patient.contact, patient.assignedNurse, patient.currentShift],
   );
   const currentStatusMeta = statusOptions?.find((s) => s.value === status);
 

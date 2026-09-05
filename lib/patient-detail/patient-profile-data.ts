@@ -6,6 +6,7 @@ import type {
   PatientListItem,
 } from "@/components/patient-detail/patient-detail-types";
 import type { WardRoundPatient } from "@/types/doctor/ipd/ward-round-types";
+import { NURSE_IPD_PATIENTS } from "@/lib/nurse/ipd/nurse-ipd-data";
 
 export function diagnosisCause(currentDiagnosis?: string, diagnosisCode?: string): string | undefined {
   return currentDiagnosis
@@ -30,6 +31,8 @@ export function wardRoundProfileDetail(p: WardRoundPatient): PatientDetailData {
     { label: "Pain", value: p.vitals.pain, unit: "/10" },
   ];
 
+  const nurse = NURSE_IPD_PATIENTS.find((n) => n.uhid === p.uhid);
+
   return {
     uhid: p.uhid,
     name: p.patientName,
@@ -43,6 +46,8 @@ export function wardRoundProfileDetail(p: WardRoundPatient): PatientDetailData {
     locationParts: p.wardRoomBed.split("/").map((s) => s.trim()).filter(Boolean),
     causeOfProblem: diagnosisCause(p.currentDiagnosis, p.diagnosisCode),
     contact: p.contactNumber,
+    assignedNurse: nurse?.assignedNurse,
+    currentShift: nurse?.currentShift,
     quickVitals,
     fallbackInfoFields,
   };

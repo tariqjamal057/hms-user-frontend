@@ -30,6 +30,8 @@ function toDetailData(p: NurseIpdPatient): PatientDetailData {
     moduleIdLabel: "ICU ID",
     locationParts: [p.ward, p.room, p.bed],
     causeOfProblem: diagnosisCause(p.currentDiagnosis, p.diagnosisCode),
+    assignedNurse: p.assignedNurse,
+    currentShift: p.currentShift,
     fallbackInfoFields: [
       { label: "Department", value: p.department },
       { label: "Attending Doctor", value: p.admittingDoctor },

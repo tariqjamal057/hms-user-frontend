@@ -89,11 +89,12 @@ export default function NursePatientDetailPage() {
     moduleIdLabel: "IPD ID",
     locationParts: [patient.ward, patient.room, patient.bed],
     causeOfProblem: diagnosisCause(patient.currentDiagnosis, patient.diagnosisCode),
+    assignedNurse: patient.assignedNurse,
+    currentShift: patient.currentShift,
     fallbackInfoFields: [
       { label: "Department", value: patient.department },
       { label: "Attending Doctor", value: patient.admittingDoctor },
       { label: "Admitted On", value: patient.admissionDateTime },
-      { label: "Assigned Nurse", value: `${patient.assignedNurse} · ${patient.currentShift}` },
     ],
   };
 

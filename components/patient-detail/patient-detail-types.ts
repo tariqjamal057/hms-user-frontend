@@ -37,6 +37,9 @@ export type PatientDetailData = {
   fallbackInfoFields?: InfoField[];
   // Optional contact number shown in the profile header
   contact?: string;
+  // Assigned nurse + current shift — appended to the info grid on all doctor/nurse detail pages
+  assignedNurse?: string;
+  currentShift?: string;
   // Optional quick vitals strip rendered below the info grid
   quickVitals?: QuickVital[];
 };
