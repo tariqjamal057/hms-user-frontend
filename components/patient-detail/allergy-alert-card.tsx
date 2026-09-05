@@ -11,6 +11,27 @@ export type AllergyAlertItem = {
   name: string;
   severity?: AllergySeverity;
   note?: string;
+  /** Optional unique identity. When omitted, `name` is used as the list key. */
+  key?: string;
+  /** Optional pills rendered before the severity badge (e.g. medicine slot). */
+  badges?: { label: string; tone?: AllergyBadgeTone }[];
+};
+
+export type AllergyBadgeTone =
+  | "blue"
+  | "purple"
+  | "amber"
+  | "emerald"
+  | "red"
+  | "slate";
+
+const BADGE_TONES: Record<AllergyBadgeTone, string> = {
+  blue: "bg-blue-50 text-blue-700 border-blue-200",
+  purple: "bg-purple-50 text-purple-700 border-purple-200",
+  amber: "bg-amber-50 text-amber-700 border-amber-200",
+  emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  red: "bg-red-50 text-red-700 border-red-200",
+  slate: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
 const SEVERITY_STYLES: Record<
@@ -105,7 +126,7 @@ export function AllergyAlertCard({
               const styles = SEVERITY_STYLES[severity];
               const isOpen = openKey === item.name;
               return (
-                <li key={item.name}>
+                <li key={item.key ?? item.name}>
                   <div
                     className={cn(
                       "group overflow-hidden rounded-lg  bg-red-50 border border-red-200 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm cursor-pointer",
@@ -115,9 +136,22 @@ export function AllergyAlertCard({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold text-red-800">{item.name}</p>
-                      <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold", styles.badge)}>
-                        {DEGREE[severity]}
-                      </span>
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                        {item.badges?.map((b, i) => (
+                          <span
+                            key={i}
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                              BADGE_TONES[b.tone ?? "slate"],
+                            )}
+                          >
+                            {b.label}
+                          </span>
+                        ))}
+                        <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold", styles.badge)}>
+                          {DEGREE[severity]}
+                        </span>
+                      </div>
                     </div>
                     {item.note && (
                       <p

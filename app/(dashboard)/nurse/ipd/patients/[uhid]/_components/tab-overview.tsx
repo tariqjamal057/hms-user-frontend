@@ -1,11 +1,11 @@
 // app/(dashboard)/nurse/ipd/patients/[uhid]/_components/tab-overview.tsx
 "use client";
-import { ArrowRight, CheckCircle2, Clock3, FileText, PackageX, Siren } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, FileText, PackageX } from "lucide-react";
 import { CurrentVitals } from "@/components/patient-detail/current-vitals";
 import { InfoTileCard } from "@/components/patient-detail/info-tile-card";
-import { InfoAlertCard } from "@/components/patient-detail/info-alert-card";
 import { PillButton } from "@/components/forms/pill-button";
-import { UrgencyBadge } from "../../_components/nurse-ipd-badges";
+import { InfoCard } from "@/components/patient-detail/info-card";
+import { AllergyAlertCard } from "@/components/patient-detail/allergy-alert-card";
 import type { EmarDose, NurseIpdPatient } from "@/types/nurse/ipd/nurse-ipd-types";
 import { getEmarForPatient, getVitalsForPatient } from "@/lib/nurse/ipd/nurse-ipd-data";
 
@@ -60,70 +60,65 @@ export function TabOverview({
         <p className="text-xs text-slate-400">Recorded {latestVitals.dateTime} by {latestVitals.recordedBy}</p>
       )}
 
-      {/* Today's medicines — three unified `InfoTileCard`s with list children */}
+      {/* Today's medicines — three unified `InfoCard`s (Given / Pending / Out of Stock) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <InfoTileCard
+        <InfoCard
           title="Given"
-          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+          icon={<CheckCircle2 className="h-4 w-4" />}
           tone="emerald"
-          count={given.length}
-        >
-          <div className="space-y-2">
-            {given.slice(0, 4).map((dose) => (
-              <div key={dose.id} className="rounded-lg border border-emerald-100 bg-white p-2.5">
-                <p className="text-sm font-medium text-slate-800">{dose.medicineName}</p>
-                <p className="text-xs text-slate-500">{dose.slot} · {dose.givenAt}</p>
-              </div>
-            ))}
-            {given.length === 0 && <p className="text-xs text-slate-400">No doses given yet.</p>}
-          </div>
-        </InfoTileCard>
+          limit={3}
+          items={given.map((dose) => ({
+            key: dose.id,
+            title: dose.medicineName,
+            badges: [{ label: "Given", tone: "emerald" }, { label: dose.slot, tone: "slate" }],
+            subtitle: `${dose.slot} • ${dose.givenAt ?? ""}`,
+          }))}
+          emptyText="No doses given yet."
+        />
 
-        <InfoTileCard
+        <InfoCard
           title="Not Given / Pending"
-          icon={<Clock3 className="h-3.5 w-3.5" />}
+          icon={<Clock3 className="h-4 w-4" />}
           tone="amber"
-          count={notGiven.length}
-        >
-          <div className="space-y-2">
-            {notGiven.slice(0, 4).map((dose) => (
-              <div key={dose.id} className="flex items-center justify-between rounded-lg border border-amber-100 bg-white p-2.5">
-                <div>
-                  <p className="text-sm font-medium text-slate-800">{dose.medicineName}</p>
-                  <p className="text-xs text-slate-500">{dose.slot} · {dose.scheduledTime}</p>
-                </div>
-                <UrgencyBadge urgency={dose.urgency} />
-              </div>
-            ))}
-            {notGiven.length === 0 && <p className="text-xs text-slate-400">All scheduled doses are up to date.</p>}
-          </div>
-        </InfoTileCard>
+          limit={3}
+          items={notGiven.map((dose) => ({
+            key: dose.id,
+            title: dose.medicineName,
+            badges: [
+              { label: dose.slot, tone: "slate" },
+              { label: dose.urgency, tone: dose.urgency === "Urgent" ? "red" : "amber" },
+            ],
+            subtitle: `${dose.slot} • ${dose.scheduledTime}`,
+          }))}
+          emptyText="All scheduled doses are up to date."
+        />
 
-        <InfoTileCard
+        <InfoCard
           title="Out of Stock"
-          icon={<PackageX className="h-3.5 w-3.5" />}
+          icon={<PackageX className="h-4 w-4" />}
           tone="red"
-          count={outOfStock.length}
-        >
-          <div className="space-y-2">
-            {outOfStock.map((dose) => (
-              <div key={dose.id} className="rounded-lg border border-red-100 bg-white p-2.5">
-                <p className="text-sm font-medium text-slate-800">{dose.medicineName}</p>
-                <p className="text-xs text-slate-500">{dose.remarks ?? "Awaiting pharmacy stock"}</p>
-              </div>
-            ))}
-            {outOfStock.length === 0 && <p className="text-xs text-slate-400">No stock issues currently.</p>}
-          </div>
-        </InfoTileCard>
+          limit={3}
+          items={outOfStock.map((dose) => ({
+            key: dose.id,
+            title: dose.medicineName,
+            badges: [{ label: "Out of Stock", tone: "red" }, { label: dose.slot, tone: "slate" }],
+            subtitle: dose.remarks ?? "Awaiting pharmacy stock",
+          }))}
+          emptyText="No stock issues currently."
+        />
       </div>
 
-      {/* Urgent alert — unified `InfoAlertCard` */}
+      {/* Urgent medicines — unified `AllergyAlertCard` */}
       {urgentPending.length > 0 && (
-        <InfoAlertCard
-          tone="red"
-          icon={<Siren className="h-3.5 w-3.5" />}
-          title={`${urgentPending.length} urgent medicine(s) require attention`}
-          body={urgentPending.map((d) => `${d.medicineName} (${d.slot})`).join("\n")}
+        <AllergyAlertCard
+          title={`${urgentPending.length} Urgent Medicine(s) Require Attention`}
+          items={urgentPending.map((d) => ({
+            key: `${d.id}`,
+            name: d.medicineName,
+            badges: [{ label: d.slot, tone: "slate" }],
+            severity: "severe",
+            note: `${d.strength} • ${d.route} • scheduled ${d.scheduledTime}`,
+          }))}
         />
       )}
 

@@ -704,6 +704,45 @@ export default function DoctorIcuPatientDetailPage() {
       content: <TabVitals vitals={vitals} onAddVital={addVital} recordVitalsPath={`/doctor/icu/all-patients/${patient.uhid}/record-vitals`} />,
     },
     {
+      value: "diagnosis",
+      label: "Diagnosis",
+      content: (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <PillButton icon={Stethoscope} onClick={() => setShowDiagnosisDrawer(true)}>
+              Add Diagnosis
+            </PillButton>
+          </div>
+          <DataTable
+            card
+            title="Diagnosis"
+            titleIcon={<Stethoscope className="h-4 w-4" />}
+            rows={diagnoses}
+            columns={diagnosisColumns}
+            rowKey={(d) => d.id}
+            countLabel="diagnoses"
+            emptyText="No diagnosis added yet."
+          />
+        </div>
+      ),
+    },
+    {
+      value: "notes",
+      label: "Progress Notes",
+      content: (
+        <ProgressNotesSection
+          notes={notes}
+          onAddNote={addNote}
+          authorName={CURRENT_DOCTOR.name}
+          authorRole="Doctor"
+          soap
+          accent="blue"
+          categories={["Doctor Round", "Nursing Update", "ICU Review", "General"]}
+          title="ICU Progress Notes"
+        />
+      ),
+    },
+    {
       value: "monitoring",
       label: "Continuous Monitoring",
       content: <TabMonitoring patientName={patient.patientName} vitals={vitals} />,
@@ -830,22 +869,6 @@ export default function DoctorIcuPatientDetailPage() {
       ),
     },
     {
-      value: "notes",
-      label: "Progress Notes",
-      content: (
-        <ProgressNotesSection
-          notes={notes}
-          onAddNote={addNote}
-          authorName={CURRENT_DOCTOR.name}
-          authorRole="Doctor"
-          soap
-          accent="blue"
-          categories={["Doctor Round", "Nursing Update", "ICU Review", "General"]}
-          title="ICU Progress Notes"
-        />
-      ),
-    },
-    {
       value: "treatment",
       label: "Treatment Plan",
       content: (
@@ -860,29 +883,6 @@ export default function DoctorIcuPatientDetailPage() {
             rowKey={(p) => p.id}
             countLabel="plans"
             emptyText="No treatment plans yet."
-          />
-        </div>
-      ),
-    },
-    {
-      value: "diagnosis",
-      label: "Diagnosis",
-      content: (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <PillButton icon={Stethoscope} onClick={() => setShowDiagnosisDrawer(true)}>
-              Add Diagnosis
-            </PillButton>
-          </div>
-          <DataTable
-            card
-            title="Diagnosis"
-            titleIcon={<Stethoscope className="h-4 w-4" />}
-            rows={diagnoses}
-            columns={diagnosisColumns}
-            rowKey={(d) => d.id}
-            countLabel="diagnoses"
-            emptyText="No diagnosis added yet."
           />
         </div>
       ),
