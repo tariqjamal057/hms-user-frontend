@@ -160,6 +160,18 @@ export function TabSurgicalSafety({
         rowKey={(c) => c.id}
         countLabel="item groups"
         emptyText="No surgical counts recorded yet."
+        searchable
+        searchPlaceholder="Search item or counted-by..."
+        filters={[
+          {
+            id: "status",
+            type: "select",
+            label: "Status",
+            placeholder: "All statuses",
+            options: Array.from(new Set(counts.map((c) => c.status))).map((s) => ({ value: s, label: s })),
+            getValue: (c) => c.status,
+          },
+        ]}
       />
     </div>
   );

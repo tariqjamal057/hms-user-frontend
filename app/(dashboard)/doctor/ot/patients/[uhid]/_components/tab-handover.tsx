@@ -70,7 +70,10 @@ export function TabHandover({
         </div>
       </div>
 
-      <DataTable card title="Handover Log" titleIcon={<ArrowRightLeft className="h-4 w-4" />} rows={handovers} columns={columns} rowKey={(h) => h.id} countLabel="handovers" emptyText="No handover recorded yet." />
+      <DataTable card title="Handover Log" titleIcon={<ArrowRightLeft className="h-4 w-4" />} rows={handovers} columns={columns} rowKey={(h) => h.id} countLabel="handovers" emptyText="No handover recorded yet."
+        searchable
+        searchPlaceholder="Search staff, role or notes..."
+      />
     </div>
   );
 }

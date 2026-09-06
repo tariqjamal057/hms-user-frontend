@@ -119,6 +119,26 @@ export function MedicineOrdersTable({ items, onEdit, onDelete, onView }: Medicin
       columns={columns}
       rowKey={(item) => item.id}
       emptyText="No medicines added yet."
+      searchable
+      searchPlaceholder="Search medicine, route or frequency..."
+      filters={[
+        {
+          id: "status",
+          type: "select",
+          label: "Status",
+          placeholder: "All statuses",
+          options: Array.from(new Set(items.map((i) => i.status))).map((s) => ({ value: s, label: s })),
+          getValue: (i) => i.status,
+        },
+        {
+          id: "route",
+          type: "select",
+          label: "Route",
+          placeholder: "All routes",
+          options: Array.from(new Set(items.map((i) => i.route))).map((r) => ({ value: r, label: r })),
+          getValue: (i) => i.route,
+        },
+      ]}
     />
   );
 }

@@ -133,6 +133,26 @@ export function CurrentDiagnosesTable({
       columns={columns}
       rowKey={(d) => d.id}
       emptyText="No active or current diagnoses."
+      searchable
+      searchPlaceholder="Search diagnosis, ICD-10 or notes..."
+      filters={[
+        {
+          id: "type",
+          type: "select",
+          label: "Type",
+          placeholder: "All types",
+          options: Array.from(new Set(diagnoses.map((d) => d.type))).map((t) => ({ value: t, label: t })),
+          getValue: (d) => d.type,
+        },
+        {
+          id: "status",
+          type: "select",
+          label: "Status",
+          placeholder: "All statuses",
+          options: Array.from(new Set(diagnoses.map((d) => d.status))).map((s) => ({ value: s, label: s })),
+          getValue: (d) => d.status,
+        },
+      ]}
     />
   );
 }

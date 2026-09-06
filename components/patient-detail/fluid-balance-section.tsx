@@ -28,6 +28,7 @@ import {
   type DataColumn,
 } from "@/components/patient-detail/data-table";
 import { PillButton } from "@/components/forms/pill-button";
+import { displayDateToIso } from "@/lib/date-utils";
 
 // Superset shape accepted by both the RMO (`types/rmo/ipd/rmo-types.ts`) and
 // the ICU/nurse (`types/nurse/ipd/nurse-ipd-types.ts`) FluidBalanceEntry
@@ -238,6 +239,35 @@ export function FluidBalanceSection<T extends FluidEntryBase>({
         rowKey={(e) => e.id}
         countLabel="entries"
         emptyText="No fluid balance entries recorded yet."
+        searchable
+        searchPlaceholder="Search route, description or staff..."
+        filters={[
+          {
+            id: "direction",
+            type: "select",
+            label: "Direction",
+            placeholder: "All directions",
+            options: [
+              { value: "Intake", label: "Intake" },
+              { value: "Output", label: "Output" },
+            ],
+            getValue: (e) => e.direction,
+          },
+          {
+            id: "route",
+            type: "select",
+            label: "Route",
+            placeholder: "All routes",
+            options: Array.from(new Set(entries.map((e) => e.route))).map((r) => ({ value: r, label: r })),
+            getValue: (e) => e.route,
+          },
+          {
+            id: "recorded-on",
+            type: "daterange",
+            label: "Recorded",
+            getValue: (e) => e.date ?? displayDateToIso(e.dateTime),
+          },
+        ]}
       />
 
       <AddFluidDrawer

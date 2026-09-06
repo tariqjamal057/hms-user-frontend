@@ -26,7 +26,10 @@ export function TabConsumables({ items }: { items: OtConsumable[] }) {
         <InfoTileCard title="Total Units" icon={<Boxes className="h-3.5 w-3.5" />} tone="cyan" value={String(total)} />
         <InfoTileCard title="Barcode Tracked" icon={<Tags className="h-3.5 w-3.5" />} tone="slate" value="Enabled" subtitle="Inventory auto-deducted" />
       </div>
-      <DataTable card title="Consumables Used" titleIcon={<Package className="h-4 w-4" />} rows={items} columns={columns} rowKey={(c) => c.id} countLabel="items" emptyText="No consumables recorded." />
+      <DataTable card title="Consumables Used" titleIcon={<Package className="h-4 w-4" />} rows={items} columns={columns} rowKey={(c) => c.id} countLabel="items" emptyText="No consumables recorded."
+        searchable
+        searchPlaceholder="Search item or staff..."
+      />
     </div>
   );
 }
@@ -50,7 +53,10 @@ export function TabImplants({ items }: { items: OtImplant[] }) {
         <InfoTileCard title="Batch Identified" icon={<CreditCard className="h-3.5 w-3.5" />} tone="blue" value={String(items.filter((i) => i.batchNo).length)} subtitle="Unique batch traceability" />
         <InfoTileCard title="Regulatory Log" icon={<Syringe className="h-3.5 w-3.5" />} tone="slate" value="Active" subtitle="Implants register maintained" />
       </div>
-      <DataTable card title="Implant Log" titleIcon={<Bone className="h-4 w-4" />} rows={items} columns={columns} rowKey={(i) => i.id} countLabel="implants" emptyText="No implants used in this procedure." />
+      <DataTable card title="Implant Log" titleIcon={<Bone className="h-4 w-4" />} rows={items} columns={columns} rowKey={(i) => i.id} countLabel="implants" emptyText="No implants used in this procedure."
+        searchable
+        searchPlaceholder="Search implant, batch or size..."
+      />
     </div>
   );
 }
@@ -94,7 +100,20 @@ export function TabSpecimens({ items }: { items: OtSpecimen[] }) {
         <InfoTileCard title="Accessioned" icon={<CreditCard className="h-3.5 w-3.5" />} tone="amber" value={String(items.filter((s) => s.accessionedNo).length)} subtitle="Lab accession numbers" />
         <InfoTileCard title="Histopathology" icon={<Microscope className="h-3.5 w-3.5" />} tone="purple" value={String(items.filter((s) => s.category === "Histopathology").length)} subtitle="Sent for reporting" />
       </div>
-      <DataTable card title="Specimen Log" titleIcon={<Microscope className="h-4 w-4" />} rows={items} columns={columns} rowKey={(s) => s.id} countLabel="specimens" emptyText="No specimens removed in this procedure." />
+      <DataTable card title="Specimen Log" titleIcon={<Microscope className="h-4 w-4" />} rows={items} columns={columns} rowKey={(s) => s.id} countLabel="specimens" emptyText="No specimens removed in this procedure."
+        searchable
+        searchPlaceholder="Search specimen, accession no. or lab..."
+        filters={[
+          {
+            id: "category",
+            type: "select",
+            label: "Category",
+            placeholder: "All categories",
+            options: Array.from(new Set(items.map((s) => s.category))).map((c) => ({ value: c, label: c })),
+            getValue: (s) => s.category,
+          },
+        ]}
+      />
     </div>
   );
 }

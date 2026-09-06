@@ -724,6 +724,18 @@ export default function DoctorIcuPatientDetailPage() {
             rowKey={(d) => d.id}
             countLabel="diagnoses"
             emptyText="No diagnosis added yet."
+            searchable
+            searchPlaceholder="Search diagnosis or code..."
+            filters={[
+              {
+                id: "status",
+                type: "select",
+                label: "Status",
+                placeholder: "All statuses",
+                options: Array.from(new Set(diagnoses.map((d) => d.status))).map((s) => ({ value: s, label: s })),
+                getValue: (d) => d.status,
+              },
+            ]}
           />
         </div>
       ),
@@ -831,6 +843,18 @@ export default function DoctorIcuPatientDetailPage() {
             rowKey={(d) => d.id}
             countLabel="doses"
             emptyText={`No medicines administered on ${new Date(selectedMedicineDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`}
+            searchable
+            searchPlaceholder="Search medicine, route or nurse..."
+            filters={[
+              {
+                id: "dose-status",
+                type: "select",
+                label: "Status",
+                placeholder: "All statuses",
+                options: Array.from(new Set(filteredDoses.map((d) => d.status))).map((s) => ({ value: s, label: s })),
+                getValue: (d) => d.status,
+              },
+            ]}
           />
         </div>
       ),
@@ -854,6 +878,26 @@ export default function DoctorIcuPatientDetailPage() {
             rowKey={(o) => o.id}
             countLabel="orders"
             emptyText="No lab orders yet."
+            searchable
+            searchPlaceholder="Search test name or category..."
+            filters={[
+              {
+                id: "lab-status",
+                type: "select",
+                label: "Status",
+                placeholder: "All statuses",
+                options: Array.from(new Set(labOrders.map((o) => o.status))).map((s) => ({ value: s, label: s })),
+                getValue: (o) => o.status,
+              },
+              {
+                id: "lab-priority",
+                type: "select",
+                label: "Priority",
+                placeholder: "All priorities",
+                options: Array.from(new Set(labOrders.map((o) => o.orders[0]?.priority ?? "Routine"))).map((s) => ({ value: s, label: s })),
+                getValue: (o) => o.orders[0]?.priority ?? "Routine",
+              },
+            ]}
           />
         </div>
       ),
@@ -904,6 +948,18 @@ export default function DoctorIcuPatientDetailPage() {
           rowKey={(a) => a.id}
           countLabel="assignments"
           emptyText="No nurse shift assignments recorded yet."
+          searchable
+          searchPlaceholder="Search nurse, ward or date..."
+          filters={[
+            {
+              id: "shift-filter",
+              type: "select",
+              label: "Shift",
+              placeholder: "All shifts",
+              options: Array.from(new Set(nurseAssignments.map((a) => a.shift))).map((s) => ({ value: s, label: s })),
+              getValue: (a) => a.shift,
+            },
+          ]}
         />
       ),
     },
@@ -1085,6 +1141,8 @@ export default function DoctorIcuPatientDetailPage() {
             rowKey={(o) => o.id}
             countLabel="orders"
             emptyText="No discharge medicines added yet."
+            searchable
+            searchPlaceholder="Search medicine or doctor..."
           />
 
           <div className="mt-4">

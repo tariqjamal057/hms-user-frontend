@@ -17,7 +17,17 @@ export function computeBilling(patient: BillingPatient): BillingComputed {
   const coverageReceived = patient.coverage ? patient.coverage.receivedAmount : 0;
   const patientResponsibility = Math.max(0, netPayable - coverageReceived);
 
-  const totalCollected = patient.payments.reduce((sum, p) => sum + p.totalAmount, 0);
+  const processedRefunds = (patient.refunds ?? []).filter((r) => r.status === "Processed");
+  const totalRefunded = processedRefunds.reduce((sum, r) => sum + r.amount, 0);
+  const pendingRefund = (patient.refunds ?? [])
+    .filter((r) => r.status === "Pending")
+    .reduce((sum, r) => sum + r.amount, 0);
+  const totalDeposits = (patient.deposits ?? []).reduce((sum, d) => sum + d.amount, 0);
+
+  const totalCollected = Math.max(
+    0,
+    patient.payments.reduce((sum, p) => sum + p.totalAmount, 0) - totalRefunded,
+  );
   const dueAmount = Math.max(0, patientResponsibility - totalCollected);
 
   let status: BillingStatus = "Fully Due";
@@ -26,7 +36,7 @@ export function computeBilling(patient: BillingPatient): BillingComputed {
   else if (totalCollected > 0 && dueAmount > 0) status = "Partially Paid";
   else status = "Fully Due";
 
-  return { grossTotal, excludedPharmacyLab, totalDiscount, netPayable, coverageReceived, patientResponsibility, totalCollected, dueAmount, status };
+  return { grossTotal, excludedPharmacyLab, totalDiscount, netPayable, coverageReceived, patientResponsibility, totalCollected, totalRefunded, pendingRefund, totalDeposits, dueAmount, status };
 }
 
 export function formatCurrency(amount: number) {

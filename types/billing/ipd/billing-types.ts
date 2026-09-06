@@ -68,6 +68,8 @@ export interface BillingPatient {
   discounts: DiscountEntry[];
   payments: PaymentRecord[];
   coverage?: CoverageDetails;
+  refunds: RefundRecord[];
+  deposits: DepositRecord[];
 }
 
 export interface BillingFilters {
@@ -84,6 +86,77 @@ export interface BillingComputed {
   coverageReceived: number;
   patientResponsibility: number;
   totalCollected: number;
+  totalRefunded: number;
+  pendingRefund: number;
+  totalDeposits: number;
   dueAmount: number;
   status: BillingStatus;
+}
+
+export type BillingEventKind =
+  | "Admission"
+  | "Charge"
+  | "Discount"
+  | "Payment"
+  | "Coverage Receipt"
+  | "Refund"
+  | "Deposit";
+
+export type BillingEventDirection = "in" | "out" | "adjustment";
+
+export interface BillingEvent {
+  id: string;
+  date: string; // ISO yyyy-mm-dd
+  dateTime?: string; // display string, e.g. "20 Aug 2026, 11:30 AM"
+  kind: BillingEventKind;
+  title: string;
+  detail?: string;
+  category?: ChargeCategory;
+  amount: number; // signed: positive receivables, negative refunds/discounts
+  direction: BillingEventDirection;
+  actor: string;
+  reference?: string;
+}
+
+export interface RefundRecord {
+  id: string;
+  date: string; // ISO yyyy-mm-dd
+  amount: number;
+  reason: string;
+  method: PaymentMethod;
+  status: "Processed" | "Pending";
+  refundedTo: string;
+  processedBy: string;
+}
+
+export interface DepositRecord {
+  id: string;
+  date: string; // ISO yyyy-mm-dd
+  dateTime: string;
+  amount: number;
+  method: PaymentMethod;
+  source: "Advance" | "Security" | "Other";
+  collectedBy: string;
+  reference?: string;
+}
+
+export type RevenueAlertType = "unpaid" | "overdue" | "coverage" | "high-value";
+export type RevenueAlertSeverity = "high" | "medium" | "low";
+
+export interface RevenueAlert {
+  id: string;
+  uhid: string;
+  patientName: string;
+  type: RevenueAlertType;
+  severity: RevenueAlertSeverity;
+  title: string;
+  detail: string;
+  amount: number;
+  ageDays?: number;
+}
+
+export interface CategoryLedgerRow {
+  category: ChargeCategory;
+  total: number;
+  count: number;
 }

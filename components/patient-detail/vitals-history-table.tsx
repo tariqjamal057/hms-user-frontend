@@ -13,6 +13,7 @@ import {
   Wind,
 } from "lucide-react";
 import { DataTable, type DataColumn } from "@/components/patient-detail/data-table";
+import { displayDateToIso } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
 
 /**
@@ -124,6 +125,16 @@ export function VitalsHistoryTable({
       rows={rows}
       columns={columns}
       rowKey={(r) => `${r.date ?? r.dateTime ?? ""}-${r.bp}-${r.pulse}-${r.temp}`}
+      searchable
+      searchPlaceholder="Search date, BP or recorded by..."
+      filters={[
+        {
+          id: "recorded-on",
+          type: "daterange",
+          label: "Recorded",
+          getValue: (r) => r.date ?? displayDateToIso(r.dateTime ?? ""),
+        },
+      ]}
     />
   );
 }

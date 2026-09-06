@@ -845,6 +845,26 @@ export function TreatmentPlanTracker({
           columns={columns}
           rowKey={(a) => a.id}
           emptyText="No treatment activities recorded yet."
+          searchable
+          searchPlaceholder="Search activity or module..."
+          filters={[
+            {
+              id: "status",
+              type: "select",
+              label: "Status",
+              placeholder: "All statuses",
+              options: Array.from(new Set(data.activities.map((a) => a.status))).map((s) => ({ value: s, label: s })),
+              getValue: (a) => a.status,
+            },
+            {
+              id: "source-module",
+              type: "select",
+              label: "Source Module",
+              placeholder: "All modules",
+              options: Array.from(new Set(data.activities.map((a) => a.sourceModule))).map((s) => ({ value: s, label: s })),
+              getValue: (a) => a.sourceModule,
+            },
+          ]}
         />
       </div>
 

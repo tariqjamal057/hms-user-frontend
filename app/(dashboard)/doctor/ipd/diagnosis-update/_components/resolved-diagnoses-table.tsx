@@ -22,6 +22,8 @@ export function ResolvedDiagnosesTable({
       columns={COLUMNS}
       rowKey={(d) => d.id}
       emptyText="No resolved or inactive diagnoses."
+      searchable
+      searchPlaceholder="Search diagnosis or type..."
     />
   );
 }

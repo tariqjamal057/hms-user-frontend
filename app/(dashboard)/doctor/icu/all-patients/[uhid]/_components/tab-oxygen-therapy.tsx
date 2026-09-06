@@ -26,6 +26,7 @@ import type {
 } from "@/types/nurse/icu/oxygen-therapy-types";
 import { formatDeviceSettings } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/oxygen-device-fields";
 import { OxygenOrderHistory } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/oxygen-order-history";
+import { displayDateToIso } from "@/lib/date-utils";
 
 type Props = {
   patientName: string;
@@ -360,6 +361,24 @@ export function TabOxygenTherapy({
           rowKey={(o) => o.id}
           countLabel="observations"
           emptyText="No oxygen observations recorded."
+          searchable
+          searchPlaceholder="Search time, condition or nurse..."
+          filters={[
+            {
+              id: "condition",
+              type: "select",
+              label: "Condition",
+              placeholder: "All conditions",
+              options: Array.from(new Set(observations.map((o) => o.patientCondition))).map((s) => ({ value: s, label: s })),
+              getValue: (o) => o.patientCondition,
+            },
+            {
+              id: "recorded-on",
+              type: "daterange",
+              label: "Recorded",
+              getValue: (o) => displayDateToIso(o.recordedAt),
+            },
+          ]}
         />
       )}
 

@@ -28,6 +28,11 @@ export const BILLING_PATIENTS: BillingPatient[] = [
       { id: "P2", date: "2026-08-24", dateTime: "24 Aug 2026, 09:30 AM", partyName: "Suresh Sharma", relationToPatient: "Brother", totalAmount: 20000, methods: [{ method: "Cash", amount: 10000 }, { method: "Card", amount: 10000 }], collectedBy: "Billing - Ritu Kapoor" },
     ],
     coverage: { type: "Insurance", schemeName: "Star Health Comprehensive", policyOrCardNumber: "SH-88221134", approvedAmount: 12000, receivedAmount: 8000, receivedDate: "23 Aug 2026", status: "Partially Received" },
+    refunds: [
+      { id: "RF1", date: "2026-08-24", amount: 400, reason: "Pharmacy co-pay reversal (universal billing)", method: "Card", status: "Processed", refundedTo: "Sunita Sharma", processedBy: "Billing - Ritu Kapoor" },
+      { id: "RF2", date: "2026-08-24", amount: 250, reason: "Bed tariff adjustment — insurance dispute under review", method: "UPI", status: "Pending", refundedTo: "Sunita Sharma", processedBy: "Billing - Ritu Kapoor" },
+    ],
+    deposits: [],
   },
   {
     uhid: "UHID12345683", ipdId: "IPD240520-0003", patientName: "Suresh Yadav", age: 55, gender: "Male",
@@ -51,6 +56,10 @@ export const BILLING_PATIENTS: BillingPatient[] = [
       { id: "P3", date: "2026-08-21", dateTime: "21 Aug 2026, 05:00 PM", partyName: "Manoj Yadav", relationToPatient: "Son", totalAmount: 15000, methods: [{ method: "Cash", amount: 15000 }], collectedBy: "Front Desk - Priya" },
     ],
     coverage: { type: "Ayushman Bharat", schemeName: "PM-JAY", policyOrCardNumber: "PMJAY-77229981", approvedAmount: 20000, receivedAmount: 20000, receivedDate: "22 Aug 2026", status: "Fully Received" },
+    refunds: [],
+    deposits: [
+      { id: "DP1", date: "2026-08-20", dateTime: "20 Aug 2026, 09:10 AM", amount: 10000, method: "Cash", source: "Advance", collectedBy: "Front Desk - Priya", reference: "Advance against final bill" },
+    ],
   },
   {
     uhid: "UHID12345684", ipdId: "IPD240520-0002", patientName: "Neha Singh", age: 36, gender: "Female",
@@ -67,6 +76,8 @@ export const BILLING_PATIENTS: BillingPatient[] = [
     discounts: [],
     payments: [],
     coverage: { type: "None", schemeName: "", policyOrCardNumber: "", approvedAmount: 0, receivedAmount: 0, status: "Pending" },
+    refunds: [],
+    deposits: [],
   },
   {
     uhid: "UHID12345670", ipdId: "IPD240815-0090", patientName: "Meena Kapoor", age: 52, gender: "Female",
@@ -89,6 +100,8 @@ export const BILLING_PATIENTS: BillingPatient[] = [
       { id: "P5", date: "2026-08-23", dateTime: "23 Aug 2026, 11:00 AM", partyName: "Rajesh Kapoor", relationToPatient: "Son", totalAmount: 7300, methods: [{ method: "Cash", amount: 3300 }, { method: "Net Banking", amount: 4000 }], collectedBy: "Billing - Ritu Kapoor" },
     ],
     coverage: { type: "None", schemeName: "", policyOrCardNumber: "", approvedAmount: 0, receivedAmount: 0, status: "Pending" },
+    refunds: [],
+    deposits: [],
   },
 ];
 

@@ -21,6 +21,7 @@ import type {
 } from "@/types/nurse/icu/ventilation-types";
 import { formatVentilatorSettings } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/ventilator-mode-fields";
 import { VentilatorOrderHistory } from "@/app/(dashboard)/nurse/icu/patients/[uhid]/_components/ventilator-order-history";
+import { displayDateToIso } from "@/lib/date-utils";
 
 type Props = {
   patientName: string;
@@ -290,6 +291,24 @@ export function TabVentilation({
           rowKey={(o) => o.id}
           countLabel="observations"
           emptyText="No ventilation observations recorded."
+          searchable
+          searchPlaceholder="Search time, status or recorded by..."
+          filters={[
+            {
+              id: "patient-status",
+              type: "select",
+              label: "Patient Status",
+              placeholder: "All statuses",
+              options: Array.from(new Set(observations.map((o) => o.patientStatus))).map((s) => ({ value: s, label: s })),
+              getValue: (o) => o.patientStatus,
+            },
+            {
+              id: "recorded-on",
+              type: "daterange",
+              label: "Recorded",
+              getValue: (o) => displayDateToIso(o.recordedAt),
+            },
+          ]}
         />
       )}
 

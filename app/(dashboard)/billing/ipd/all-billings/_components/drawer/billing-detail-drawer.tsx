@@ -2,19 +2,23 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Banknote, FileText, HeartHandshake, Receipt, TicketPercent, Wallet, X } from "lucide-react";
+import { Banknote, FileText, HeartHandshake, History, Receipt, RotateCcw, ScrollText, TicketPercent, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { BillingPatient, PaymentRecord } from "@/types/billing/ipd/billing-types";
 import { computeBilling, formatCurrency } from "@/lib/billing/ipd/billing-calculations";
+import { buildBillingTimeline } from "@/lib/billing/ipd/billing-analytics";
 import { BillingStatusBadge } from "../billing-badges";
 import { SectionBillSummary } from "./section-bill-summary";
 import { SectionCharges } from "./section-charges";
 import { SectionDiscounts } from "./section-discounts";
 import { SectionPayments } from "./section-payments";
 import { SectionCoverage } from "./section-coverage";
+import { SectionTimeline } from "./section-timeline";
+import { SectionAuditTrail } from "./section-audit-trail";
+import { SectionRefunds } from "./section-refunds";
 import { CollectPaymentModal } from "./collect-payment-modal";
 
-type SectionKey = "summary" | "charges" | "discounts" | "payments" | "coverage";
+type SectionKey = "summary" | "charges" | "discounts" | "payments" | "coverage" | "timeline" | "audit" | "refunds";
 
 const NAV: { key: SectionKey; label: string; icon: React.ElementType }[] = [
   { key: "summary", label: "Bill Summary", icon: FileText },
@@ -22,6 +26,9 @@ const NAV: { key: SectionKey; label: string; icon: React.ElementType }[] = [
   { key: "discounts", label: "Discounts", icon: TicketPercent },
   { key: "payments", label: "Payments", icon: Wallet },
   { key: "coverage", label: "Ayushman / Insurance", icon: HeartHandshake },
+  { key: "timeline", label: "Timeline", icon: History },
+  { key: "audit", label: "Audit Trail", icon: ScrollText },
+  { key: "refunds", label: "Refunds", icon: RotateCcw },
 ];
 
 export function BillingDetailDrawer({ patient, onClose, onPatientUpdate }: { patient: BillingPatient | null; onClose: () => void; onPatientUpdate: (patient: BillingPatient) => void }) {
@@ -76,6 +83,9 @@ export function BillingDetailDrawer({ patient, onClose, onPatientUpdate }: { pat
           {section === "discounts" && <SectionDiscounts discounts={active.discounts} />}
           {section === "payments" && <SectionPayments payments={active.payments} />}
           {section === "coverage" && <SectionCoverage netPayable={computed.netPayable} coverage={active.coverage} />}
+          {section === "timeline" && <SectionTimeline patient={active} />}
+          {section === "audit" && <SectionAuditTrail events={buildBillingTimeline(active)} />}
+          {section === "refunds" && <SectionRefunds refunds={active.refunds} />}
         </div>
 
         {computed.dueAmount > 0 ? (

@@ -108,6 +108,26 @@ export function TreatmentPlanTable({ items, onEdit, onDelete }: TreatmentPlanTab
       columns={columns}
       rowKey={(item) => item.id}
       emptyText="No treatment plan added yet."
+      searchable
+      searchPlaceholder="Search problem, intervention or goal..."
+      filters={[
+        {
+          id: "priority",
+          type: "select",
+          label: "Priority",
+          placeholder: "All priorities",
+          options: Array.from(new Set(items.map((i) => i.priority))).map((p) => ({ value: p, label: p })),
+          getValue: (i) => i.priority,
+        },
+        {
+          id: "category",
+          type: "select",
+          label: "Category",
+          placeholder: "All categories",
+          options: Array.from(new Set(items.map((i) => i.category))).map((c) => ({ value: c, label: c })),
+          getValue: (i) => i.category,
+        },
+      ]}
     />
   );
 }

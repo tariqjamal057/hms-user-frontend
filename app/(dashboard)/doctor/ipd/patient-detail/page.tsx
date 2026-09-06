@@ -219,6 +219,18 @@ function PatientDetailInner() {
           rowKey={(a) => a.id}
           countLabel="assignments"
           emptyText="No nurse shift assignments recorded yet."
+          searchable
+          searchPlaceholder="Search nurse, ward or date..."
+          filters={[
+            {
+              id: "shift-filter",
+              type: "select",
+              label: "Shift",
+              placeholder: "All shifts",
+              options: Array.from(new Set(nurseAssignments.map((a) => a.shift))).map((s) => ({ value: s, label: s })),
+              getValue: (a) => a.shift,
+            },
+          ]}
         />
       ),
     },

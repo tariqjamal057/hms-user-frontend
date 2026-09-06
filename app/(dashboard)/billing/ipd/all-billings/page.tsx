@@ -2,7 +2,7 @@
 "use client";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, TrendingUp, Wallet, Eye } from "lucide-react";
+import { AlertTriangle, HeartHandshake, RotateCcw, TrendingUp, Wallet, Eye } from "lucide-react";
 import type { BillingFilters as BillingFiltersState, BillingPatient } from "@/types/billing/ipd/billing-types";
 import { BILLING_PATIENTS, BILLING_WARDS, THIS_MONTH_PREFIX, TODAY_ISO } from "@/lib/billing/ipd/billing-data";
 import { computeBilling, formatCurrency } from "@/lib/billing/ipd/billing-calculations";
@@ -10,11 +10,12 @@ import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButto
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
 import { BillingStatusBadge } from "./_components/billing-badges";
+import { RevenueAlertsPanel } from "./_components/revenue-alerts";
 
 type ViewMode = "list" | "grid";
 const initialFilters: BillingFiltersState = { search: "", ward: "All", status: "All" };
 
-const previousDay = { collectedToday: 81250, collectedMonth: 1260000, due: 980000, fullyPaid: 14 };
+const previousDay = { collectedToday: 81250, collectedMonth: 1260000, due: 980000, insurancePending: 6000, refundPending: 200, fullyPaid: 14 };
 
 export default function IpdBillingPage() {
   const router = useRouter();
@@ -39,6 +40,8 @@ export default function IpdBillingPage() {
     let collectedThisMonth = 0;
     let totalDue = 0;
     let fullyPaidCount = 0;
+    let insurancePending = 0;
+    let refundPending = 0;
 
     patients.forEach((patient) => {
       const computed = computeBilling(patient);
@@ -48,9 +51,21 @@ export default function IpdBillingPage() {
         if (payment.date === TODAY_ISO) collectedToday += payment.totalAmount;
         if (payment.date.startsWith(THIS_MONTH_PREFIX)) collectedThisMonth += payment.totalAmount;
       });
+      patient.refunds.forEach((refund) => {
+        if (refund.status === "Pending") refundPending += refund.amount;
+      });
     });
 
-    return { collectedToday, collectedThisMonth, totalDue, fullyPaidCount };
+    const pendingCoverage = patients.reduce((sum, patient) => {
+      const coverage = patient.coverage;
+      if (coverage && coverage.type !== "None") {
+        return sum + Math.max(0, coverage.approvedAmount - coverage.receivedAmount);
+      }
+      return sum;
+    }, 0);
+    insurancePending = pendingCoverage;
+
+    return { collectedToday, collectedThisMonth, totalDue, fullyPaidCount, insurancePending, refundPending };
   }, [patients]);
 
   function updateFilter<K extends keyof BillingFiltersState>(key: K, value: BillingFiltersState[K]) {
@@ -72,8 +87,9 @@ export default function IpdBillingPage() {
   const infoCards: KpiCardProps[] = [
     { label: "Collected Today", value: formatCurrency(stats.collectedToday), icon: Wallet, accent: "emerald", footer: "24 Aug 2026", trend: buildTrend(stats.collectedToday, previousDay.collectedToday, "vs yesterday") },
     { label: "Collected This Month", value: formatCurrency(stats.collectedThisMonth), icon: TrendingUp, accent: "blue", footer: "August 2026", trend: buildTrend(stats.collectedThisMonth, previousDay.collectedMonth, "vs yesterday") },
-    { label: "Total Outstanding Due", value: formatCurrency(stats.totalDue), icon: AlertTriangle, accent: "rose", footer: "Across all patients", trend: buildTrend(stats.totalDue, previousDay.due, "vs yesterday") },
-    { label: "Fully Paid Bills", value: String(stats.fullyPaidCount), icon: CheckCircle2, accent: "violet", footer: "Fully settled accounts", trend: buildTrend(stats.fullyPaidCount, previousDay.fullyPaid, "vs yesterday") },
+    { label: "IPD Outstanding Due", value: formatCurrency(stats.totalDue), icon: AlertTriangle, accent: "rose", footer: "Across all patients", trend: buildTrend(stats.totalDue, previousDay.due, "vs yesterday") },
+    { label: "Insurance / TPA Pending", value: formatCurrency(stats.insurancePending), icon: HeartHandshake, accent: "violet", footer: "Awaiting insurer receipt", trend: buildTrend(stats.insurancePending, previousDay.insurancePending, "vs yesterday") },
+    { label: "Refund Pending", value: formatCurrency(stats.refundPending), icon: RotateCcw, accent: "amber", footer: "Under review", trend: buildTrend(stats.refundPending, previousDay.refundPending, "vs yesterday") },
   ];
 
   return (
@@ -90,6 +106,8 @@ export default function IpdBillingPage() {
 
       <div className="flex flex-col gap-4">
         <StatsRow items={infoCards} />
+
+        <RevenueAlertsPanel patients={patients} onOpenPatient={openPatient} />
 
         <FilterBar
           search={filters.search}

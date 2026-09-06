@@ -6,6 +6,7 @@ import { DataTable, type DataColumn } from "@/components/patient-detail/data-tab
 import { Badge } from "@/components/ui/badge";
 import { PillButton } from "@/components/forms/pill-button";
 import { InvestigationStatusBadge } from "./investigation-status-badge";
+import { displayDateToIso } from "@/lib/date-utils";
 import type { InvestigationOrderItem } from "@/types/doctor/ipd/investigation-order-types";
 
 interface InvestigationOrdersTableProps {
@@ -130,6 +131,40 @@ export function InvestigationOrdersTable({
       columns={columns}
       rowKey={(item) => item.id}
       emptyText="No investigations added yet."
+      searchable
+      searchPlaceholder="Search investigation, sample or panel..."
+      filters={[
+        {
+          id: "department",
+          type: "select",
+          label: "Department",
+          placeholder: "All departments",
+          options: Array.from(new Set(items.map((i) => i.department))).map((d) => ({ value: d, label: d })),
+          getValue: (i) => i.department,
+        },
+        {
+          id: "status",
+          type: "select",
+          label: "Status",
+          placeholder: "All statuses",
+          options: Array.from(new Set(items.map((i) => i.status))).map((s) => ({ value: s, label: s })),
+          getValue: (i) => i.status,
+        },
+        {
+          id: "priority",
+          type: "select",
+          label: "Urgency",
+          placeholder: "All priorities",
+          options: Array.from(new Set(items.map((i) => i.priority))).map((p) => ({ value: p, label: p })),
+          getValue: (i) => i.priority,
+        },
+        {
+          id: "ordered-on",
+          type: "daterange",
+          label: "Ordered",
+          getValue: (i) => displayDateToIso(i.orderDate),
+        },
+      ]}
     />
   );
 }

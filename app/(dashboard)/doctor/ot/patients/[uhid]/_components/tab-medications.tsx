@@ -48,7 +48,10 @@ export function TabMedications({ medications }: { medications: OtMedicationDose[
         <InfoTileCard title="Other" icon={<Syringe className="h-3.5 w-3.5" />} tone="slate" value={String(medications.filter((m) => !/cefuroxime|antibiotic|paracetamol|analges|pain/i.test(`${m.medicine} ${m.purpose}`)).length)} subtitle="Supportive care" />
       </div>
 
-      <DataTable card title="Medication Administration Record" titleIcon={<Pill className="h-4 w-4" />} rows={medications} columns={columns} rowKey={(m) => m.id} countLabel="doses" emptyText="No OT medications recorded." />
+      <DataTable card title="Medication Administration Record" titleIcon={<Pill className="h-4 w-4" />} rows={medications} columns={columns} rowKey={(m) => m.id} countLabel="doses" emptyText="No OT medications recorded."
+        searchable
+        searchPlaceholder="Search medicine, dose, route or staff..."
+      />
     </div>
   );
 }

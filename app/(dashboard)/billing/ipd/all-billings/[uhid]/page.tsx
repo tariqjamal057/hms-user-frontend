@@ -25,7 +25,11 @@ import { SectionCharges } from "../_components/drawer/section-charges";
 import { SectionDiscounts } from "../_components/drawer/section-discounts";
 import { SectionPayments } from "../_components/drawer/section-payments";
 import { SectionCoverage } from "../_components/drawer/section-coverage";
+import { SectionTimeline } from "../_components/drawer/section-timeline";
+import { SectionAuditTrail } from "../_components/drawer/section-audit-trail";
+import { SectionRefunds } from "../_components/drawer/section-refunds";
 import { CollectPaymentModal } from "../_components/drawer/collect-payment-modal";
+import { buildBillingTimeline } from "@/lib/billing/ipd/billing-analytics";
 
 const patientsPath = "/billing/ipd/all-billings";
 
@@ -123,6 +127,21 @@ export default function BillingPatientDetailPage() {
           coverage={patient.coverage}
         />
       ),
+    },
+    {
+      value: "timeline",
+      label: "Timeline",
+      content: <SectionTimeline patient={patient} />,
+    },
+    {
+      value: "audit",
+      label: "Audit Trail",
+      content: <SectionAuditTrail events={buildBillingTimeline(patient)} />,
+    },
+    {
+      value: "refunds",
+      label: "Refunds",
+      content: <SectionRefunds refunds={patient.refunds} />,
     },
   ];
 
