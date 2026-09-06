@@ -160,3 +160,125 @@ export interface CategoryLedgerRow {
   total: number;
   count: number;
 }
+
+// ── Insurance / TPA claims lifecycle ────────────────────────────────
+
+export type ClaimStageKey =
+  | "Eligibility"
+  | "Pre-Auth"
+  | "Treatment"
+  | "Interim Claim"
+  | "Final Claim"
+  | "Settlement";
+
+export type ClaimStageState = "done" | "current" | "upcoming";
+
+export interface ClaimStage {
+  key: ClaimStageKey;
+  state: ClaimStageState;
+  label: string;
+  detail?: string;
+  value?: string;
+}
+
+export interface PayerBreakdown {
+  insuranceApproved: number;
+  insuranceReceived: number;
+  insurancePending: number;
+  deposits: number;
+  selfPaid: number;
+  patientPayable: number;
+}
+
+// ── Hospital-wide audit trail ───────────────────────────────────────
+
+export interface AuditEvent {
+  id: string;
+  timestamp: string;
+  uhid: string;
+  ipdId: string;
+  patientName: string;
+  user: string;
+  role: string;
+  action: string;
+  previous: string;
+  newValue: string;
+  reason: string;
+  source: string;
+}
+
+// ── Discharge settlement ────────────────────────────────────────────
+
+export interface SettlementChecklistItem {
+  label: string;
+  done: boolean;
+}
+
+export interface DischargeSettlement {
+  uhid: string;
+  ipdId: string;
+  patientName: string;
+  grossBill: number;
+  packageDiscount: number;
+  insuranceApproved: number;
+  insurancePending: number;
+  deposits: number;
+  selfCollected: number;
+  patientPayable: number;
+  refundDue: number;
+  ready: boolean;
+  checklist: SettlementChecklistItem[];
+}
+
+// ── Approval workflows ──────────────────────────────────────────────
+
+export type ApprovalKind = "Refund" | "Discount" | "Write-Off";
+export type ApprovalStatus = "Pending" | "Approved" | "Rejected";
+
+export interface ApprovalRequest {
+  id: string;
+  kind: ApprovalKind;
+  status: ApprovalStatus;
+  uhid: string;
+  ipdId: string;
+  patientName: string;
+  amount: number;
+  requestedBy: string;
+  date: string;
+  reason: string;
+}
+
+// ── Department ledger (cross-patient) ───────────────────────────────
+
+export interface DepartmentLedgerRow {
+  id: string;
+  date: string;
+  dept: string;
+  service: string;
+  orderedBy: string;
+  qty: number;
+  rate: number;
+  discount: number;
+  tax: number;
+  net: number;
+  payer: string;
+  status: string;
+  uhid: string;
+  ipdId: string;
+  patientName: string;
+}
+
+// ── Dashboard aggregates ────────────────────────────────────────────
+
+export interface BillingDashboardStats {
+  todayRevenue: number;
+  ipdOutstanding: number;
+  activeAccounts: number;
+  insurancePending: number;
+  todayCollection: number;
+  todayTransactions: number;
+  refundPending: number;
+  refundApprovals: number;
+  leakageAlerts: number;
+  fullyPaidCount: number;
+}

@@ -29,7 +29,9 @@ import { SectionTimeline } from "../_components/drawer/section-timeline";
 import { SectionAuditTrail } from "../_components/drawer/section-audit-trail";
 import { SectionRefunds } from "../_components/drawer/section-refunds";
 import { CollectPaymentModal } from "../_components/drawer/collect-payment-modal";
-import { buildBillingTimeline } from "@/lib/billing/ipd/billing-analytics";
+import { buildBillingTimeline, computeDischargeSettlement } from "@/lib/billing/ipd/billing-analytics";
+import { ClaimsTab } from "../../../dashboard/_components/claims-tab";
+import { SettlementCard } from "../../../dashboard/_components/settlement-card";
 
 const patientsPath = "/billing/ipd/all-billings";
 
@@ -142,6 +144,21 @@ export default function BillingPatientDetailPage() {
       value: "refunds",
       label: "Refunds",
       content: <SectionRefunds refunds={patient.refunds} />,
+    },
+    {
+      value: "claims",
+      label: "Insurance / Claims",
+      content: <ClaimsTab patient={patient} />,
+    },
+    {
+      value: "settlement",
+      label: "Discharge Settlement",
+      content: (
+        <SettlementCard
+          settlement={computeDischargeSettlement(patient)}
+          onCollect={() => setCollecting(true)}
+        />
+      ),
     },
   ];
 
