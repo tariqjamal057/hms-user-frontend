@@ -111,3 +111,41 @@ export function getBillingPatientByUhid(uhid: string) {
 export const BILLING_WARDS = Array.from(new Set(BILLING_PATIENTS.map((p) => p.ward)));
 export const TODAY_ISO = "2026-08-24";
 export const THIS_MONTH_PREFIX = "2026-08";
+
+function patientHaystack(p: BillingPatient): string {
+  const coverage = p.coverage;
+  return [
+    p.patientName,
+    p.uhid,
+    p.ipdId,
+    p.contactNumber,
+    p.admittingDoctor,
+    p.ward,
+    p.room,
+    p.bed,
+    p.guardianName ?? "",
+    coverage && coverage.type !== "None" ? coverage.policyOrCardNumber : "",
+    coverage ? coverage.schemeName : "",
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+/**
+ * True when a patient matches a free-text search term across name, UHID,
+ * mobile, IPD ID, doctor, ward/bed, guardian and insurance identifiers.
+ * Multi-word queries require every word to match somewhere.
+ */
+export function matchesBillingPatientQuery(patient: BillingPatient, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = patientHaystack(patient);
+  return q.split(/\s+/).every((term) => haystack.includes(term));
+}
+
+/** Global patient lookup used by the command-center header search. */
+export function searchBillingPatients(query: string, limit = 8) {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  return BILLING_PATIENTS.filter((p) => matchesBillingPatientQuery(p, q)).slice(0, limit);
+}

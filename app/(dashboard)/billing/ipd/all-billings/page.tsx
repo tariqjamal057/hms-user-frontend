@@ -4,8 +4,9 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, HeartHandshake, RotateCcw, TrendingUp, Wallet, Eye } from "lucide-react";
 import type { BillingFilters as BillingFiltersState, BillingPatient } from "@/types/billing/ipd/billing-types";
-import { BILLING_PATIENTS, BILLING_WARDS, THIS_MONTH_PREFIX, TODAY_ISO } from "@/lib/billing/ipd/billing-data";
+import { BILLING_PATIENTS, BILLING_WARDS, THIS_MONTH_PREFIX, TODAY_ISO, matchesBillingPatientQuery } from "@/lib/billing/ipd/billing-data";
 import { computeBilling, formatCurrency } from "@/lib/billing/ipd/billing-calculations";
+import { useLayout } from "@/providers/LayoutProvider";
 import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
 import type { OpsColumn } from "@/components/operations";
 import type { KpiCardProps } from "@/components/dashboard";
@@ -19,6 +20,7 @@ const previousDay = { collectedToday: 81250, collectedMonth: 1260000, due: 98000
 
 export default function IpdBillingPage() {
   const router = useRouter();
+  const { globalSearch } = useLayout();
   const [patients] = useState<BillingPatient[]>(BILLING_PATIENTS);
   const [filters, setFilters] = useState<BillingFiltersState>(initialFilters);
   const [view, setView] = useState<ViewMode>("list");
@@ -29,11 +31,13 @@ export default function IpdBillingPage() {
 
   const filtered = useMemo(() => patients.filter((patient) => {
     const query = filters.search.trim().toLowerCase();
-    const matchesSearch = !query || [patient.patientName, patient.uhid, patient.ipdId].join(" ").toLowerCase().includes(query);
+    const matchesSearch =
+      matchesBillingPatientQuery(patient, query) &&
+      matchesBillingPatientQuery(patient, globalSearch);
     const matchesWard = filters.ward === "All" || patient.ward === filters.ward;
     const matchesStatus = filters.status === "All" || computeBilling(patient).status === filters.status;
     return matchesSearch && matchesWard && matchesStatus;
-  }), [patients, filters]);
+  }), [patients, filters, globalSearch]);
 
   const stats = useMemo(() => {
     let collectedToday = 0;
@@ -111,7 +115,7 @@ export default function IpdBillingPage() {
 
         <FilterBar
           search={filters.search}
-          searchPlaceholder="Patient, UHID, or IPD ID..."
+          searchPlaceholder="Patient, UHID, mobile, IPD, or doctor..."
           onSearch={(value) => setFilters((p) => ({ ...p, search: value }))}
           canClear={Boolean(filters.search || filters.ward !== "All" || filters.status !== "All")}
           onClear={() => setFilters(initialFilters)}

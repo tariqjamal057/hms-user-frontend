@@ -110,17 +110,29 @@ export function DataTable<T>({
     return rows.filter((row) => {
       if (q && hasSearch) {
         const searchableFilters = filters.filter((f) => f.type === "search");
-        const targets = searchableFilters.flatMap((f) => {
-          const value = (f as Extract<DataTableFilter<T>, { type: "search" }>).getValue(row);
-          return Array.isArray(value) ? value : [value];
-        });
+        let targets: string[] = [];
+        if (searchableFilters.length > 0) {
+          targets = searchableFilters.flatMap((f) => {
+            const value = (f as Extract<DataTableFilter<T>, { type: "search" }>).getValue(row);
+            return Array.isArray(value) ? value : [value];
+          });
+        } else {
+          // Fallback: search across all raw string/number column values so a
+          // bare `searchable` table (no explicit search filters) still filters.
+          targets = columns.flatMap((col) => {
+            const raw = (row as Record<string, unknown>)[col.key];
+            return typeof raw === "string" || typeof raw === "number"
+              ? [String(raw)]
+              : [];
+          });
+        }
         if (targets.length > 0 && !targets.some((t) => t.toLowerCase().includes(q))) {
           return false;
         }
       }
       return filters.every((filter) => matchesFilter(filter, row, values));
     });
-  }, [rows, query, values, filters, hasSearch]);
+  }, [rows, query, values, filters, columns, hasSearch]);
 
   const activeFilterCount =
     (query ? 1 : 0) +

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { logoutUser } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import { searchBillingPatients } from "@/lib/billing/ipd/billing-data";
 
 const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
   critical: AlertCircle,
@@ -84,6 +85,18 @@ export default function Header() {
   const [searchFocused, setSearchFocused] = useState(false);
   const alertsRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const searchResults = useMemo(
+    () => searchBillingPatients(globalSearch),
+    [globalSearch],
+  );
+  const showSearchResults = globalSearch.trim().length >= 2;
+
+  function navigateToPatient(uhid: string) {
+    router.push(`/billing/ipd/all-billings/${uhid}`);
+    setGlobalSearch("");
+    searchInputRef.current?.blur();
+  }
 
   const initials = user?.name
     ?.split(" ")
@@ -161,6 +174,11 @@ export default function Header() {
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchResults[0]) {
+                    navigateToPatient(searchResults[0].uhid);
+                  }
+                }}
                 placeholder="Search patient, UHID, mobile, doctor..."
                 className={`
                   w-full rounded-xl border bg-slate-50 py-2.5 pl-9 pr-9 text-xs
@@ -186,6 +204,64 @@ export default function Header() {
                 </span>
               )}
             </motion.div>
+
+            {showSearchResults && searchFocused && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.12 }}
+                className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-300/30"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-4 py-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                    Global Patient Search
+                  </p>
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    {searchResults.length}{" "}
+                    {searchResults.length === 1 ? "match" : "matches"}
+                  </span>
+                </div>
+                <div className="max-h-[340px] overflow-y-auto p-2">
+                  {searchResults.length === 0 ? (
+                    <div className="px-3 py-6 text-center text-sm text-slate-400">
+                      No patients found for &ldquo;{globalSearch.trim()}&rdquo;
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {searchResults.map((patient) => (
+                        <button
+                          key={patient.uhid}
+                          type="button"
+                          onClick={() => navigateToPatient(patient.uhid)}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-blue-50"
+                        >
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 text-xs font-bold text-white">
+                            {patient.patientName.charAt(0)}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-slate-800">
+                              {patient.patientName}
+                            </span>
+                            <span className="block truncate text-[11px] text-slate-400">
+                              <span className="font-mono">{patient.uhid}</span>{" "}
+                              · {patient.ipdId} · {patient.ward} · {patient.bed}{" "}
+                              · {patient.contactNumber}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-[10px] font-semibold text-blue-600">
+                            View →
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-2 text-[10px] text-slate-400">
+                  Searches name · UHID · mobile · IPD · doctor · insurance
+                </div>
+              </motion.div>
+            )}
           </div>
 
           {/* Critical Alerts */}
