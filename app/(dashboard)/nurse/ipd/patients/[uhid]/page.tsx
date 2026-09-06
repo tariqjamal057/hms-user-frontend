@@ -16,8 +16,6 @@ import {
 import { TabOverview } from "./_components/tab-overview";
 import { TabVitals } from "./_components/tab-vitals";
 import { TabEmar } from "./_components/tab-emar";
-import { TabMedicines } from "./_components/tab-medicines";
-import { TabIntakeOutput } from "./_components/tab-intake-output";
 import { TabProgressNotes } from "./_components/tab-progress-notes";
 import { TabFluidBalance } from "./_components/tab-fluid-balance";
 import { TabTreatmentPlan } from "./_components/tab-treatment-plan";
@@ -102,11 +100,9 @@ export default function NursePatientDetailPage() {
     { value: "overview", label: "Overview", content: <TabOverview patient={patient} onNext={() => setTab("vitals")} /> },
     { value: "vitals", label: "Vitals Monitoring", content: <TabVitals vitals={vitals} onAddVital={addVital} recordVitalsPath={`/nurse/ipd/patients/${patient.uhid}/record-vitals`} /> },
     { value: "monitoring", label: "Patient Monitoring", content: <TabMonitoring patientName={patient.patientName} vitals={vitals} title="Patient Monitoring" subtitle="Current value · trend vs previous · recorded time & author — same parameters, ward workflow" /> },
-    { value: "medicines", label: "Medicines", content: <TabMedicines doses={doses} /> },
     { value: "emar", label: "Medication Administration", content: <TabEmar doses={doses} onUpdateDose={updateDose} /> },
     { value: "notes", label: "Progress Notes", content: <TabProgressNotes notes={notes} onAddNote={addNote} /> },
     { value: "fluid", label: "Fluid Balance", content: <TabFluidBalance entries={fluidEntries} onAddEntry={addFluidEntry} /> },
-    { value: "intake-output", label: "Intake & Output", content: <TabIntakeOutput entries={fluidEntries} /> },
     { value: "treatment", label: "Treatment Plan", content: <TabTreatmentPlan plans={plans} onToggleFollow={toggleFollow} /> },
     { value: "handover", label: "Shift Handover", content: <TabShiftHandover handovers={handovers} onHandover={handleHandover} /> },
     { value: "discharge", label: "Discharge", content: <TabDischarge patientName={patient.patientName} onDischarge={handleDischarge} /> },
