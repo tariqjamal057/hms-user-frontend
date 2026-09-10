@@ -1,7 +1,7 @@
 // types/billing/ipd/billing-types.ts
 
 export type BillingStatus = "Fully Paid" | "Partially Paid" | "Fully Due";
-export type ChargeCategory = "Doctor Fee" | "Nurse Fee" | "Bed Fee" | "Diagnostic" | "Pharmacy" | "Procedure" | "Other";
+export type ChargeCategory = "Doctor Fee" | "Nurse Fee" | "Bed Fee" | "Diagnostic" | "Pharmacy" | "Procedure" | "Other" | "Ambulance" | "OT Charges" | "Consumables" | "Miscellaneous";
 export type PaymentMethod = "Cash" | "Card" | "UPI" | "Net Banking";
 export type CoverageType = "Ayushman Bharat" | "Insurance" | "None";
 export type CoverageStatus = "Approved" | "Partially Received" | "Fully Received" | "Pending" | "Rejected";

@@ -1,0 +1,170 @@
+// app/(dashboard)/billing/emergency/page.tsx
+"use client";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, HeartHandshake, RotateCcw, TrendingUp, Wallet, Eye } from "lucide-react";
+import type { BillingFilters as BillingFiltersState, BillingPatient } from "@/types/billing/ipd/billing-types";
+import { BILLING_PATIENTS, BILLING_WARDS, THIS_MONTH_PREFIX, TODAY_ISO, matchesBillingPatientQuery } from "@/lib/billing/emergency/billing-data";
+import { computeBilling, formatCurrency } from "@/lib/billing/ipd/billing-calculations";
+import { useLayout } from "@/providers/LayoutProvider";
+import { PageShellHeader, StatsRow, FilterBar, OpsTable, OpsGrid, OpsActionButton, buildTrend } from "@/components/operations";
+import type { OpsColumn } from "@/components/operations";
+import type { KpiCardProps } from "@/components/dashboard";
+import { RevenueAlertsPanel } from "../../ipd/all-billings/_components/revenue-alerts";
+import { BillingStatusBadge } from "../../ipd/all-billings/_components/billing-badges";
+
+type ViewMode = "list" | "grid";
+const initialFilters: BillingFiltersState = { search: "", ward: "All", status: "All" };
+
+const previousDay = { collectedToday: 18400, collectedMonth: 385000, due: 165000, insurancePending: 3000, refundPending: 0, fullyPaid: 6 };
+
+export default function EmergencyBillingPage() {
+  const router = useRouter();
+  const { globalSearch } = useLayout();
+  const [patients] = useState<BillingPatient[]>(BILLING_PATIENTS);
+  const [filters, setFilters] = useState<BillingFiltersState>(initialFilters);
+  const [view, setView] = useState<ViewMode>("list");
+
+  const openPatient = useCallback((patient: BillingPatient) => {
+    router.push(`/billing/emergency/all-billings/${patient.uhid}`);
+  }, [router]);
+
+  const filtered = useMemo(() => patients.filter((patient) => {
+    const query = filters.search.trim().toLowerCase();
+    const matchesSearch =
+      matchesBillingPatientQuery(patient, query) &&
+      matchesBillingPatientQuery(patient, globalSearch);
+    const matchesWard = filters.ward === "All" || patient.ward === filters.ward;
+    const matchesStatus = filters.status === "All" || computeBilling(patient).status === filters.status;
+    return matchesSearch && matchesWard && matchesStatus;
+  }), [patients, filters, globalSearch]);
+
+  const stats = useMemo(() => {
+    let collectedToday = 0;
+    let collectedThisMonth = 0;
+    let totalDue = 0;
+    let fullyPaidCount = 0;
+    let insurancePending = 0;
+    let refundPending = 0;
+
+    patients.forEach((patient) => {
+      const computed = computeBilling(patient);
+      totalDue += computed.dueAmount;
+      if (computed.status === "Fully Paid") fullyPaidCount += 1;
+      patient.payments.forEach((payment) => {
+        if (payment.date === TODAY_ISO) collectedToday += payment.totalAmount;
+        if (payment.date.startsWith(THIS_MONTH_PREFIX)) collectedThisMonth += payment.totalAmount;
+      });
+      patient.refunds.forEach((refund) => {
+        if (refund.status === "Pending") refundPending += refund.amount;
+      });
+    });
+
+    const pendingCoverage = patients.reduce((sum, patient) => {
+      const coverage = patient.coverage;
+      if (coverage && coverage.type !== "None") {
+        return sum + Math.max(0, coverage.approvedAmount - coverage.receivedAmount);
+      }
+      return sum;
+    }, 0);
+    insurancePending = pendingCoverage;
+
+    return { collectedToday, collectedThisMonth, totalDue, fullyPaidCount, insurancePending, refundPending };
+  }, [patients]);
+
+  function updateFilter<K extends keyof BillingFiltersState>(key: K, value: BillingFiltersState[K]) {
+    setFilters((previous) => ({ ...previous, [key]: value }));
+  }
+
+  const columns = useMemo<OpsColumn<BillingPatient>[]>(() => [
+    { key: "Patient", header: "Patient", cell: (row) => <div><p className="font-semibold text-slate-800">{row.patientName}</p><p className="text-xs text-slate-400">{row.uhid}</p></div> },
+    { key: "ER ID", header: "ER ID", cell: (row) => <span className="text-sm text-slate-600">{row.ipdId}</span> },
+    { key: "Bay / Bed", header: "Bay / Bed", cell: (row) => <div className="text-sm text-slate-600">{row.ward}<p className="text-xs text-slate-400">{row.bed}</p></div> },
+    { key: "Doctor", header: "Doctor", cell: (row) => <span className="text-sm text-slate-600">{row.admittingDoctor}</span> },
+    { key: "Net Payable", header: "Net Payable", cell: (row) => <span className="text-sm font-bold text-slate-800">{formatCurrency(computeBilling(row).netPayable)}</span> },
+    { key: "Collected", header: "Collected", cell: (row) => <span className="text-sm font-semibold text-emerald-600">{formatCurrency(computeBilling(row).totalCollected)}</span> },
+    { key: "Due", header: "Due", cell: (row) => { const due = computeBilling(row).dueAmount; return <span className={`text-sm font-bold ${due > 0 ? "text-red-600" : "text-slate-400"}`}>{formatCurrency(due)}</span>; } },
+    { key: "Status", header: "Status", cell: (row) => <BillingStatusBadge status={computeBilling(row).status} /> },
+    { key: "Action", header: "Action", enableHiding: false, headerClassName: "text-right", cell: (row) => (<div className="text-right"><OpsActionButton label="View Details" icon={Eye} onClick={() => openPatient(row)} /></div>) },
+  ], [openPatient]);
+
+  const infoCards: KpiCardProps[] = [
+    { label: "Collected Today", value: formatCurrency(stats.collectedToday), icon: Wallet, accent: "emerald", footer: "30 Aug 2026", trend: buildTrend(stats.collectedToday, previousDay.collectedToday, "vs yesterday") },
+    { label: "Collected This Month", value: formatCurrency(stats.collectedThisMonth), icon: TrendingUp, accent: "blue", footer: "August 2026", trend: buildTrend(stats.collectedThisMonth, previousDay.collectedMonth, "vs yesterday") },
+    { label: "Emergency Outstanding Due", value: formatCurrency(stats.totalDue), icon: AlertTriangle, accent: "rose", footer: "Across all patients", trend: buildTrend(stats.totalDue, previousDay.due, "vs yesterday") },
+    { label: "Insurance / TPA Pending", value: formatCurrency(stats.insurancePending), icon: HeartHandshake, accent: "violet", footer: "Awaiting insurer receipt", trend: buildTrend(stats.insurancePending, previousDay.insurancePending, "vs yesterday") },
+    { label: "Refund Pending", value: formatCurrency(stats.refundPending), icon: RotateCcw, accent: "amber", footer: "Under review", trend: buildTrend(stats.refundPending, previousDay.refundPending, "vs yesterday") },
+  ];
+
+  return (
+    <div className="min-h-screen">
+      <PageShellHeader
+        title="Emergency Billing"
+        description="Track charges, discounts, payments, and insurance coverage for every Emergency patient."
+        meta={
+          <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
+            Billing Department
+          </span>
+        }
+      />
+
+      <div className="flex flex-col gap-4">
+        <StatsRow items={infoCards} />
+
+        <RevenueAlertsPanel patients={patients} onOpenPatient={openPatient} />
+
+        <FilterBar
+          search={filters.search}
+          searchPlaceholder="Patient, UHID, mobile, ER ID, or doctor..."
+          onSearch={(value) => setFilters((p) => ({ ...p, search: value }))}
+          canClear={Boolean(filters.search || filters.ward !== "All" || filters.status !== "All")}
+          onClear={() => setFilters(initialFilters)}
+          viewSupported
+          viewMode={view}
+          onViewChange={(v) => setView(v as ViewMode)}
+          filters={[
+            { key: "ward", label: "Filter by bay", placeholder: "All Bays", selected: filters.ward, options: BILLING_WARDS.map((item) => ({ value: item, label: item })) },
+            { key: "status", label: "Filter by status", placeholder: "All Statuses", selected: filters.status, options: ["Fully Paid", "Partially Paid", "Fully Due"].map((item) => ({ value: item, label: item })) },
+          ]}
+          onFilterChange={(key, value) => updateFilter(key as keyof BillingFiltersState, value as BillingFiltersState[keyof BillingFiltersState])}
+        />
+
+        {view === "list" ? (
+          <OpsTable
+            columns={columns}
+            data={filtered}
+            rowKey={(row) => row.uhid}
+            onRowClick={openPatient}
+          />
+        ) : (
+          <OpsGrid
+            data={filtered}
+            rowKey={(row) => row.uhid}
+            renderCard={(row) => (
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+                <div className="mb-1 h-1 rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-rose-500" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-500 font-bold text-white">{row.patientName.charAt(0)}</div>
+                    <div><p className="font-bold text-slate-800">{row.patientName}</p><p className="text-xs text-slate-400">{row.uhid}</p></div>
+                  </div>
+                  <BillingStatusBadge status={computeBilling(row).status} />
+                </div>
+                <div className="mt-4 rounded-xl bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-700">{row.admittingDoctor}</p>
+                  <p className="mt-1 text-xs text-slate-500">{row.ward} · {row.bed}</p>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-lg border border-slate-100 p-2"><p className="text-[9px] uppercase text-slate-400">Net Payable</p><p className="mt-1 text-sm font-bold text-slate-800">{formatCurrency(computeBilling(row).netPayable)}</p></div>
+                  <div className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-2"><p className="text-[9px] uppercase text-emerald-500">Collected</p><p className="mt-1 text-sm font-bold text-emerald-700">{formatCurrency(computeBilling(row).totalCollected)}</p></div>
+                  <div className="rounded-lg border border-red-100 bg-red-50/40 p-2"><p className="text-[9px] uppercase text-red-500">Due</p><p className="mt-1 text-sm font-bold text-red-700">{formatCurrency(computeBilling(row).dueAmount)}</p></div>
+                </div>
+                <button type="button" onClick={() => openPatient(row)} className="mt-4 w-full rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50">View Details</button>
+              </div>
+            )}
+          />
+        )}
+      </div>
+    </div>
+  );
+}

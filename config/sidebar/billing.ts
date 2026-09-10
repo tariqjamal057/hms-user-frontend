@@ -1,5 +1,5 @@
 import { SidebarItem } from "@/types/sidebar";
-import { LayoutDashboard, Activity } from "lucide-react";
+import { LayoutDashboard, Activity, Siren } from "lucide-react";
 
 const billingSidebar: SidebarItem[] = [
   {
@@ -14,6 +14,14 @@ const billingSidebar: SidebarItem[] = [
     section: "Billing",
     children: [
       { label: "All Billings", href: "/billing/ipd/all-billings" },
+    ],
+  },
+  {
+    label: "Emergency",
+    icon: Siren,
+    section: "Billing",
+    children: [
+      { label: "All Billings", href: "/billing/emergency/all-billings" },
     ],
   },
 ];
